@@ -40,6 +40,20 @@ const truncate = (s, n) => (s && s.length > n ? s.slice(0, n).replace(/\s+\S*$/,
 
 const stripHtml = (s) => (s || "").replace(/<[^>]+>/g, "").replace(/&[a-z]+;/gi, " ").trim();
 
+// ---------- CORS PROXY ----------
+// SSOT for CORS-blocked endpoints. Adapters on pattern 2 call proxiedFetch()
+// instead of fetch(). Single line swap per adapter — easy to revert.
+// The /api/proxy Vercel function handles UA injection + allowlist gating.
+const PROXY_BASE = "/api/proxy";
+async function proxiedFetch(url, options = {}) {
+  const proxyUrl = `${PROXY_BASE}?url=${encodeURIComponent(url)}` +
+    (options.method && options.method !== "GET" ? `&method=${options.method}` : "");
+  const fetchOpts = options.method === "POST"
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: options.body }
+    : {};
+  return fetch(proxyUrl, fetchOpts);
+}
+
 // ---------- STORAGE ----------
 // Single source of truth for all localStorage access. Namespaced keys so
 // future features (library, prefs, etc.) don't collide with anything else
@@ -1067,8 +1081,11 @@ const OPENCONTEXT_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? 3 : 5;
-    const url = `https://opencontext.org/query/.json?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    // Corrected endpoint: /sets/.json is the JSON-LD search API.
+    // /query/.json is the human-facing UI and returns HTML. Routed through
+    // proxy to inject the User-Agent OpenContext requires (browsers can't set it).
+    const url = `https://opencontext.org/sets/.json?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`;
+    const r = await proxiedFetch(url);
     if (!r.ok) throw new Error(`Open Context ${r.status}`);
     const data = await r.json();
     const features = data.features || data.oc_api?.["has-results"] || [];
@@ -1115,17 +1132,19 @@ const NORTHWESTERN_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? 3 : 5;
-    // NULIB v2 API uses POST with OpenSearch DSL
-    const body = {
-      query: { query_string: { query, default_operator: "AND" } },
-      size: pageSize,
-      from: offset
-    };
-    const r = await fetch("https://api.dc.library.northwestern.edu/api/v2/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(body)
-    });
+    // NULIB v2 API uses POST with OpenSearch DSL.
+    // Pattern 3: try direct first (CORS unverified), fall back to proxy on network failure.
+    const nuUrl = "https://api.dc.library.northwestern.edu/api/v2/search";
+    let r;
+    try {
+      r = await fetch(nuUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body)
+      });
+    } catch {
+      r = await proxiedFetch(nuUrl, { method: "POST", body: JSON.stringify(body) });
+    }
     if (!r.ok) throw new Error(`Northwestern ${r.status}`);
     const data = await r.json();
     const docs = data.data || [];
@@ -1168,9 +1187,10 @@ const PRINCETON_DPUL_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? 3 : 5;
     const page = Math.floor(offset / pageSize) + 1;
-    // Spotlight-on-Blacklight: ?format=json appended to catalog search
+    // DPUL is Spotlight-on-Blacklight. Princeton's deployment has no CORS headers.
+    // "Failed to fetch" with no status = browser CORS rejection. Proxy fixes it.
     const url = `https://dpul.princeton.edu/catalog.json?q=${encodeURIComponent(query)}&per_page=${pageSize}&page=${page}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await proxiedFetch(url);
     if (!r.ok) throw new Error(`Princeton DPUL ${r.status}`);
     const data = await r.json();
     const docs = data.data || data.response?.docs || [];
@@ -1207,13 +1227,13 @@ const PRINCETON_DPUL_ADAPTER = {
   }
 };
 
-// PANGAEA — beta. Elasticsearch endpoint may CORS-block in browsers.
-// Wrapped in graceful try/catch with user-visible degrade message.
-// Beta testers: please report 503/CORS errors so we can confirm or demote to launcher.
+// PANGAEA — Earth & environment data publisher. Uses internal panFMP Elasticsearch schema.
+// Field names differ from standard ES conventions — verified against rOpenSci pangaear docs.
+// Routed through proxy (CORS-blocked in browsers + POST body forwarding needed).
 const PANGAEA_ADAPTER = {
   id: "PANGAEA",
   name: "PANGAEA",
-  tagline: "Earth & environment data · archaeogenetic metadata · ⚠️ beta (CORS-risk)",
+  tagline: "Earth & environment data · archaeogenetic metadata",
   color: { bg: "bg-teal-900", text: "text-teal-50" },
   category: ADAPTER_CATEGORY.EXTENSION,
   region: ["global"],
@@ -1223,40 +1243,42 @@ const PANGAEA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? 3 : 5;
+    // Request only the panFMP fields we actually map below — avoids large xml blob in response.
     const body = {
       query: { query_string: { query } },
       size: pageSize,
       from: offset,
-      _source: ["title", "author", "publication_date", "abstract", "doi", "uri", "citation"]
+      _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract"]
     };
-    let r;
-    try {
-      r = await fetch("https://ws.pangaea.de/es/pangaea/panmd/_search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(body)
-      });
-    } catch (netErr) {
-      throw new Error("PANGAEA: browser CORS appears to block this endpoint. Use the launcher in External Archives instead. (Beta — please flag this to baazijan if you see it.)");
-    }
+    const r = await proxiedFetch("https://ws.pangaea.de/es/pangaea/panmd/_search", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
     if (!r.ok) throw new Error(`PANGAEA ${r.status}`);
     const data = await r.json();
     const hits = data.hits?.hits || [];
     const total = data.hits?.total?.value ?? data.hits?.total ?? hits.length;
     const results = hits.map((h, i) => {
       const s = h._source || {};
-      const authors = Array.isArray(s.author) ? s.author.map(a => a.name || a).filter(Boolean) : [];
+      // sf-authortitle is PANGAEA's combined citation string, e.g.:
+      // "Schiebel R, Waniek J (2001): Physical oceanography during METEOR cruise M36/6"
+      // Shown as-is — always correct, genuinely useful for copy-paste citation.
+      const title = s["sf-authortitle"] || "Untitled";
+      const authors = (s["agg-author"] || []).filter(Boolean);
+      const year = s["agg-pubYear"] ? String(s["agg-pubYear"]) : "";
+      const url = s.URI || "";
+      const doi = (s.URI || "").match(/10\.\d+\/[^\s]+$/)?.[0] || "";
       return {
         id: `pangaea-${h._id || `${offset}-${i}`}`,
         source: "PANGAEA",
-        title: s.title || s.citation || "Untitled",
+        title,
         authors,
-        year: String(s.publication_date || "").match(/\d{4}/)?.[0] || "",
+        year,
         journal: "",
         publisher: "PANGAEA",
         volume: "", issue: "", pages: "",
-        doi: s.doi || "",
-        url: s.uri || (s.doi ? `https://doi.org/${s.doi}` : ""),
+        doi,
+        url: url || (doi ? `https://doi.org/${doi}` : ""),
         abstract: stripHtml(s.abstract || ""),
         isOA: true,
         type: "genomic-data"
@@ -1309,11 +1331,18 @@ const OPENNEURO_ADAPTER = {
         }
       }
     `;
-    const r = await fetch("https://openneuro.org/crn/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query: gqlQuery })
-    });
+    // Pattern 3: try direct first, fall back to proxy on network/CORS failure.
+    const onUrl = "https://openneuro.org/crn/graphql";
+    let r;
+    try {
+      r = await fetch(onUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ query: gqlQuery })
+      });
+    } catch {
+      r = await proxiedFetch(onUrl, { method: "POST", body: JSON.stringify({ query: gqlQuery }) });
+    }
     if (!r.ok) throw new Error(`OpenNeuro ${r.status}`);
     const data = await r.json();
     if (data.errors) throw new Error(`OpenNeuro GraphQL: ${data.errors[0]?.message || "unknown error"}`);
