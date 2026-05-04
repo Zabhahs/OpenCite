@@ -3,11 +3,168 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Stacks — Free Scholarly Search</title>
-    <meta name="description" content="A meta-search across free, open-access scholarly databases. Citations ready to paste." />
+
+    <!-- Primary SEO -->
+    <title>OpenCITE — Free Open-Access Scholarly Search & Citation Tool</title>
+    <meta name="description" content="OpenCITE is a free meta-search engine for open-access scholarly sources. We bring the light of knowledge to citizen scientists and citizen scholars by removing barriers to peer-reviewed research. Search DOAJ, OpenAlex, Crossref, Europeana, and more — get MLA and APA citations instantly." />
+    <meta name="keywords" content="open access search, scholarly search engine, free academic database, citizen science, citizen scholar, citation generator, MLA citation, APA citation, DOAJ, OpenAlex, Crossref, Europeana, peer-reviewed articles, open scholarship, research tool, free research" />
+    <meta name="author" content="Shahbaz Yusuf" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="theme-color" content="#1c1917" />
+
+    <!-- Favicon: Shahbaz, the royal falcon of Persia (Achaemenid heraldic) -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph (LinkedIn, Slack, Discord, Facebook previews) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="OpenCITE — Free Open-Access Scholarly Search" />
+    <meta property="og:description" content="Bringing the light of knowledge to the citizen scientist and citizen scholar. Free meta-search across DOAJ, OpenAlex, Crossref, Europeana, and more — with citations ready to paste." />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="OpenCITE — Shahbaz, the royal falcon of Persia, in gold" />
+    <meta property="og:site_name" content="OpenCITE" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenCITE — Free Open-Access Scholarly Search" />
+    <meta name="twitter:description" content="Bringing the light of knowledge to citizen scientists and citizen scholars. Free meta-search across multiple open scholarly databases." />
+    <meta name="twitter:image" content="/android-chrome-512x512.png" />
+    <meta name="twitter:image:alt" content="OpenCITE — Shahbaz, the royal falcon of Persia, in gold" />
+
+    <!-- AEO / GEO: Structured data for answer engines and LLM-powered search.
+         These JSON-LD blocks let AI search tools (Perplexity, ChatGPT search,
+         Google AI Overviews, Claude search) accurately describe what OpenCITE
+         is, who it's for, and what it does — without hallucinating. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "OpenCITE",
+      "alternateName": "OpenCITE Scholarly Search",
+      "description": "OpenCITE is a free meta-search tool for open-access scholarly sources. Built for citizen scientists, citizen scholars, students, and independent researchers who need credible peer-reviewed sources without paywall barriers. Searches DOAJ, OpenAlex, Crossref, Europeana, and Semantic Scholar simultaneously, returning ready-to-paste MLA and APA citations.",
+      "applicationCategory": "EducationalApplication",
+      "applicationSubCategory": "Research Tool",
+      "operatingSystem": "Web Browser",
+      "browserRequirements": "Requires JavaScript and a modern browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Shahbaz Yusuf",
+        "url": "https://www.linkedin.com/in/shahbaz-yusuf/"
+      },
+      "audience": [
+        { "@type": "Audience", "audienceType": "citizen scientists" },
+        { "@type": "Audience", "audienceType": "citizen scholars" },
+        { "@type": "Audience", "audienceType": "independent researchers" },
+        { "@type": "Audience", "audienceType": "students" },
+        { "@type": "Audience", "audienceType": "educators" }
+      ],
+      "featureList": [
+        "Meta-search across multiple open-access scholarly databases",
+        "Searches DOAJ, OpenAlex, Crossref, Europeana, Semantic Scholar in parallel",
+        "MLA 9 and APA 7 citation formatting, copy-ready",
+        "User-curated trusted journal lists",
+        "Saved library with bibliography export",
+        "Search history",
+        "Image previews for cultural heritage primary sources",
+        "Multiple visual themes including high-contrast dark mode",
+        "Zero AI tokens per search — direct API calls only",
+        "No tracking, no analytics, no account required"
+      ],
+      "keywords": "open access, scholarly search, citizen science, citizen scholar, peer-reviewed, free research, citation generator, MLA, APA, DOAJ, OpenAlex, Crossref, Europeana"
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "OpenCITE",
+      "url": "/",
+      "logo": "/android-chrome-512x512.png",
+      "sameAs": [
+        "https://www.linkedin.com/in/shahbaz-yusuf/"
+      ],
+      "founder": {
+        "@type": "Person",
+        "name": "Shahbaz Yusuf"
+      },
+      "description": "OpenCITE exists to bring the light of knowledge to the citizen scientist and the citizen scholar. We remove the barrier to learning by aggregating free, open-access scholarly sources into one meta-search and providing citations ready to use."
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is OpenCITE?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "OpenCITE is a free meta-search tool for open-access scholarly research. It searches DOAJ, OpenAlex, Crossref, Europeana, and Semantic Scholar in parallel and returns peer-reviewed sources with MLA and APA citations ready to paste."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who is OpenCITE for?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "OpenCITE is built for citizen scientists, citizen scholars, students, independent researchers, and anyone who needs credible peer-reviewed sources without paywall barriers. The mission is to remove the barrier to learning and bring the light of knowledge to anyone who seeks it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is OpenCITE free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. OpenCITE is completely free to use. There is no account required, no tracking, and no paywall. Some integrated databases (OpenAlex, Europeana) require their own free API keys, which take seconds to obtain."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What sources does OpenCITE search?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "OpenCITE searches DOAJ (Directory of Open Access Journals), OpenAlex (250M+ scholarly works), Crossref (130M+ DOI records), Europeana (cultural heritage and primary sources), and Semantic Scholar. It also includes a launcher for JSTOR using your existing account, and supports user-defined curated journal lists."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does OpenCITE generate citations?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Every search result includes both MLA 9 and APA 7 citations formatted from the source's structured metadata, with a one-click copy button. Users can also save items to a library and export the entire saved set as a bibliography."
+          }
+        }
+      ]
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
+    <!-- Skip link for screen readers and AEO content extraction -->
+    <a href="#root" class="sr-only">Skip to main content</a>
+
+    <!-- Mission statement, hidden from sighted users but readable by AI/screen readers/crawlers.
+         AEO best practice: state what the tool does in plain language at the top of the document. -->
+    <div class="sr-only" aria-hidden="false">
+      <h1>OpenCITE: Free Scholarly Search for Citizen Scientists and Citizen Scholars</h1>
+      <p>OpenCITE is a free meta-search tool for open-access scholarly research. Our mission is to bring the light of knowledge to the citizen scientist and the citizen scholar by removing barriers to peer-reviewed learning. We search DOAJ, OpenAlex, Crossref, Europeana, and Semantic Scholar in parallel — returning credible sources with MLA and APA citations ready to paste. No account required. No tracking. No paywall.</p>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="./src/main.jsx"></script>
   </body>

@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# AI search agents are explicitly welcomed —
+# OpenCITE's mission is to spread access to knowledge.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
