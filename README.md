@@ -12,7 +12,7 @@ Built for citizen scientists, citizen scholars, independent researchers, and any
 
 ## Live
 
-**[opencite.app](https://opencite.app)**
+**[opencite.app](https://citation.today)**
 
 ---
 
@@ -170,13 +170,12 @@ Issues and PRs welcome. If you're adding a new scholarly source, please verify:
 
 **Shahbaz Yusuf** — [LinkedIn](https://www.linkedin.com/in/shahbaz-yusuf/)
 
-If OpenCITE saved you time, the kindest thing you can do is connect.
-
+Connect with me - happy to chat anytime.
 ---
 
 ## License
 
-OpenCITE Source-Available License v1.0 — Copyright (c) 2025 Shahbaz Yusuf.
+OpenCITE Source-Available License v1.0 — Copyright (c) 2026 Shahbaz Yusuf.
 
 Free to use, study, and modify for personal, academic, or internal research purposes. The following are strictly prohibited:
 
