@@ -1,6 +1,5 @@
 import React from "react";
 import { ResultCard } from "./ResultCard.jsx";
-
 export function SourceSection({ adapter, state, onCopy, copied, isInLibrary, onToggleLibrary, onLoadMore }) {
   const { loading, results, error, hasMore, loadingMore } = state;
 

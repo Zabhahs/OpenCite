@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { TAG_VOCAB } from "../../constants/vocabulary.js";
 import { DEFAULT_CURATED_JOURNALS } from "../../constants/defaults.js";
-import { ResultCard } from "../search/ResultCard.jsx";
+import { ResultCard } from "./ResultCard.jsx";
 import { libraryKey } from "../../lib/library.js";
 
 // ---------- AddJournalForm ----------

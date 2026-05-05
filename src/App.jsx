@@ -1,9 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
-// Contexts
-import { AuthProvider } from "./contexts/AuthContext.jsx";
-import { BillingProvider } from "./contexts/BillingContext.jsx";
-
 // Hooks
 import { useTheme } from "./hooks/useTheme.js";
 import { useSettings } from "./hooks/useSettings.js";
@@ -17,11 +13,11 @@ import { LAUNCHERS } from "./launchers/index.js";
 import { HISTORY_MAX } from "./constants/defaults.js";
 
 // Components
-import { SearchInput } from "./components/search/SearchInput.jsx";
-import { SourceSection } from "./components/search/SourceSection.jsx";
-import { LauncherBlock } from "./components/launchers/LauncherBlock.jsx";
-import { Header, Footer, ConnectCard, ThemeStrip } from "./components/layout/Layout.jsx";
-import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/panels/Panels.jsx";
+import { SearchInput } from "./components/SearchInput.jsx";
+import { SourceSection } from "./components/SourceSection.jsx";
+import { LauncherBlock } from "./components/LauncherBlock.jsx";
+import { Header, Footer, ConnectCard, ThemeStrip } from "./components/Layout.jsx";
+import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
 
 /* ============================================================================
    App.jsx — thin orchestrator.
@@ -196,13 +192,7 @@ function OpenCITE() {
   );
 }
 
-// Context providers wrap the app — stubs now, real implementations in Phase 1/3.
+// Context providers (AuthProvider, BillingProvider) are stubs — added in Phase 1.
 export default function App() {
-  return (
-    <AuthProvider>
-      <BillingProvider>
-        <OpenCITE />
-      </BillingProvider>
-    </AuthProvider>
-  );
+  return <OpenCITE />;
 }
