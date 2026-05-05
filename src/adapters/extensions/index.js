@@ -495,8 +495,12 @@ export const PANGAEA_ADAPTER = {
       const doi = (s.URI || "").match(/10\.\d+\/[^\s]+$/)?.[0] || "";
       return {
         id: `pangaea-${h._id || `${offset}-${i}`}`, source: "PANGAEA",
-        title: s["sf-authortitle"] || "Untitled",
-        authors: Array.isArray(s["agg-author"]) ? s["agg-author"].filter(Boolean) : (s["agg-author"] ? [s["agg-author"]] : []),
+        title: (s["sf-authortitle"] && s["sf-authortitle"].length < 100 && !/\d[A-Z]{5,}/.test(s["sf-authortitle"])) 
+       ? s["sf-authortitle"] 
+       : "Dataset: Environmental Research Data",
+        authors: (Array.isArray(s["agg-author"]) ? s["agg-author"] : [s["agg-author"]])
+         .filter(Boolean)
+         .map(a => a.includes(',') ? a : a.split(' ').reverse().join(', ')),
         year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
         journal: "", publisher: "PANGAEA",
         volume: "", issue: "", pages: "",
