@@ -1,0 +1,157 @@
+OpenCITE Source-Available License v1.0
+Copyright (c) 2025 Shahbaz Yusuf. All rights reserved.
+
+================================================================================
+DEFINITIONS
+================================================================================
+
+"Software" means OpenCITE and all associated source code, documentation,
+configuration files, and assets made available under this license, including
+any modified or derivative versions thereof.
+
+"Licensor" means Shahbaz Yusuf, the copyright holder of the Software.
+
+"You" means the individual or legal entity exercising rights under this license.
+
+"Hosted Service" means any deployment of the Software, or any software
+substantially derived from the Software, that is made accessible to third
+parties over a network — whether publicly, privately, behind authentication,
+via API, embedded in another product, or by any other means — regardless of
+whether a fee is charged.
+
+"Commercial Use" means any use of the Software, in original or modified form,
+that is intended to generate revenue, monetary compensation, non-monetary
+compensation, credit, or any other form of value for You or any third party,
+directly or indirectly.
+
+"Rate-Limiting Mechanism" means any logic, configuration, infrastructure, or
+enforcement system — including but not limited to search quotas, credit systems,
+request throttling, API gateway rules, or account tiers — that restricts the
+volume or frequency of searches or API calls made through the Software.
+
+"Circumvention" means any act that bypasses, disables, modifies, removes,
+replaces, or renders ineffective any Rate-Limiting Mechanism, whether in the
+original Software or in any derivative version, including but not limited to:
+creating multiple accounts, rotating credentials, forking the Software to remove
+limits, deploying modified versions without equivalent limits, or using automated
+means to exceed enforced thresholds.
+
+================================================================================
+GRANT OF RIGHTS
+================================================================================
+
+Subject to the terms and conditions of this license, the Licensor grants You
+a limited, non-exclusive, non-transferable, non-sublicensable, royalty-free
+license to:
+
+  1. Use the Software for personal, academic, or internal research purposes;
+  2. Study and inspect the source code;
+  3. Modify the Software for personal, academic, or internal research purposes;
+  4. Distribute verbatim copies of the Software, provided this license is
+     included in full and unmodified with every copy.
+
+No rights are granted beyond those expressly stated above.
+
+================================================================================
+RESTRICTIONS — READ CAREFULLY
+================================================================================
+
+The following are strictly prohibited without prior written authorisation
+from the Licensor:
+
+1. HOSTED SERVICES
+   You may not operate, offer, or make available a Hosted Service based on
+   the Software or any derivative of it — whether free of charge, paid,
+   freemium, or otherwise. This prohibition applies regardless of how the
+   service is presented, packaged, or accessed.
+
+2. COMMERCIAL USE
+   You may not use the Software or any derivative of it for any Commercial
+   Use. This includes but is not limited to: selling access to search results,
+   bundling the Software in a paid product or service, using the Software to
+   generate advertising revenue, or using the Software as the basis of any
+   venture that seeks investment or compensation.
+
+3. CIRCUMVENTION OF RATE LIMITS
+   You may not circumvent, disable, modify, remove, or otherwise undermine
+   any Rate-Limiting Mechanism present in the Software or in any version of
+   it operated by the Licensor. Any derivative version of the Software that
+   you distribute or deploy must include Rate-Limiting Mechanisms at least
+   as restrictive as those present in the version of the Software from which
+   your derivative was derived. You may not distribute or deploy a version
+   of the Software with rate limits reduced, removed, or made ineffective.
+
+4. MISREPRESENTATION
+   You may not represent the Software, or any derivative of it, as your own
+   original work, or remove, alter, or obscure any copyright notice, license
+   text, or attribution to the Licensor.
+
+5. SUBLICENSING
+   You may not grant any third party rights to use the Software beyond those
+   granted to You under this license.
+
+================================================================================
+COMMERCIAL LICENSING
+================================================================================
+
+If You wish to use the Software in a manner not permitted by this license —
+including operating a Hosted Service, Commercial Use, or any other restricted
+purpose — You must obtain a separate written commercial license from the
+Licensor prior to such use.
+
+Commercial licensing enquiries: shahbazyusuf@outlook.com
+
+================================================================================
+ATTRIBUTION
+================================================================================
+
+Any permitted distribution of the Software or derivative works must:
+
+  - Include this license in full;
+  - Retain all existing copyright notices;
+  - Clearly indicate if modifications have been made and identify the original
+    source as OpenCITE by Shahbaz Yusuf.
+
+================================================================================
+NO WARRANTY
+================================================================================
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY — WHETHER
+IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE — ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+TERMINATION
+================================================================================
+
+Your rights under this license terminate automatically and without notice if
+You breach any term of this license. Upon termination, You must immediately
+cease all use, distribution, and operation of the Software and destroy all
+copies in Your possession.
+
+The Licensor may reinstate your rights at their sole discretion upon written
+request, but is under no obligation to do so.
+
+================================================================================
+GOVERNING LAW
+================================================================================
+
+This license shall be governed by and construed in accordance with the laws
+of the State of Delaware, United States of America, without regard to conflict
+of law principles. Any disputes arising under this license shall be subject to
+the exclusive jurisdiction of the federal and state courts located in Delaware.
+
+================================================================================
+ENTIRE AGREEMENT
+================================================================================
+
+This license constitutes the entire agreement between You and the Licensor
+with respect to the Software and supersedes all prior agreements,
+representations, or understandings of any kind.
+
+If any provision of this license is found to be unenforceable, that provision
+shall be modified to the minimum extent necessary to make it enforceable, and
+the remaining provisions shall continue in full force and effect.
