@@ -491,34 +491,35 @@ export const PANGAEA_ADAPTER = {
     const hits = data.hits?.hits || [];
     const total = data.hits?.total?.value ?? data.hits?.total ?? hits.length;
     const results = hits.map((h, i) => {
-      const s = h._source || {};
-      const url = s.URI || "";
-      const doi = url.match(/10\.\d+\/[^\s]+$/)?.[0] || "";
-      
-      // Title logic: reject hashes/long IDs
-      const rawTitle = s["sf-authortitle"] || "";
-      const isGibberish = /\d[A-Z]{5,}/.test(rawTitle) || rawTitle.length > 150;
-      const cleanTitle = isGibberish ? "Environmental Research Dataset" : rawTitle;
+  const s = h._source || {};
+  const url = s.URI || "";
+  const doi = url.match(/10\.\d+\/[^\s]+$/)?.[0] || "";
+  
+  // Prioritize the real title, then the short-form title, then fallback
+  const displayTitle = s.title || s["sf-authortitle"] || "Untitled Dataset";
+  const isGibberish = /\d[A-Z]{5,}/.test(displayTitle) || displayTitle.length > 250;
+  
+  // Author logic: PANGAEA often returns "Last, First", 
+  // so we ensure the citation engine doesn't "re-reverse" them.
+  const rawAuthors = s["agg-author"];
+  const cleanAuthors = (Array.isArray(rawAuthors) ? rawAuthors : (rawAuthors ? [rawAuthors] : []))
+    .filter(Boolean);
 
-      // Author logic: safe array handling and formatting
-      const rawAuthors = s["agg-author"];
-      const cleanAuthors = (Array.isArray(rawAuthors) ? rawAuthors : (rawAuthors ? [rawAuthors] : []))
-        .filter(Boolean)
-        .map(a => a.includes(',') ? a : a.split(' ').reverse().join(', '));
-
-      return {
-        id: `pangaea-${h._id || `${offset}-${i}`}`, source: "PANGAEA",
-        title: cleanTitle,
-        authors: cleanAuthors,
-        year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
-        journal: "", publisher: "PANGAEA",
-        volume: "", issue: "", pages: "",
-        doi: doi, url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
-        abstract: (s.abstract && !/\d[A-Z]{5,}/.test(s.abstract)) ? stripHtml(s.abstract) : "Summary: Field-based observational data hosted by the PANGAEA repository.",
-        isOA: true, type: "genomic-data"
-      };
-    });
-    return { results, hasMore: offset + hits.length < total };
+  return {
+    id: `pangaea-${h._id || `${offset}-${i}`}`, source: "PANGAEA",
+    title: isGibberish ? "Environmental Research Data" : stripHtml(displayTitle),
+    authors: cleanAuthors,
+    year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
+    journal: "", publisher: "PANGAEA",
+    volume: "", issue: "", pages: "",
+    doi: doi, url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
+    // If the abstract is a hash/gibberish, hide it.
+    abstract: (s.abstract && !/\d[A-Z]{5,}/.test(s.abstract)) 
+      ? stripHtml(s.abstract) 
+      : "Data hosted by the PANGAEA repository.",
+    isOA: true, type: "genomic-data"
+  };
+});
   }
 };
 
