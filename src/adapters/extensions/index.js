@@ -1,3 +1,4 @@
+import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
 import { proxiedFetch } from "../_shared/proxy.js";
@@ -14,7 +15,7 @@ export const EUROPEANA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.europeanaKey) throw new Error("Europeana needs a free API key. Open settings (⚙) to add yours.");
     const offset = opts.offset || 0;
-    const rows = offset === 0 ? 3 : 5;
+    const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const start = offset + 1;
     const url = `https://api.europeana.eu/record/v2/search.json?wskey=${encodeURIComponent(settings.europeanaKey)}&query=${encodeURIComponent(query)}&rows=${rows}&start=${start}&profile=rich`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
@@ -50,7 +51,7 @@ export const MET_ADAPTER = {
   color: { bg: "bg-red-800", text: "text-red-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const r = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${encodeURIComponent(query)}&hasImages=true`);
     if (!r.ok) throw new Error(`Met ${r.status}`);
     const data = await r.json();
@@ -90,7 +91,7 @@ export const SMITHSONIAN_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.smithsonianKey) throw new Error("Smithsonian needs an api.data.gov key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
-    const rows = offset === 0 ? 3 : 5;
+    const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const url = `https://api.si.edu/openaccess/api/v1.0/search?q=${encodeURIComponent(query)}&start=${offset}&rows=${rows}&api_key=${encodeURIComponent(settings.smithsonianKey)}`;
     const r = await fetch(url);
     if (!r.ok) {
@@ -133,7 +134,7 @@ export const DPLA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.dplaKey) throw new Error("DPLA needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const r = await fetch(`https://api.dp.la/v2/items?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(settings.dplaKey)}`);
     if (!r.ok) throw new Error(`DPLA ${r.status}`);
@@ -168,7 +169,7 @@ export const RIJKSMUSEUM_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.rijksKey) throw new Error("Rijksmuseum needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const r = await fetch(`https://www.rijksmuseum.nl/api/en/collection?key=${encodeURIComponent(settings.rijksKey)}&q=${encodeURIComponent(query)}&p=${page}&ps=${pageSize}&imgonly=true`);
     if (!r.ok) {
@@ -200,7 +201,7 @@ export const INTERNET_ARCHIVE_ADAPTER = {
   color: { bg: "bg-stone-700", text: "text-stone-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const fields = "identifier,title,creator,date,description,mediatype,collection";
     const params = `q=${encodeURIComponent(query + " AND mediatype:texts")}&fl[]=${fields.split(",").join("&fl[]=")}&rows=${pageSize}&page=${page}&output=json`;
@@ -235,7 +236,7 @@ export const BDPI_ADAPTER = {
   color: { bg: "bg-yellow-800", text: "text-yellow-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const url = `https://www.iberoamericadigital.net/BDPI/OpenSearch.do?Field=todos&text=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}&format=json`;
     const r = await fetch(url);
     if (!r.ok) throw new Error(`BDPI ${r.status}`);
@@ -271,7 +272,7 @@ export const GALLICA_ADAPTER = {
   color: { bg: "bg-rose-900", text: "text-rose-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const url = `https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=${encodeURIComponent('dc.any all "' + query + '"')}&startRecord=${offset + 1}&maximumRecords=${pageSize}&recordSchema=dc&mode=json`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Gallica ${r.status}`);
@@ -307,7 +308,7 @@ export const THAQALAYN_ADAPTER = {
   color: { bg: "bg-emerald-800", text: "text-emerald-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const r = await fetch(`https://www.thaqalayn-api.net/api/v2/query?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Thaqalayn ${r.status}`);
     const data = await r.json();
@@ -342,7 +343,7 @@ export const NCBI_ADAPTER = {
   color: { bg: "bg-cyan-900", text: "text-cyan-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const r1 = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
     if (!r1.ok) throw new Error(`NCBI esearch ${r1.status}`);
     const searchData = await r1.json();
@@ -381,7 +382,7 @@ export const OPENCONTEXT_ADAPTER = {
   color: { bg: "bg-stone-600", text: "text-stone-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     // Corrected endpoint: /sets/.json is the JSON-LD search API (not /query/.json which returns HTML).
     // Proxied to inject the User-Agent OpenContext requires.
     const url = `https://opencontext.org/sets/.json?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`;
@@ -417,7 +418,7 @@ export const NORTHWESTERN_ADAPTER = {
   color: { bg: "bg-purple-900", text: "text-purple-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const body = { query: { query_string: { query, default_operator: "AND" } }, size: pageSize, from: offset };
     const nuUrl = "https://api.dc.library.northwestern.edu/api/v2/search";
     // Pattern 3: try direct first (CORS unverified), fall back to proxy.
@@ -456,7 +457,7 @@ export const PRINCETON_DPUL_ADAPTER = {
   color: { bg: "bg-orange-800", text: "text-orange-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     // DPUL is Spotlight-on-Blacklight. Princeton has no CORS headers — proxy required.
     const url = `https://dpul.princeton.edu/catalog.json?q=${encodeURIComponent(query)}&per_page=${pageSize}&page=${page}`;
@@ -501,7 +502,7 @@ export const PANGAEA_ADAPTER = {
   color: { bg: "bg-teal-900", text: "text-teal-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     // panFMP field names — verified against rOpenSci pangaear docs.
     const body = {
       query: { query_string: { query } }, size: pageSize, from: offset,
@@ -541,7 +542,7 @@ export const OPENNEURO_ADAPTER = {
   color: { bg: "bg-violet-900", text: "text-violet-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const gqlQuery = `query PublicDatasets { datasets(first: 100, orderBy: { created: descending }) { edges { node { id created latestSnapshot { tag description { Name Authors DatasetDOI Acknowledgements } summary { modalities tasks } } } } } }`;
     const onUrl = "https://openneuro.org/crn/graphql";
     // Pattern 3: try direct first, fall back to proxy.
@@ -588,7 +589,7 @@ export const ENA_ADAPTER = {
   color: { bg: "bg-cyan-800", text: "text-cyan-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const fields = "study_accession,study_title,study_description,first_public,center_name,study_alias";
     const enaQuery = `study_title="*${query}*" OR study_description="*${query}*"`;
     const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=study&query=${encodeURIComponent(enaQuery)}&fields=${fields}&format=json&limit=${pageSize}&offset=${offset}`;
