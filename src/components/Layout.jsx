@@ -1,10 +1,9 @@
 import React from "react";
-import { ADAPTERS } from "../../adapters/index.js";
-import { THEMES } from "../../constants/themes.js";
+import { THEMES } from "../constants/themes.js";
 
 // ---------- Header ----------
 
-export function Header({ onLibrary, onHistory, onSettings, libraryCount, historyCount, activePanel }) {
+export function Header({ adapters, onLibrary, onHistory, onSettings, libraryCount, historyCount }) {
   const btn = (panel, label) => (
     <button
       onClick={() => (activePanel === panel ? onLibrary(null) : { library: onLibrary, history: onHistory, settings: onSettings }[panel](panel))}
@@ -38,7 +37,7 @@ export function Header({ onLibrary, onHistory, onSettings, libraryCount, history
           A meta-search across free, open-access scholarly databases. Citations ready to paste.
         </p>
         <div className="flex flex-wrap gap-2 mt-4">
-          {ADAPTERS.map(a => (
+          {adapters.map(a => (
             <span key={a.id} className={`mono-font text-[10px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-1`}>{a.name}</span>
           ))}
         </div>

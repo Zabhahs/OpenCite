@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { buildMLA, buildAPA, segmentsToPlain } from "../../lib/citations.js";
-import { truncate } from "../../lib/helpers.js";
+import { buildMLA, buildAPA, segmentsToPlain } from "../lib/citations.js";
+import { truncate } from "../lib/helpers.js";
 
 export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary }) {
   const mlaSegs = buildMLA(result);

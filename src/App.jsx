@@ -98,6 +98,7 @@ function OpenCITE() {
 
       <div className="relative max-w-4xl mx-auto px-6 py-10 md:py-16" style={{ zIndex: 2 }}>
         <Header
+          adapters={ADAPTERS}
           onLibrary={() => togglePanel("library")}
           onHistory={() => togglePanel("history")}
           onSettings={() => togglePanel("settings")}
