@@ -243,32 +243,20 @@ export const BDPI_ADAPTER = {
   contentType: ["textual", "manuscript", "visual", "primary-source"],
   color: { bg: "bg-yellow-800", text: "text-yellow-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
-    const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const url = `https://www.iberoamericadigital.net/BDPI/OpenSearch.do?Field=todos&text=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}&format=json`;
-    // Updated to proxiedFetch
-    const r = await proxiedFetch(url);
-    if (!r.ok) throw new Error(`BDPI ${r.status}`);
-    const text = await r.text();
-    const json = text.replace(/^[^{[]+/, "").replace(/[^}\]]+$/, "");
-    let data;
-    try { data = JSON.parse(json); } catch { throw new Error("BDPI returned non-JSON response"); }
-    const items = data.items || data.docs || [];
-    const total = data.totalResults || data.count || items.length;
-    const results = items.map((it, i) => ({
-      id: `bdpi-${it.id || `${offset}-${i}`}`, source: "BDPI",
-      title: it.title || it.titulo || "Sin título",
-      authors: Array.isArray(it.creator) ? it.creator : (it.autor ? [it.autor] : []),
-      year: String(it.date || it.fecha || "").match(/\d{4}/)?.[0] || "",
-      journal: "", publisher: it.publisher || it.institucion || "",
-      volume: "", issue: "", pages: "", doi: "",
-      url: it.link || it.url || "",
-      abstract: stripHtml(it.description || it.descripcion || ""),
-      isOA: true, type: "primary-source",
-      previewImage: it.thumbnail || it.image || ""
-    }));
-    return { results, hasMore: offset + results.length < total };
-  }
+  const offset = opts.offset || 0;
+  const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+
+  const r = await fetch(`/api/search/bdpi?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
+
+  if (!r.ok) throw new Error(`BDPI ${r.status}`);
+
+  const data = await r.json();
+
+  return {
+    results: data.results || [],
+    hasMore: offset + (data.results?.length || 0) < (data.total || 0)
+  };
+}
 };
 
 /* === 8. GALLICA (Updated with Proxy) === */
@@ -281,34 +269,20 @@ export const GALLICA_ADAPTER = {
   contentType: ["manuscript", "textual", "visual", "primary-source"],
   color: { bg: "bg-rose-900", text: "text-rose-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
-    const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const url = `https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=${encodeURIComponent('dc.any all "' + query + '"')}&startRecord=${offset + 1}&maximumRecords=${pageSize}&recordSchema=dc&mode=json`;
-    // Updated to proxiedFetch
-    const r = await proxiedFetch(url, { headers: { Accept: "application/json" } });
-    if (!r.ok) throw new Error(`Gallica ${r.status}`);
-    let data;
-    try { data = await r.json(); } catch { throw new Error("Gallica returned non-JSON (CORS may be blocking)"); }
-    const records = data?.srw?.records?.[0]?.record || [];
-    const total = parseInt(data?.srw?.numberOfRecords?.[0] || "0", 10) || 0;
-    const results = records.map((rec, i) => {
-      const dc = rec?.recordData?.[0]?.["oai_dc:dc"]?.[0] || {};
-      const ark = (dc["dc:identifier"] || []).find(s => typeof s === "string" && s.includes("ark:")) || "";
-      return {
-        id: `gallica-${ark || `${offset}-${i}`}`, source: "GALLICA",
-        title: (dc["dc:title"] || [""])[0] || "Untitled",
-        authors: (dc["dc:creator"] || []).filter(Boolean),
-        year: String((dc["dc:date"] || [""])[0] || "").match(/\d{4}/)?.[0] || "",
-        journal: "", publisher: "Bibliothèque nationale de France",
-        volume: "", issue: "", pages: "", doi: "",
-        url: ark || "",
-        abstract: stripHtml((dc["dc:description"] || [""])[0] || ""),
-        isOA: true, type: "primary-source",
-        previewImage: ark ? `${ark}.thumbnail` : ""
-      };
-    });
-    return { results, hasMore: offset + results.length < total };
-  }
+  const offset = opts.offset || 0;
+  const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+
+  const r = await fetch(`/api/search/gallica?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
+
+  if (!r.ok) throw new Error(`Gallica ${r.status}`);
+
+  const data = await r.json();
+
+  return {
+    results: data.results || [],
+    hasMore: offset + (data.results?.length || 0) < (data.total || 0)
+  };
+}
 };
 
 /* === 9. THAQALAYN === */
@@ -395,30 +369,20 @@ export const OPENCONTEXT_ADAPTER = {
   contentType: ["archaeological-data", "primary-source"],
   color: { bg: "bg-stone-600", text: "text-stone-50" }, needsKey: false,
   search: async (query, settings, opts = {}) => {
-    const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const url = `https://opencontext.org/sets/.json?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`;
-    const r = await proxiedFetch(url);
-    if (!r.ok) throw new Error(`Open Context ${r.status}`);
-    const data = await r.json();
-    const features = data.features || data.oc_api?.["has-results"] || [];
-    const total = parseInt(data?.totalResults || data?.["oc-api:total"] || "0", 10) || features.length;
-    const results = features.map((f, i) => {
-      const props = f.properties || {};
-      return {
-        id: `oc-${props.uri || `${offset}-${i}`}`, source: "OPENCONTEXT",
-        title: props.label || f.label || "Untitled",
-        authors: [], year: String(props.published || props["created"] || "").match(/\d{4}/)?.[0] || "",
-        journal: props["project label"] || props.project || "",
-        publisher: "Open Context", volume: "", issue: "", pages: "", doi: "",
-        url: props.uri || "",
-        abstract: stripHtml(props.description || props["dc-terms:abstract"] || ""),
-        isOA: true, type: "archaeological-data",
-        previewImage: props.thumbnail || ""
-      };
-    });
-    return { results, hasMore: offset + results.length < total };
-  }
+  const offset = opts.offset || 0;
+  const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+
+  const r = await fetch(`/api/search/opencontext?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
+
+  if (!r.ok) throw new Error(`Open Context ${r.status}`);
+
+  const data = await r.json();
+
+  return {
+    results: data.results || [],
+    hasMore: offset + (data.results?.length || 0) < (data.total || 0)
+  };
+}
 };
 
 /* === 12. NORTHWESTERN === */
