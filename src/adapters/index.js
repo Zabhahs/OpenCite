@@ -8,8 +8,8 @@ import { CROSSREF_ADAPTER } from "./core/crossref.js";
 import { CURATED_JOURNALS_ADAPTER } from "./core/curatedJournals.js";
 
 // Extension adapters
+import { SEMANTIC_SCHOLAR_ADAPTER } from "./extensions/semanticScholar.js";
 import {
-  SEMANTIC_SCHOLAR_ADAPTER,
   EUROPEANA_ADAPTER,
   MET_ADAPTER,
   SMITHSONIAN_ADAPTER,
