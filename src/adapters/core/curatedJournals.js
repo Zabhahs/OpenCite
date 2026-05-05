@@ -1,3 +1,4 @@
+import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { parseOpenAlexWork } from "../_shared/parseOpenAlex.js";
 

@@ -1,11 +1,6 @@
 import React from "react";
-import { TAG_VOCAB } from "../../constants/vocabulary.js";
-
-const REGION_ORDER = [
-  "global", "north-america", "europe", "latin-america",
-  "mena", "north-africa", "sahel", "west-africa", "sub-saharan-africa",
-  "central-asia", "south-asia", "east-asia"
-];
+import { TAG_VOCAB } from "../constants/vocabulary.js";
+import { REGION_ORDER } from "../constants/defaults.js";
 
 export function LauncherBlock({ query, launchers }) {
   const groups = {};

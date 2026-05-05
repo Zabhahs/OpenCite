@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { TAG_VOCAB } from "../../constants/vocabulary.js";
-import { DEFAULT_CURATED_JOURNALS } from "../../constants/defaults.js";
+import { TAG_VOCAB, ADAPTER_CATEGORY } from "../constants/vocabulary.js";
+import { DEFAULT_CURATED_JOURNALS, REGION_ORDER } from "../constants/defaults.js";
 import { ResultCard } from "./ResultCard.jsx";
-import { libraryKey } from "../../lib/library.js";
+import { libraryKey } from "../lib/library.js";
 
 // ---------- AddJournalForm ----------
 
@@ -40,11 +40,9 @@ export function AddJournalForm({ onAdd }) {
 
 // ---------- SourcesPanel ----------
 
-const REGION_ORDER = ["global","north-america","europe","latin-america","mena","north-africa","sahel","west-africa","sub-saharan-africa","central-asia","south-asia","east-asia"];
-
 export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
-  const core = adapters.filter(a => a.category === "core");
-  const extensions = adapters.filter(a => a.category === "extension");
+  const core = adapters.filter(a => a.category === ADAPTER_CATEGORY.CORE);
+  const extensions = adapters.filter(a => a.category === ADAPTER_CATEGORY.EXTENSION);
   const groups = {};
   extensions.forEach(a => {
     const region = a.region?.[0] || "global";

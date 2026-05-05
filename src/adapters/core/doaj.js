@@ -1,3 +1,4 @@
+import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
 
@@ -13,7 +14,7 @@ export const DOAJ_ADAPTER = {
   needsKey: false,
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? 3 : 5;
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://doaj.org/api/v3/search/articles/${encodeURIComponent(query)}?pageSize=${pageSize}&page=${page}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });

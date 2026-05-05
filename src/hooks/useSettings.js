@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DEFAULT_SETTINGS, DEFAULT_CURATED_JOURNALS } from "../constants/defaults.js";
+import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { ADAPTERS, isAdapterDefaultEnabled } from "../adapters/index.js";
 
 export function useSettings() {
@@ -58,7 +59,7 @@ export function useSettings() {
 
   const toggleAdapter = (adapterId) => {
     const adapter = ADAPTERS.find(a => a.id === adapterId);
-    if (!adapter || adapter.category === "core") return;
+    if (!adapter || adapter.category === ADAPTER_CATEGORY.CORE) return;
     save({ ...settings, enabledSources: { ...settings.enabledSources, [adapterId]: !isEnabled(adapter) } });
   };
 

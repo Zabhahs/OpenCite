@@ -1,3 +1,4 @@
+import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 
 export const SEMANTIC_SCHOLAR_ADAPTER = {
@@ -16,7 +17,7 @@ export const SEMANTIC_SCHOLAR_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.s2Key) throw new Error("Semantic Scholar requires an API key. Add yours in settings (⚙) — it's free but takes a few days for approval.");
     const offset = opts.offset || 0;
-    const limit = offset === 0 ? 3 : 5;
+    const limit = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const fields = "title,authors,year,venue,abstract,openAccessPdf,externalIds,journal";
     const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}&fields=${fields}`;
     const r = await fetch(url, { headers: { Accept: "application/json", "x-api-key": settings.s2Key } });
