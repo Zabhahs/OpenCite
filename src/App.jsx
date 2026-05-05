@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 // Hooks
 import { useTheme } from "./hooks/useTheme.js";
@@ -195,5 +196,10 @@ function OpenCITE() {
 
 // Context providers (AuthProvider, BillingProvider) are stubs — added in Phase 1.
 export default function App() {
-  return <OpenCITE />;
+  return (
+    <>
+      <OpenCITE />
+      <Analytics />
+    </>
+  );
 }
