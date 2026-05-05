@@ -1,128 +1,188 @@
 # OpenCITE
 
-A free, open-access scholarly meta-search. Returns top results from multiple databases — DOAJ, OpenAlex, Crossref, Europeana, your own curated journals list, and (optionally) Semantic Scholar — with MLA 9 and APA 7 citations ready to copy.
-
-Zero AI tokens. Each database is queried directly via its public API. Built to be self-hostable and extensible.
+**Free meta-search across open-access scholarly databases. Citations ready to paste.**
 
 > *"The only good is knowledge, Sekhandur. The only evil is ignorance."*
+
+OpenCITE searches multiple academic APIs in parallel and returns peer-reviewed results with MLA 9 and APA 7 citations formatted and ready to copy. No account required. No tracking. No paywall. Zero AI tokens per search — direct API calls only.
+
+Built for citizen scientists, citizen scholars, independent researchers, and anyone who needs credible sources without institutional access.
+
+---
+
+## Live
+
+**[opencite.app](https://citation.today)**
 
 ---
 
 ## Sources
 
-| Source | Coverage | Auth |
-|---|---|---|
-| **DOAJ** | 15,000+ peer-reviewed open-access journals, all disciplines | None |
-| **OpenAlex** | 250M+ scholarly works, OA-filtered | **Free key required** (since Feb 2026) |
-| **Crossref** | 130M+ records — DOI authority | Optional email (polite pool) |
-| **Europeana** | Cultural heritage, museums, primary sources | Free key required |
-| **Curated Journals** | User-defined list of trusted journals (uses OpenAlex backend) | Uses OpenAlex key |
-| **Semantic Scholar** | AI-curated, cross-disciplinary | Free key (optional, slow approval) |
-| **JSTOR** | Launcher (uses your own login, opens in new tab) | Your JSTOR account |
+### Core (always on)
+| Source | Coverage |
+|---|---|
+| [DOAJ](https://doaj.org) | Directory of Open Access Journals — peer-reviewed |
+| [OpenAlex](https://openalex.org) | 250M+ scholarly works, OA-filtered |
+| [Crossref](https://crossref.org) | DOI authority — 130M+ works |
+| Curated Journals | Your own hand-picked trusted sources, powered by OpenAlex |
+
+### Extensions (opt-in)
+| Source | Coverage |
+|---|---|
+| [Semantic Scholar](https://semanticscholar.org) | AI-curated, cross-disciplinary |
+| [Europeana](https://europeana.eu) | Cultural heritage, museums, primary sources |
+| [The Met](https://metmuseum.org) | 470,000+ artworks |
+| [Smithsonian](https://si.edu) | 11M+ records across 19 museums |
+| [DPLA](https://dp.la) | Digital Public Library of America — 50M+ items |
+| [Rijksmuseum](https://rijksmuseum.nl) | Dutch Golden Age, 700,000+ objects |
+| [Internet Archive](https://archive.org) | 42M+ texts |
+| [BDPI](https://www.iberoamericadigital.net) | 16 Iberoamerican national libraries |
+| [BnF Gallica](https://gallica.bnf.fr) | Bibliothèque nationale de France — 9M+ items |
+| [Thaqalayn](https://thaqalayn.net) | Comprehensive Shi'i hadith library |
+| [NCBI Entrez](https://ncbi.nlm.nih.gov) | PubMed — biomedical & life sciences |
+| [Open Context](https://opencontext.org) | Archaeological datasets |
+| [Northwestern Digital](https://dc.library.northwestern.edu) | Herskovits Library — West African MSS |
+| [Princeton DPUL](https://dpul.princeton.edu) | Islamic, Persian Sufi & Shi'i manuscripts |
+| [PANGAEA](https://pangaea.de) | Earth & environment data, archaeogenetic metadata |
+| [OpenNeuro](https://openneuro.org) | BIDS neuroimaging datasets |
+| [ENA](https://ebi.ac.uk/ena) | European Nucleotide Archive — ancient DNA |
+
+### External Launchers
+23 archives without queryable APIs — pre-filled search opens in a new tab, grouped by region. Includes JSTOR, Qatar Digital Library, OpenITI, British Library, HMML, and more.
 
 ---
 
-## Deploying to Vercel (no terminal required)
+## Features
 
-### 1. Create the GitHub repo
+- **Parallel search** — all enabled sources fire simultaneously, results stream in as they arrive
+- **MLA 9 + APA 7** — formatted citations on every result, one-click copy
+- **Saved library** — persist results across sessions, export as a full bibliography `.txt`
+- **Search history** — last 50 queries, re-run with one click
+- **Curated journals** — configure your own trusted ISSN list, searched via OpenAlex
+- **Theme switcher** — Tan, Blue-grey, Dark, Porphyry & Gold
+- **Load more** — paginate any source independently
+- **Image previews** — for cultural heritage and museum results
+- **Zero AI tokens** — every result comes directly from the source API
 
-1. Go to [github.com/new](https://github.com/new), name it whatever you like.
-2. **Don't** initialize with a README (you have one here).
-3. Once created, press the `.` (period) key on the repo page. This opens **github.dev**, a full VS Code editor in your browser.
+---
 
-### 2. Paste the files
+## Architecture
 
-In github.dev, recreate this folder structure:
+OpenCITE v.13 is a modular React application deployed on Vercel.
 
 ```
-opencite/
-├── .gitignore
-├── README.md
-├── index.html
-├── package.json
-├── vite.config.js
-├── public/
-│   ├── favicon.svg
-│   ├── opencite-linkedin-qr.jpeg
-│   └── robots.txt
-└── src/
-    ├── App.jsx
-    └── main.jsx
+src/
+├── App.jsx                    ← thin orchestrator (~200 lines)
+├── adapters/                  ← one file per source; registry + sanitize wrapper
+│   ├── _shared/               ← proxy, AbstractAdapter, OpenAlex parser
+│   ├── core/                  ← DOAJ, OpenAlex, Crossref, CuratedJournals
+│   ├── extensions/            ← 17 extension adapters
+│   └── index.js               ← ADAPTERS registry + runSearch()
+├── components/
+│   ├── layout/Layout.jsx      ← Header, ThemeStrip, Footer, ConnectCard
+│   ├── panels/Panels.jsx      ← Settings, Library, History, Sources panels
+│   ├── search/                ← ResultCard, SourceSection, SearchInput
+│   └── launchers/             ← LauncherBlock
+├── constants/                 ← themes, vocabulary, defaults
+├── contexts/                  ← SettingsContext (live); AuthContext, BillingContext (stubs)
+├── hooks/                     ← useSearch, useSettings, useLibrary, useHistory, useTheme
+├── launchers/                 ← 23 launcher definitions
+└── lib/                       ← citations, storage, history, library, helpers
 ```
 
-For each file: right-click in the file tree → New File → type the path → paste the contents from this project. For the QR image, drag-and-drop the file into the `public/` folder in github.dev.
+All search results pass through `AbstractAdapter.sanitize()` before reaching the UI — preventing `.trim()` runtime errors on inconsistent upstream fields.
 
-When all files are in place, click the Source Control icon (left sidebar), write a commit message, click the checkmark to commit & push.
+The `AuthContext` and `BillingContext` are wired into the provider tree as stubs. When monetisation phases ship, only those context files change — nothing else in the tree requires modification.
 
-### 3. Deploy with Vercel
+### CORS Proxy
 
-1. Go to [vercel.com](https://vercel.com), sign in with GitHub.
-2. Click "Add New" → "Project".
-3. Pick your repo, click "Import".
-4. Vercel auto-detects Vite. Don't change any settings. Click "Deploy".
-5. ~60 seconds later, you have a live URL.
+Several institutional archives block browser requests via CORS or require a specific `User-Agent`. A thin Vercel serverless function at `api/proxy.js` handles this transparently.
 
----
-
-## Customizing
-
-### Change the curated journals list
-
-Two ways:
-
-**Per-user (recommended):** Each visitor manages their own list via the ⚙ settings panel in the app. Lists save to their browser's `localStorage`.
-
-**Default list (for your deployment):** Edit `DEFAULT_CURATED_JOURNALS` near the top of `src/App.jsx`. This sets the starting list every new visitor sees.
-
-```js
-const DEFAULT_CURATED_JOURNALS = [
-  { name: "Journal Name", issn: "1234-5678" },
-  // ...
-];
-```
-
-### Add a new database source
-
-Each database is a self-contained adapter in `src/App.jsx`. To add one:
-
-1. Write a new adapter object following the shape of the existing ones.
-2. Push it into the `ADAPTERS` array.
-3. The UI auto-renders a section for it.
-
-Each adapter exports `{ id, name, tagline, color, search }` and optionally `{ needsKey, keyName, keyLabel, keyHelp }` if it requires a user-supplied API key.
-
-### Replace the LinkedIn connect card
-
-The collapsible "Connect with the maker" card lives near the bottom of `src/App.jsx`. Edit the URL, copy text, and replace `public/opencite-linkedin-qr.jpeg` with your own QR.
-
-### Custom domain
-
-In Vercel: Project → Settings → Domains → Add. Point your domain's DNS to Vercel.
+**Allowlisted domains:**
+`dpul.princeton.edu`, `ws.pangaea.de`, `opencontext.org`, `api.dc.library.northwestern.edu`, `openneuro.org`, `www.ebi.ac.uk`, `eutils.ncbi.nlm.nih.gov`
 
 ---
 
-## Tech notes
-
-- **Tailwind**: loaded via CDN (`cdn.tailwindcss.com`) in `index.html`. Fine for personal/light traffic; for high-traffic deployments, swap to a proper Tailwind install with PostCSS.
-- **Storage**: browser `localStorage`. Settings are per-device, never sent to any server.
-- **APIs**: DOAJ and Crossref are keyless. OpenAlex requires a free key as of February 2026 — register at [openalex.org/settings/api](https://openalex.org/settings/api). $1/day in free credits is plenty for personal use. Europeana requires a free key from [api.europeana.eu](https://api.europeana.eu/api/v2/apikey.html). Semantic Scholar is optional — request a key from [semanticscholar.org/product/api](https://www.semanticscholar.org/product/api#api-key-form).
-- **JSTOR**: launcher only — opens search in a new tab using the user's existing login.
-
----
-
-## Local development (optional)
-
-If you want to edit on your machine:
+## Local Development
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/shahbazyusuf/opencite
+cd opencite
 npm install
 npm run dev
 ```
 
-Open the URL it prints (usually `localhost:5173`).
+Requires Node 18+. No environment variables needed for core sources. Some extensions require free API keys — add them in the settings panel (⚙) at runtime.
+
+### API keys (all free)
+
+| Source | Where to get it |
+|---|---|
+| Europeana | [api.europeana.eu](https://api.europeana.eu) |
+| OpenAlex | [openalex.org/settings/api](https://openalex.org/settings/api) — optional |
+| Semantic Scholar | [semanticscholar.org/product/api](https://semanticscholar.org/product/api) |
+| Smithsonian | [api.data.gov/signup](https://api.data.gov/signup) |
+| DPLA | Email pro@dp.la |
+| Rijksmuseum | [rijksmuseum.nl/rijksstudio](https://www.rijksmuseum.nl/en/rijksstudio) |
 
 ---
 
-Built by [Shahbaz Yusuf](https://www.linkedin.com/in/shahbaz-yusuf/).
+## Adding a New Source
+
+1. Create a file in `src/adapters/extensions/` — follow the shape of any existing adapter
+2. Export it from `src/adapters/extensions/index.js`
+3. Add it to the `ADAPTERS` array in `src/adapters/index.js`
+
+The UI auto-renders a section for it. No other changes needed.
+
+Each adapter must return `{ results: UnifiedResult[], hasMore: boolean }`. Every result passes through `AbstractAdapter.sanitize()` automatically — no need to handle null fields defensively inside the adapter itself.
+
+If the source is CORS-blocked, use `proxiedFetch()` from `src/adapters/_shared/proxy.js` and add the domain to the allowlist in `api/proxy.js`.
+
+---
+
+## Roadmap
+
+OpenCITE is the foundation for **citation.today** — a tiered platform for human and autonomous agent access to scholarly search.
+
+| Phase | Status | Description |
+|---|---|---|
+| 0 — Adapter stability | ✅ Complete | All sources live, CORS proxy, field mapping fixes |
+| 1 — Identity | 🔲 Next | Postgres schema, NextAuth (OIDC), SIWE (Base L2 agents) |
+| 2 — Rate limiting | 🔲 | Vercel KV leaky-bucket, credit deduction in `runSearch()` |
+| 3 — Human billing | 🔲 | Stripe — Starter $2.99/mo, Pro $9.99/mo |
+| 4 — Agent billing | 🔲 | Base L2 micropayments via Chainlink price feeds |
+| 5 — Telemetry | 🔲 | KV-buffered logs, Postgres JSONB batch writes |
+| 6 — Native API | 🔲 | `/api/search` route, API keys, OpenAPI spec, iOS/Android |
+
+---
+
+## Contributing
+
+Issues and PRs welcome. If you're adding a new scholarly source, please verify:
+- The API is publicly accessible without auth (or document the key requirement)
+- CORS behaviour in a browser environment
+- The correct field names from the upstream response (don't assume standard naming)
+
+---
+
+## Built by
+
+**Shahbaz Yusuf** — [LinkedIn](https://www.linkedin.com/in/shahbaz-yusuf/)
+
+Connect with me - happy to chat anytime.
+---
+
+## License
+
+OpenCITE Source-Available License v1.0 — Copyright (c) 2026 Shahbaz Yusuf.
+
+Free to use, study, and modify for personal, academic, or internal research purposes. The following are strictly prohibited:
+
+- Hosting this software or any derivative as a service for third parties
+- Any commercial use, direct or indirect
+- Circumventing, removing, or weakening any rate-limiting mechanism
+
+For commercial licensing, contact Shahbaz Yusuf: shahbazyusuf@outlook.com
+
+See [LICENSE](./LICENSE) for the full terms.

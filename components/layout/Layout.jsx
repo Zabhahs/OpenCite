@@ -17,7 +17,7 @@ export function Header({ onLibrary, onHistory, onSettings, libraryCount, history
   return (
     <header className="mb-10 md:mb-14">
       <div className="flex items-baseline justify-between mb-2">
-        <span className="mono-font text-xs uppercase tracking-[0.3em] text-stone-600">v.12 / opencite</span>
+        <span className="mono-font text-xs uppercase tracking-[0.3em] text-stone-600">v.13 / opencite</span>
         <div className="flex items-center gap-4 flex-wrap">
           <button onClick={onLibrary} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ★ library{libraryCount > 0 ? ` (${libraryCount})` : ""}
