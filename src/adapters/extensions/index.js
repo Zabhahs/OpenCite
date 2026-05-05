@@ -496,12 +496,15 @@ export const PANGAEA_ADAPTER = {
       return {
         id: `pangaea-${h._id || `${offset}-${i}`}`, source: "PANGAEA",
         title: s["sf-authortitle"] || "Untitled",
-        authors: (s["agg-author"] || []).filter(Boolean),
+        authors: Array.isArray(s["agg-author"]) ? s["agg-author"].filter(Boolean) : (s["agg-author"] ? [s["agg-author"]] : []),
         year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
         journal: "", publisher: "PANGAEA",
         volume: "", issue: "", pages: "",
-        doi, url: url || (doi ? `https://doi.org/${doi}` : ""),
-        abstract: stripHtml(s.abstract || ""), isOA: true, type: "genomic-data"
+        doi: doi || "", 
+        url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
+        abstract: stripHtml(s.abstract || s["sf-authortitle"] || "No description available."), 
+        isOA: true, 
+        type: "genomic-data"
       };
     });
     return { results, hasMore: offset + hits.length < total };
