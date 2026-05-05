@@ -257,7 +257,6 @@ export const BDPI_ADAPTER = {
     hasMore: offset + (data.results?.length || 0) < (data.total || 0)
   };
 }
-  }
 };
 
 /* === 8. GALLICA (Updated with Proxy) === */
@@ -284,7 +283,6 @@ export const GALLICA_ADAPTER = {
     hasMore: offset + (data.results?.length || 0) < (data.total || 0)
   };
 }
-    }
 };
 
 /* === 9. THAQALAYN === */
@@ -385,7 +383,6 @@ export const OPENCONTEXT_ADAPTER = {
     hasMore: offset + (data.results?.length || 0) < (data.total || 0)
   };
 }
-    }
 };
 
 /* === 12. NORTHWESTERN === */
