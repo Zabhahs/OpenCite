@@ -469,6 +469,7 @@ export const PRINCETON_DPUL_ADAPTER = {
   }
 };
 
+JavaScript
 /* === 14. PANGAEA === */
 export const PANGAEA_ADAPTER = {
   id: "PANGAEA", name: "PANGAEA",
@@ -490,39 +491,36 @@ export const PANGAEA_ADAPTER = {
     const hits = data.hits?.hits || [];
     const total = data.hits?.total?.value ?? data.hits?.total ?? hits.length;
     const results = hits.map((h, i) => {
-  const s = h._source || {};
-  const url = s.URI || "";
-  const doi = url.match(/10\.\d+\/[^\s]+$/)?.[0] || "";
-  
-  // 1. Title Cleanup: Reject hashes/IDs and fallback to a descriptive name
-  const rawTitle = s["sf-authortitle"] || "";
-  const isGibberish = /\d[A-Z]{5,}/.test(rawTitle) || rawTitle.length > 150;
-  const cleanTitle = isGibberish ? "Environmental Research Dataset" : rawTitle;
+      const s = h._source || {};
+      const url = s.URI || "";
+      const doi = url.match(/10\.\d+\/[^\s]+$/)?.[0] || "";
+      
+      // Title logic: reject hashes/long IDs
+      const rawTitle = s["sf-authortitle"] || "";
+      const isGibberish = /\d[A-Z]{5,}/.test(rawTitle) || rawTitle.length > 150;
+      const cleanTitle = isGibberish ? "Environmental Research Dataset" : rawTitle;
 
-  // 2. Author Cleanup: Preserve "Last, First" but fix citations
-  const cleanAuthors = (Array.isArray(s["agg-author"]) ? s["agg-author"] : [s["agg-author"]])
-    .filter(Boolean)
-    .map(a => a.includes(',') ? a : a.split(' ').reverse().join(', '));
+      // Author logic: safe array handling and formatting
+      const rawAuthors = s["agg-author"];
+      const cleanAuthors = (Array.isArray(rawAuthors) ? rawAuthors : (rawAuthors ? [rawAuthors] : []))
+        .filter(Boolean)
+        .map(a => a.includes(',') ? a : a.split(' ').reverse().join(', '));
 
-  return {
-    id: `pangaea-${h._id || `${offset}-${i}`}`, 
-    source: "PANGAEA",
-    title: cleanTitle,
-    authors: cleanAuthors,
-    year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
-    journal: "", 
-    publisher: "PANGAEA",
-    volume: "", issue: "", pages: "",
-    doi: doi, 
-    url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
-    // 3. Abstract Cleanup: Strip the encoded hash if it matches the abstract field
-    abstract: (s.abstract && !/\d[A-Z]{5,}/.test(s.abstract)) 
-      ? stripHtml(s.abstract) 
-      : "Summary: Field-based observational data hosted by the PANGAEA repository.",
-    isOA: true, 
-    type: "genomic-data"
-  };
-});
+      return {
+        id: `pangaea-${h._id || `${offset}-${i}`}`, source: "PANGAEA",
+        title: cleanTitle,
+        authors: cleanAuthors,
+        year: s["agg-pubYear"] ? String(s["agg-pubYear"]) : "",
+        journal: "", publisher: "PANGAEA",
+        volume: "", issue: "", pages: "",
+        doi: doi, url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
+        abstract: (s.abstract && !/\d[A-Z]{5,}/.test(s.abstract)) ? stripHtml(s.abstract) : "Summary: Field-based observational data hosted by the PANGAEA repository.",
+        isOA: true, type: "genomic-data"
+      };
+    });
+    return { results, hasMore: offset + hits.length < total };
+  }
+};
 
 /* === 15. OPENNEURO === */
 export const OPENNEURO_ADAPTER = {
