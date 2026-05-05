@@ -469,7 +469,6 @@ export const PRINCETON_DPUL_ADAPTER = {
   }
 };
 
-JavaScript
 /* === 14. PANGAEA === */
 export const PANGAEA_ADAPTER = {
   id: "PANGAEA", name: "PANGAEA",
