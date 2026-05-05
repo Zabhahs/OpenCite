@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Hooks
 import { useTheme } from "./hooks/useTheme.js";
@@ -200,6 +201,7 @@ export default function App() {
     <>
       <OpenCITE />
       <Analytics />
+      <SpeedInsights />
     </>
   );
 }
