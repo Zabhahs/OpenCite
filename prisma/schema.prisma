@@ -1,0 +1,88 @@
+// OpenCITE — Prisma Schema
+// Provider: Supabase (PostgreSQL)
+// Auth adapter: @auth/prisma-adapter (Auth.js v5)
+// Phase 4 hook: agent_wallet_address (SIWE / Base L2)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pgBouncer pooler — runtime
+  directUrl = env("DIRECT_URL")     // direct connection — migrations only
+}
+
+// ─── Core user record ────────────────────────────────────────────────────────
+
+model User {
+  internal_id          String    @id @default(uuid())
+  email                String?   @unique
+  emailVerified        DateTime?
+  name                 String?
+  image                String?
+
+  // Phase 3 hook — Stripe billing
+  stripe_customer_id   String?   @unique
+
+  // Phase 4 hook — SIWE / Base L2 autonomous agent auth
+  agent_wallet_address String?   @unique
+
+  // Credits: seeded at 10 on signup via @default
+  total_credits        Decimal   @default(10) @db.Decimal(12, 4)
+
+  // Flexible demographic / preference blob (analytics, Phase 5)
+  demographics         Json?
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Auth.js required relations
+  accounts             Account[]
+  sessions             Session[]
+
+  @@map("users")
+}
+
+// ─── Auth.js required models ─────────────────────────────────────────────────
+// Do not rename fields — @auth/prisma-adapter expects this exact shape.
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [internal_id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [internal_id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

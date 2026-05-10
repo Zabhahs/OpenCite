@@ -1,32 +1,59 @@
-import React, { createContext, useContext } from "react";
+// OpenCITE — AuthContext
+// Replaces the Phase 0 stub with a live session backed by Auth.js v5 + Supabase.
+//
+// Phase 4 hook: SIWE / Base L2 wallet auth — marked below.
+// BillingContext reads: user?.id (internal_id UUID)
+// runSearch() reads: nothing directly — BillingContext mediates credits.
 
-/**
- * AuthContext — Phase 1 hook point.
- *
- * Currently a stub. When Phase 1 (Identity) ships:
- *   - Replace the stub value with a real NextAuth.js session for OIDC users
- *   - Add SIWE (Sign-In with Ethereum) for autonomous agent actors
- *   - Both paths map to the same internal_id in Postgres
- *
- * Nothing else in the tree needs to change — consumers already call useAuth().
- */
+import { createContext, useContext, useEffect, useState } from "react";
+import { getSession, signIn, signOut } from "../lib/auth-client";
+
+// ─── Context shape ────────────────────────────────────────────────────────────
+
 const AuthContext = createContext({
-  user: null,
-  isAgent: false,
-  signIn: () => Promise.resolve(),
-  signOut: () => Promise.resolve(),
+  user: null,               // { id, name, email, image } | null
+  status: "loading",        // "loading" | "authenticated" | "unauthenticated"
+  signIn,                   // (provider) => void
+  signOut,                  // () => void
 });
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }) {
-  // Phase 1: replace this stub with NextAuth SessionProvider + SIWE resolver
-  const value = {
-    user: null,
-    isAgent: false,
-    signIn: () => Promise.resolve(),
-    signOut: () => Promise.resolve(),
-  };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const [user, setUser] = useState(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getSession().then((session) => {
+      if (cancelled) return;
+      if (session?.user) {
+        setUser(session.user);
+        setStatus("authenticated");
+      } else {
+        setUser(null);
+        setStatus("unauthenticated");
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── PHASE 4 HOOK — SIWE / Base L2 ──────────────────────────────────────────
+  // Add wallet connection state here.
+  // On successful SIWE verification, call getSession() to sync internal_id.
+  // Both OIDC and SIWE sessions resolve to the same user.id (internal_id UUID).
+  // ── END PHASE 4 HOOK ───────────────────────────────────────────────────────
+
+  return (
+    <AuthContext.Provider value={{ user, status, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
   return useContext(AuthContext);

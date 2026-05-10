@@ -12,7 +12,11 @@ const ALLOWED_DOMAINS = [
   'eutils.ncbi.nlm.nih.gov',
   'api.dp.la',
   'gallica.bnf.fr',
-  'www.iberoamericadigital.net' 
+  'www.iberoamericadigital.net',
+  // Phase 1 — OIDC provider discovery endpoints
+  'accounts.google.com',
+  'appleid.apple.com',
+  'login.microsoftonline.com',
 ];
 
 export default async function handler(req) {
