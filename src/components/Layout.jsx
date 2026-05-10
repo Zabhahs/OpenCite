@@ -186,50 +186,96 @@ export function Footer() {
   );
 }
 
+// ---------- KofiOverlay ----------
+// Injects the Ko-fi floating chat overlay script once on mount.
+
+export function KofiOverlay() {
+  useEffect(() => {
+    if (document.getElementById("kofi-overlay-script")) return; // already loaded
+    const script = document.createElement("script");
+    script.id = "kofi-overlay-script";
+    script.src = "https://storage.ko-fi.com/cdn/scripts/overlay-widget.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.kofiWidgetOverlay) {
+        window.kofiWidgetOverlay.draw("313mitra", {
+          "type": "floating-chat",
+          "floating-chat.donateButton.text": "Support me",
+          "floating-chat.donateButton.background-color": "#00b9fe",
+          "floating-chat.donateButton.text-color": "#fff",
+        });
+      }
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  return null; // renders nothing — overlay is injected into body by the widget
+}
+
 // ---------- ConnectCard ----------
 
 export function ConnectCard() {
   return (
     <section className="mt-16">
-      <details className="group border-2 border-stone-900 bg-amber-50/40 transition">
-        <summary className="cursor-pointer list-none flex items-center justify-between p-5 hover:bg-amber-100/40 transition">
-          <div>
-            <h3 className="display-font text-xl md:text-2xl font-bold text-stone-900 leading-tight">Connect with the maker</h3>
-            <p className="display-font italic text-sm text-stone-600 mt-1">Building OpenCITE and other tools — let's talk.</p>
-          </div>
-          <span className="mono-font text-xs uppercase tracking-widest text-stone-700 ml-4 transition group-open:rotate-180 inline-block">▾</span>
-        </summary>
-        <div className="border-t border-stone-300 p-5 md:p-6 grid md:grid-cols-[1fr_auto] gap-6 items-center">
-          <div>
-            <p className="display-font text-stone-800 mb-3 leading-relaxed">
-              OpenCITE is built by Shahbaz Yusuf — open to collaboration, feature ideas, or just a hello from a fellow researcher or builder.
-            </p>
-            <p className="display-font italic text-stone-600 mb-5 leading-relaxed text-sm">
-              If this tool saved you time, the kindest thing you can do is connect — building in public is more fun with company.
-            </p>
-            {/* Ko-fi — above LinkedIn */}
-            <a
-              href="https://ko-fi.com/L3L31YYTKM"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mono-font text-xs uppercase tracking-widest px-5 py-3 mb-3 transition hover:opacity-80"
-              style={{ backgroundColor: "#72a4f2", color: "#ffffff" }}
+      <div className="grid md:grid-cols-2 gap-4">
+
+        {/* Ko-fi card */}
+        <a
+          href="https://ko-fi.com/L3L31YYTKM"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block p-6 border-2 border-stone-200 hover:border-[#00b9fe] bg-white hover:bg-blue-50/30 transition-all duration-200 no-underline"
+        >
+          <div className="flex items-start gap-4">
+            <div
+              className="flex-shrink-0 w-11 h-11 flex items-center justify-center text-2xl rounded-sm"
+              style={{ backgroundColor: "#00b9fe" }}
             >
-              ☕ support on ko-fi ↗
-            </a>
-            <br />
-            <a href="https://www.linkedin.com/in/shahbaz-yusuf/" target="_blank" rel="noopener noreferrer"
-              className="inline-block mono-font text-xs uppercase tracking-widest bg-stone-900 text-amber-50 px-5 py-3 hover:bg-red-900 transition">
-              Connect on LinkedIn ↗
-            </a>
+              ☕
+            </div>
+            <div>
+              <h3 className="display-font text-base font-bold text-stone-900 mb-1 group-hover:text-[#00b9fe] transition-colors">
+                Support on Ko-fi
+              </h3>
+              <p className="display-font italic text-sm text-stone-600 leading-snug mb-3">
+                Support dev &amp; hosting costs!
+              </p>
+              <span
+                className="inline-block mono-font text-[10px] uppercase tracking-widest px-3 py-1.5 transition group-hover:opacity-90"
+                style={{ backgroundColor: "#00b9fe", color: "#fff" }}
+              >
+                ☕ buy a coffee ↗
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
-            <img src="/opencite-linkedin-qr.jpeg" alt="QR code linking to Shahbaz Yusuf's LinkedIn profile"
-              className="w-36 h-36 md:w-40 md:h-40 border-2 border-stone-900 bg-white p-1" />
-            <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 mt-2">scan to connect</p>
+        </a>
+
+        {/* LinkedIn card */}
+        <a
+          href="https://www.linkedin.com/in/shahbaz-yusuf/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block p-6 border-2 border-stone-200 hover:border-stone-900 bg-white hover:bg-stone-50 transition-all duration-200 no-underline"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-11 h-11 flex items-center justify-center text-xl bg-[#0077b5] text-white rounded-sm">
+              in
+            </div>
+            <div>
+              <h3 className="display-font text-base font-bold text-stone-900 mb-1 group-hover:text-[#0077b5] transition-colors">
+                Shahbaz Yusuf
+              </h3>
+              <p className="display-font italic text-sm text-stone-600 leading-snug mb-3">
+                Connect with the creator on LinkedIn!
+              </p>
+              <span className="inline-block mono-font text-[10px] uppercase tracking-widest bg-stone-900 text-amber-50 px-3 py-1.5 group-hover:bg-[#0077b5] transition-colors">
+                connect ↗
+              </span>
+            </div>
           </div>
-        </div>
-      </details>
+        </a>
+
+      </div>
     </section>
   );
 }

@@ -18,7 +18,7 @@ import { HISTORY_MAX } from "./constants/defaults.js";
 import { SearchInput } from "./components/SearchInput.jsx";
 import { SourceSection } from "./components/SourceSection.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
-import { Header, Footer, ConnectCard, ThemeStrip } from "./components/Layout.jsx";
+import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
 
 /* ============================================================================
@@ -199,6 +199,7 @@ function OpenCITE() {
 export default function App() {
   return (
     <>
+      <KofiOverlay />
       <OpenCITE />
       <Analytics />
       <SpeedInsights />
