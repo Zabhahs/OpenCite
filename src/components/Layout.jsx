@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { THEMES } from "../constants/themes.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { APP_VERSION, APP_NAME } from "../constants/app.js";
 
 // ---------- AuthButton + SyncTooltip ----------
 
@@ -18,7 +19,6 @@ function AuthButton() {
   const [tooltip, setTooltip] = useState(false);
   const ref = useRef(null);
 
-  // Show tooltip once for unauthenticated users
   useEffect(() => {
     if (status === "unauthenticated" && !localStorage.getItem(TOOLTIP_KEY)) {
       const t = setTimeout(() => setTooltip(true), 3000);
@@ -26,7 +26,6 @@ function AuthButton() {
     }
   }, [status]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -43,14 +42,13 @@ function AuthButton() {
 
   const handleOk = () => {
     dismissTooltip();
-    setOpen(true);  // open the sign-in provider dropdown
+    setOpen(true);
   };
 
   if (status === "loading") return null;
 
   const navBtn = "mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition";
 
-  // ── Signed in ──────────────────────────────────────────────────────────────
   if (status === "authenticated") {
     const firstName = (user.name ?? "").split(" ")[0] || "user";
     return (
@@ -72,14 +70,12 @@ function AuthButton() {
     );
   }
 
-  // ── Signed out ─────────────────────────────────────────────────────────────
   return (
     <div className="relative" ref={ref}>
       <button onClick={() => { dismissTooltip(); setOpen(o => !o); }} className={navBtn}>
         ↳ sign in
       </button>
 
-      {/* Sync tooltip — shown once, dismissed via OK or direct sign-in click */}
       {tooltip && !open && (
         <div className="absolute right-0 top-full mt-2 z-50 bg-white border-2 border-stone-900 w-[260px] p-4 shadow-sm">
           <p className="display-font text-sm text-stone-800 leading-snug mb-3">
@@ -94,7 +90,6 @@ function AuthButton() {
         </div>
       )}
 
-      {/* Provider dropdown */}
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 bg-white border-2 border-stone-900 min-w-[140px]">
           {PROVIDERS.map(p => (
@@ -127,7 +122,9 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, libraryCoun
   return (
     <header className="mb-10 md:mb-14">
       <div className="flex items-baseline justify-between mb-2">
-        <span className="mono-font text-xs uppercase tracking-[0.3em] text-stone-600">v.13 / opencite</span>
+        <span className="mono-font text-xs uppercase tracking-[0.3em] text-stone-600">
+          {APP_VERSION} / {APP_NAME.toLowerCase()}
+        </span>
         <div className="flex items-center gap-4 flex-wrap">
           <button onClick={onLibrary} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ★ library{libraryCount > 0 ? ` (${libraryCount})` : ""}
@@ -143,7 +140,7 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, libraryCoun
       </div>
       <div className="border-t-2 border-stone-900 pt-6">
         <h1 className="display-font text-5xl md:text-7xl font-black leading-none text-stone-900 mb-3" style={{ letterSpacing: "-0.02em" }}>
-          OpenCITE
+          {APP_NAME}
         </h1>
         <p className="display-font italic text-lg md:text-xl text-stone-700 max-w-xl mb-3">
           A meta-search across free, open-access scholarly databases. Citations ready to paste.
@@ -187,11 +184,10 @@ export function Footer() {
 }
 
 // ---------- KofiOverlay ----------
-// Injects the Ko-fi floating chat overlay script once on mount.
 
 export function KofiOverlay() {
   useEffect(() => {
-    if (document.getElementById("kofi-overlay-script")) return; // already loaded
+    if (document.getElementById("kofi-overlay-script")) return;
     const script = document.createElement("script");
     script.id = "kofi-overlay-script";
     script.src = "https://storage.ko-fi.com/cdn/scripts/overlay-widget.js";
@@ -209,7 +205,7 @@ export function KofiOverlay() {
     document.body.appendChild(script);
   }, []);
 
-  return null; // renders nothing — overlay is injected into body by the widget
+  return null;
 }
 
 // ---------- ConnectCard ----------
@@ -219,7 +215,6 @@ export function ConnectCard() {
     <section className="mt-16">
       <div className="grid md:grid-cols-2 gap-4">
 
-        {/* Ko-fi card */}
         <a
           href="https://ko-fi.com/L3L31YYTKM"
           target="_blank"
@@ -250,7 +245,6 @@ export function ConnectCard() {
           </div>
         </a>
 
-        {/* LinkedIn card */}
         <a
           href="https://www.linkedin.com/in/shahbaz-yusuf/"
           target="_blank"

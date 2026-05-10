@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { buildMLA, buildAPA, segmentsToPlain } from "../lib/citations.js";
+import { buildMLA, buildAPA, segmentsToPlain, exportAs } from "../lib/citations.js";
 import { truncate } from "../lib/helpers.js";
 
 export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary }) {
@@ -69,6 +69,7 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
       )}
 
       <div className="bg-white border border-stone-300 p-3 space-y-3">
+        {/* MLA 9 + APA 7 — unchanged */}
         {[["MLA 9", mlaSegs, segmentsToPlain(mlaSegs), "mla"], ["APA 7", apaSegs, segmentsToPlain(apaSegs), "apa"]].map(([label, segs, plain, style], idx) => (
           <div key={style} className={idx > 0 ? "pt-2 border-t border-stone-200" : ""}>
             <div className="flex items-center justify-between mb-1">
@@ -83,6 +84,24 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
             </p>
           </div>
         ))}
+
+        {/* Export formats — BibTeX, RIS, CSL-JSON */}
+        <div className="pt-2 border-t border-stone-200">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="mono-font text-[10px] uppercase tracking-widest text-stone-500">Export as</span>
+            <div className="flex gap-4">
+              {[["BibTeX", "bibtex"], ["RIS", "ris"], ["CSL-JSON", "csl-json"]].map(([label, fmt]) => (
+                <button
+                  key={fmt}
+                  onClick={() => onCopy(exportAs(result, fmt), cardId, fmt)}
+                  className="mono-font text-[10px] uppercase tracking-widest text-stone-500 hover:text-red-900 transition"
+                >
+                  {copied.id === cardId && copied.style === fmt ? "✓" : label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </article>
   );
