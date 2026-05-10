@@ -222,7 +222,8 @@ Injects browser UA (Chrome/Windows) for legacy scholarly APIs. Adds `Access-Cont
 2. **`components/Panels.jsx`** and **`components/Layout.jsx`** — barrel files. Baazijan has accepted. Do not split unless asked.
 3. **No `prisma migrate` history** — Phase 1 schema applied directly via Supabase SQL Editor (fresh instance, no migration files in repo). Begin using `prisma migrate dev` from Phase 2 onwards for incremental schema changes.
 4. **No `postinstall` script yet** — if Vercel deploy fails with `PrismaClient not found`, add `"postinstall": "prisma generate"` to `package.json` scripts.
-5. **Google-only auth at launch** — Apple and Microsoft providers are implemented but commented out in `[...auth].js`. Re-enable by uncommenting providers, adding env vars to Vercel, and registering callback URIs in respective developer consoles.
+5. **`AuthProvider` must wrap `App` root** — `useAuth()` returns `status: "loading"` permanently without it, silently hiding `AuthButton`. Always confirm `<AuthProvider>` wraps the component tree in `App.jsx` before debugging auth UI.
+6. **Google-only auth at launch** — Apple and Microsoft providers are implemented but commented out in `[...auth].js`. Re-enable by uncommenting providers, adding env vars to Vercel, and registering callback URIs in respective developer consoles.
 6. **OAuth is free** — Google OAuth has no cost for standard sign-in use at any scale.
 
 ---

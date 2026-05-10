@@ -1,5 +1,6 @@
 import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { AbstractAdapter } from "./_shared/base.js";
+import { normalizeRecord, createDedupMap } from "./_shared/normalize.js";
 
 // Core adapters
 import { DOAJ_ADAPTER } from "./core/doaj.js";
@@ -70,19 +71,38 @@ export const isAdapterDefaultEnabled = (adapter) =>
 /**
  * runSearch — registry wrapper around adapter.search().
  *
- * This is the single chokepoint for all upstream data.
- * Phase 2 (rate limiting): call BillingContext.deduct() here before returning.
- * Phase 5 (telemetry): log query + source here for KV buffering.
+ * Pipeline (in order):
+ *   1. adapter.search()          — raw upstream fetch
+ *   2. AbstractAdapter.sanitize() — null safety, UnifiedResult contract
+ *   3. normalizeRecord()          — NCR enforcement, type canonicalization,
+ *                                   author parsing, request-scoped dedup
  *
- * Sanitize runs on every result via AbstractAdapter.sanitize() to enforce the
- * UnifiedResult contract and prevent .trim() runtime errors on bad upstream data.
+ * Single chokepoint for all upstream data.
+ * Phase 2 (rate limiting): KV cache check/write goes here — see hook comments.
+ * Phase 2 (billing):       BillingContext.deduct() goes here after KV check.
+ * Phase 5 (telemetry):     log query + adapterKey here for KV buffering.
  */
 export const runSearch = async (adapter, query, settings, opts = {}) => {
+  // PHASE 2 HOOK — KV cache check (slot before upstream fetch)
+  // const cacheKey = `opencite:${adapterKey}:${sha1(query)}`;
+  // const cached = await kv.get(cacheKey);
+  // if (cached) return JSON.parse(cached);
+
+  const adapterKey = adapter.id || adapter.name || "unknown";
+  const dedupMap = createDedupMap();
+
   const raw = await adapter.search(query, settings, opts);
-  const results = Array.isArray(raw)
-    ? raw.map(AbstractAdapter.sanitize)
-    : (raw.results || []).map(AbstractAdapter.sanitize);
+  const rawResults = Array.isArray(raw) ? raw : (raw.results || []);
   const hasMore = Array.isArray(raw) ? false : !!raw.hasMore;
+
+  const results = rawResults
+    .map(AbstractAdapter.sanitize)
+    .map((r) => normalizeRecord(r, adapterKey, dedupMap))
+    .filter(Boolean); // null = duplicate within this request — drop it
+
+  // PHASE 2 HOOK — KV cache write (slot after results built)
+  // await kv.set(cacheKey, JSON.stringify({ results, hasMore }), { ex: 300 });
+
   return { results, hasMore };
 };
 

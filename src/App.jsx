@@ -21,6 +21,9 @@ import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
 
+// Contexts
+import { AuthProvider } from "./contexts/AuthContext.jsx";
+
 /* ============================================================================
    App.jsx — thin orchestrator.
    All business logic lives in hooks/. All UI lives in components/.
@@ -195,14 +198,13 @@ function OpenCITE() {
   );
 }
 
-// Context providers (AuthProvider, BillingProvider) are stubs — added in Phase 1.
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <KofiOverlay />
       <OpenCITE />
       <Analytics />
       <SpeedInsights />
-    </>
+    </AuthProvider>
   );
 }
