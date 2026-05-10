@@ -483,7 +483,6 @@ export const PANGAEA_ADAPTER = {
     const body = {
       query: { query_string: { query } }, size: pageSize, from: offset,
       _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract"]
-	  return { results, hasMore: offset + results.length < total };
     };
     const r = await proxiedFetch("https://ws.pangaea.de/es/pangaea/panmd/_search", { method: "POST", body: JSON.stringify(body) });
     if (!r.ok) throw new Error(`PANGAEA ${r.status}`);
@@ -520,6 +519,7 @@ export const PANGAEA_ADAPTER = {
     isOA: true, type: "genomic-data"
   };
 });
+    return { results, hasMore: offset + results.length < total };
   }
 };
 
