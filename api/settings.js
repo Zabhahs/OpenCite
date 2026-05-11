@@ -9,6 +9,8 @@
 //
 // GET  /api/settings  → decrypt and return settings object
 // POST /api/settings  → encrypt and upsert settings object
+//
+// FIX v.16: replaced Access-Control-Allow-Origin: * with origin-aware CORS.
 
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { PrismaClient } from "@prisma/client";
@@ -48,12 +50,31 @@ function decrypt(blob) {
   return JSON.parse(plain);
 }
 
+// ── Trusted origins for CORS ──────────────────────────────────────────────────
+
+const ALLOWED_ORIGINS = [
+  "https://citation.today",
+  "https://opencite.space",
+];
+
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(".vercel.app"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+}
+
 // ── Auth session helper ───────────────────────────────────────────────────────
 
 async function getSession(req) {
-  const url = new URL(req.url ?? `http://localhost${req.url}`, "http://localhost");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const sessionUrl = `${protocol}://${host}/api/auth/session`;
   try {
-    const res = await fetch(`${url.origin}/api/auth/session`, {
+    const res = await fetch(sessionUrl, {
       headers: { cookie: req.headers.cookie ?? "" },
     });
     const data = await res.json();
@@ -66,7 +87,7 @@ async function getSession(req) {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  setCorsHeaders(req, res);
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(204).end();

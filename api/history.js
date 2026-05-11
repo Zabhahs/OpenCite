@@ -6,6 +6,9 @@
 // GET    /api/history          → load all entries for user (ordered ts DESC)
 // POST   /api/history          → add entry  { query }
 // DELETE /api/history          → remove one { query } or clear all { clear: true }
+//
+// FIX v.16: replaced Access-Control-Allow-Origin: * with origin-aware CORS.
+//           Wildcard + credentials: "include" = browsers reject the cookie.
 
 import { PrismaClient } from "@prisma/client";
 
@@ -13,11 +16,29 @@ const globalForPrisma = globalThis;
 const prisma = globalForPrisma.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+// ── Trusted origins for CORS ──────────────────────────────────────────────────
+
+const ALLOWED_ORIGINS = [
+  "https://citation.today",
+  "https://opencite.space",
+];
+
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(".vercel.app"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+}
+
 // ── Auth session helper ───────────────────────────────────────────────────────
 
 async function getSession(req) {
-  const url = new URL(req.url ?? `http://localhost${req.url}`, "http://localhost");
-  const sessionUrl = `${url.origin}/api/auth/session`;
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const sessionUrl = `${protocol}://${host}/api/auth/session`;
   try {
     const res = await fetch(sessionUrl, {
       headers: { cookie: req.headers.cookie ?? "" },
@@ -32,7 +53,7 @@ async function getSession(req) {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  setCorsHeaders(req, res);
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(204).end();

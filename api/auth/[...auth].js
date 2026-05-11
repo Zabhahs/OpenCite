@@ -7,6 +7,10 @@
 // PHASE 4:  SIWE / Base L2 — hook point marked below
 //
 // Trusted domains: citation.today, opencite.space
+//
+// FIX v.16: @auth/core Auth() expects Web Request/Response, not Node.js
+//           req/res. Previous handler passed Node objects directly → silent 500.
+//           Now bridges Node ↔ Web API correctly.
 
 import { Auth } from "@auth/core";
 import Google from "@auth/core/providers/google";
@@ -81,8 +85,9 @@ const authConfig = {
   callbacks: {
     // Expose internal_id (UUID) on the session object.
     // BillingContext and API routes read session.user.id.
+    // FIX v.16: defensive — guard against missing user or internal_id
     session({ session, user }) {
-      if (session.user && user) {
+      if (session.user && user?.internal_id) {
         session.user.id = user.internal_id;
       }
       return session;
@@ -105,8 +110,83 @@ const authConfig = {
   },
 };
 
+// ─── Node.js ↔ Web API bridge ─────────────────────────────────────────────────
+// @auth/core Auth() expects a Web Request and returns a Web Response.
+// Vercel Node.js serverless functions provide IncomingMessage / ServerResponse.
+// This bridge converts between the two without adding any new dependencies.
+
+/**
+ * Read the full body from a Node.js IncomingMessage as a Buffer.
+ * Returns null for bodyless methods (GET, HEAD).
+ */
+function readBody(req) {
+  if (req.method === "GET" || req.method === "HEAD") return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+/**
+ * Convert Node.js IncomingMessage → Web Request.
+ */
+async function toWebRequest(req) {
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const url = new URL(req.url, `${protocol}://${host}`);
+
+  const headers = new Headers();
+  for (const [key, val] of Object.entries(req.headers)) {
+    if (val != null) headers.set(key, Array.isArray(val) ? val.join(", ") : val);
+  }
+
+  const body = await readBody(req);
+
+  return new Request(url.toString(), {
+    method: req.method,
+    headers,
+    body,
+    // duplex required for streaming request bodies in Node 18+
+    ...(body ? { duplex: "half" } : {}),
+  });
+}
+
+/**
+ * Write Web Response → Node.js ServerResponse.
+ */
+async function toNodeResponse(webResponse, res) {
+  res.statusCode = webResponse.status;
+  res.statusMessage = webResponse.statusText;
+
+  // Forward all response headers (especially Set-Cookie for sessions)
+  for (const [key, value] of webResponse.headers.entries()) {
+    // Set-Cookie can appear multiple times — getSetCookie() returns all values
+    if (key.toLowerCase() === "set-cookie") {
+      const cookies = webResponse.headers.getSetCookie
+        ? webResponse.headers.getSetCookie()
+        : [value];
+      res.setHeader("set-cookie", cookies);
+    } else {
+      res.setHeader(key, value);
+    }
+  }
+
+  const body = await webResponse.arrayBuffer();
+  res.end(Buffer.from(body));
+}
+
 // ─── Vercel serverless export ─────────────────────────────────────────────────
 
-export default function handler(req, res) {
-  return Auth(req, res, authConfig);
+export default async function handler(req, res) {
+  try {
+    const webRequest = await toWebRequest(req);
+    const webResponse = await Auth(webRequest, authConfig);
+    await toNodeResponse(webResponse, res);
+  } catch (err) {
+    console.error("[auth] handler error:", err);
+    res.statusCode = 500;
+    res.end("Internal auth error");
+  }
 }
