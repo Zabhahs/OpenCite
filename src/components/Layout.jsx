@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { THEMES } from "../constants/themes.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { APP_VERSION, APP_NAME } from "../app.js";
+import { APP_VERSION, APP_NAME } from "../constants/app.js";
 
 // ---------- AuthButton + SyncTooltip ----------
 

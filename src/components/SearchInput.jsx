@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { SEARCH_PLACEHOLDER_ITEMS } from "../app.js";
+import { SEARCH_PLACEHOLDER_ITEMS } from "../constants/app.js";
 
 export function SearchInput({ query, onChange, onSearch, inputRef }) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
