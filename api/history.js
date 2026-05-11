@@ -7,7 +7,6 @@
 // POST   /api/history          → add entry  { query }
 // DELETE /api/history          → remove one { query } or clear all { clear: true }
 
-import { Auth } from "@auth/core";
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis;

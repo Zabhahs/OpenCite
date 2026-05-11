@@ -42,7 +42,7 @@ function OpenCITE() {
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
   const hist = useHistory();
   const lib = useLibrary();
-  const { sectionStates, hasSearched, search, loadMore } = useSearch(settings, isEnabled);
+  const { sectionStates, hasSearched, search, loadMore, reset } = useSearch(settings, isEnabled);
 
   // Bootstrap: load persisted state once on mount
   useEffect(() => {
@@ -64,6 +64,14 @@ function OpenCITE() {
     hist.add(q);
     search(q);
   }, [search, hist]);
+
+  // Logo click — close any open panel and return to landing state
+  const handleLogoClick = useCallback(() => {
+    setQuery("");
+    setActivePanel(null);
+    reset();
+    inputRef.current?.focus();
+  }, [reset]);
 
   const copyText = (text, id, style) => {
     navigator.clipboard.writeText(text);
@@ -98,6 +106,17 @@ function OpenCITE() {
         .underline-thick { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; }
         .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
+        .ticker-track { display:flex; gap:0.5rem; animation:ticker 40s linear infinite; width:max-content; will-change:transform; }
+        .ticker-track:hover { animation-play-state:paused; }
+        @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+        .eagle-shake { animation: eagle-shake 0.45s ease; }
+        @keyframes eagle-shake {
+          0%,100% { transform: rotate(0deg) scale(1.1); }
+          20%     { transform: rotate(-10deg) scale(1.1); }
+          40%     { transform: rotate(9deg) scale(1.1); }
+          60%     { transform: rotate(-6deg) scale(1.1); }
+          80%     { transform: rotate(5deg) scale(1.1); }
+        }
       `}</style>
       <div className="grain" />
 
@@ -107,6 +126,7 @@ function OpenCITE() {
           onLibrary={() => togglePanel("library")}
           onHistory={() => togglePanel("history")}
           onSettings={() => togglePanel("settings")}
+          onLogoClick={handleLogoClick}
           libraryCount={lib.items.length}
           historyCount={hist.entries.length}
           activePanel={activePanel}
@@ -185,7 +205,7 @@ function OpenCITE() {
             </div>
             {!settings.europeanaKey && (
               <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900 mt-6">
-                ⚙ add your free Europeana key in settings to enable that source
+                Visit &lsquo;Settings&rsquo; to learn how to enable supplemental sources and custom journals!
               </p>
             )}
           </div>

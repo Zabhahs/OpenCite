@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { THEMES } from "../constants/themes.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { APP_VERSION, APP_NAME } from "../constants/app.js";
+import { APP_VERSION, APP_NAME } from "../app.js";
 
 // ---------- AuthButton + SyncTooltip ----------
 
@@ -118,7 +118,13 @@ function AuthButton() {
 
 // ---------- Header ----------
 
-export function Header({ adapters, onLibrary, onHistory, onSettings, libraryCount, historyCount }) {
+export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick, libraryCount, historyCount }) {
+  const [shaking, setShaking] = useState(false);
+
+  const handleEagleClick = () => {
+    setShaking(true);
+  };
+
   return (
     <header className="mb-10 md:mb-14">
       <div className="flex items-baseline justify-between mb-2">
@@ -138,17 +144,50 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, libraryCoun
           <AuthButton />
         </div>
       </div>
+
       <div className="border-t-2 border-stone-900 pt-6">
-        <h1 className="display-font text-5xl md:text-7xl font-black leading-none text-stone-900 mb-3" style={{ letterSpacing: "-0.02em" }}>
-          {APP_NAME}
-        </h1>
-        <p className="display-font italic text-lg md:text-xl text-stone-700 max-w-xl mb-3">
+        {/* Logo row — clickable title + eagle */}
+        <div className="flex items-center gap-4 mb-3">
+          <h1
+            onClick={onLogoClick}
+            className="display-font text-5xl md:text-7xl font-black leading-none text-stone-900 cursor-pointer hover:text-red-900 transition-colors select-none"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            {APP_NAME}
+          </h1>
+          <img
+            src="/android-chrome-512x512.png"
+            alt={`${APP_NAME} eagle`}
+            className={`h-16 md:h-24 w-auto select-none cursor-pointer transition-transform duration-200 hover:scale-110 ${shaking ? "eagle-shake" : ""}`}
+            style={{ mixBlendMode: "multiply" }}
+            draggable={false}
+            onClick={handleEagleClick}
+            onAnimationEnd={() => setShaking(false)}
+          />
+        </div>
+
+        <p className="display-font italic text-lg md:text-xl text-stone-700 max-w-xl mb-4">
           A meta-search across free, open-access scholarly databases. Citations ready to paste.
         </p>
-        <div className="flex flex-wrap gap-2 mt-4">
-          {adapters.map(a => (
-            <span key={a.id} className={`mono-font text-[10px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-1`}>{a.name}</span>
-          ))}
+
+        {/* Adapter ticker — loops seamlessly, pauses on hover */}
+        <div
+          className="overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)",
+          }}
+        >
+          <div className="ticker-track">
+            {[...adapters, ...adapters].map((a, i) => (
+              <span
+                key={i}
+                className={`mono-font text-[10px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-1 shrink-0`}
+              >
+                {a.name}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </header>

@@ -41,6 +41,10 @@ model User {
   accounts             Account[]
   sessions             Session[]
 
+  // Phase 1 — sync relations
+  search_history       search_history[]
+  library_items        library_items[]
+
   @@map("users")
 }
 
@@ -85,4 +89,33 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// ─── Phase 1 — Search history ────────────────────────────────────────────────
+
+model search_history {
+  id      String @id @default(uuid())
+  user_id String
+  query   String
+  ts      BigInt
+
+  user    User   @relation(fields: [user_id], references: [internal_id], onDelete: Cascade)
+
+  @@unique([user_id, query], name: "user_id_query")
+  @@map("search_history")
+}
+
+// ─── Phase 1 — Library items ─────────────────────────────────────────────────
+
+model library_items {
+  id          String @id @default(uuid())
+  user_id     String
+  library_key String
+  result      Json
+  saved_at    BigInt
+
+  user        User   @relation(fields: [user_id], references: [internal_id], onDelete: Cascade)
+
+  @@unique([user_id, library_key], name: "user_id_library_key")
+  @@map("library_items")
 }

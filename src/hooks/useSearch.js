@@ -5,6 +5,11 @@ export function useSearch(settings, isEnabled) {
   const [sectionStates, setSectionStates] = useState({});
   const [hasSearched, setHasSearched] = useState(false);
 
+  const reset = useCallback(() => {
+    setHasSearched(false);
+    setSectionStates({});
+  }, []);
+
   const search = useCallback(async (query) => {
     if (!query.trim()) return;
     setHasSearched(true);
@@ -58,5 +63,5 @@ export function useSearch(settings, isEnabled) {
     }
   }, [settings, sectionStates]);
 
-  return { sectionStates, hasSearched, search, loadMore };
+  return { sectionStates, hasSearched, search, loadMore, reset };
 }
