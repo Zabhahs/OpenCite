@@ -38,6 +38,10 @@ const authConfig = {
   adapter: PrismaAdapter(prisma),
   secret: process.env.AUTH_SECRET,
 
+  // Tell Auth.js its base path so parseActionAndProviderId strips the
+  // /api/auth prefix correctly before matching actions like signin/google.
+  basePath: "/api/auth",
+
   // Restrict callbacks to known production domains only
   // Prevents token reuse across unrelated origins
   trustHost: true,
