@@ -36,9 +36,7 @@ function OpenCITE() {
   const [copied, setCopied] = useState({ id: null, style: null });
   const inputRef = useRef(null);
 
-  const { themeKey, theme, changeTheme } = useTheme(
-    (() => { try { return localStorage.getItem("themeKey"); } catch { return null; } })()
-  );
+  const { themeKey, theme, changeTheme } = useTheme();
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
   const hist = useHistory();
   const lib = useLibrary();
@@ -93,7 +91,9 @@ function OpenCITE() {
         "--ui-border": theme.border, "--ui-border-subtle": theme.borderSubtle,
         "--ui-surface": theme.surface, "--ui-accent": theme.accent, "--ui-on-accent": theme.onAccent,
         "--ui-button-bg": theme.buttonBg, "--ui-settings-bg": theme.settingsBg, "--ui-input-bg": theme.inputBg,
-        "--ui-grain-opacity": theme.grainOpacity
+        "--ui-grain-opacity": theme.grainOpacity,
+        "--ui-eagle-blend": theme.eagleBlend, "--ui-eagle-shadow": theme.eagleShadow,
+        "--ui-sticky-bg": theme.stickyBg,
       }}
     >
       <style>{`
@@ -106,9 +106,10 @@ function OpenCITE() {
         .underline-thick { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; }
         .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
-        .ticker-track { display:flex; gap:0.5rem; animation:ticker 40s linear infinite; width:max-content; will-change:transform; }
+        .ticker-track { display:flex; gap:0.5rem; animation:ticker 80s linear infinite; width:max-content; will-change:transform; }
         .ticker-track:hover { animation-play-state:paused; }
         @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+        .eagle-header { mix-blend-mode:var(--ui-eagle-blend,multiply); filter:drop-shadow(var(--ui-eagle-shadow)); transition:transform 0.2s ease; }
         .eagle-shake { animation: eagle-shake 0.45s ease; }
         @keyframes eagle-shake {
           0%,100% { transform: rotate(0deg) scale(1.1); }

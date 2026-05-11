@@ -158,8 +158,7 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick
           <img
             src="/android-chrome-512x512.png"
             alt={`${APP_NAME} eagle`}
-            className={`h-16 md:h-24 w-auto select-none cursor-pointer transition-transform duration-200 hover:scale-110 ${shaking ? "eagle-shake" : ""}`}
-            style={{ mixBlendMode: "multiply" }}
+            className={`h-16 md:h-24 w-auto select-none cursor-pointer hover:scale-110 eagle-header ${shaking ? "eagle-shake" : ""}`}
             draggable={false}
             onClick={handleEagleClick}
             onAnimationEnd={() => setShaking(false)}
@@ -198,7 +197,7 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick
 
 export function ThemeStrip({ themeKey, onChange }) {
   return (
-    <div className="flex items-center gap-2 mt-2">
+    <div className="flex items-center gap-2 mt-2 mb-2">
       <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Theme</span>
       {Object.entries(THEMES).map(([key, t]) => (
         <button key={key} onClick={() => onChange(key)}
