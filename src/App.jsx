@@ -18,11 +18,12 @@ import { HISTORY_MAX } from "./constants/defaults.js";
 import { SearchInput } from "./components/SearchInput.jsx";
 import { SourceSection } from "./components/SourceSection.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
-import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay } from "./components/Layout.jsx";
+import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { useAuth } from "./contexts/AuthContext.jsx";
 
 /* ============================================================================
    App.jsx — thin orchestrator.
@@ -35,6 +36,9 @@ function OpenCITE() {
   const [activePanel, setActivePanel] = useState(null); // "settings" | "history" | "library" | null
   const [copied, setCopied] = useState({ id: null, style: null });
   const inputRef = useRef(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [searchCount, setSearchCount] = useState(0);
+  const { status } = useAuth();
 
   const { themeKey, theme, changeTheme } = useTheme();
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
@@ -54,7 +58,14 @@ function OpenCITE() {
     if (!query.trim()) return;
     hist.add(query);
     search(query);
-  }, [query, search, hist]);
+    setSearchCount(c => {
+      const next = c + 1;
+      if (next >= 3 && status === "unauthenticated") {
+        try { if (!localStorage.getItem("opencite_auth_prompted")) setShowAuthModal(true); } catch {}
+      }
+      return next;
+    });
+  }, [query, search, hist, status]);
 
   const handleRerun = useCallback((q) => {
     setQuery(q);
@@ -62,6 +73,19 @@ function OpenCITE() {
     hist.add(q);
     search(q);
   }, [search, hist]);
+
+  const dismissModal = useCallback(() => {
+    try { localStorage.setItem("opencite_auth_prompted", "1"); } catch {}
+    setShowAuthModal(false);
+  }, []);
+
+  // Show modal on first visit (2s delay) — gives page time to load
+  useEffect(() => {
+    if (status !== "unauthenticated") return;
+    try { if (localStorage.getItem("opencite_auth_prompted")) return; } catch {}
+    const t = setTimeout(() => setShowAuthModal(true), 2000);
+    return () => clearTimeout(t);
+  }, [status]);
 
   // Logo click — close any open panel and return to landing state
   const handleLogoClick = useCallback(() => {
@@ -83,6 +107,7 @@ function OpenCITE() {
   return (
     <div
       className="min-h-screen w-full"
+      data-theme={themeKey}
       style={{
         background: theme.bg,
         fontFamily: "'Avenir Next', 'Avenir', 'Mulish', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
@@ -93,7 +118,7 @@ function OpenCITE() {
         "--ui-button-bg": theme.buttonBg, "--ui-settings-bg": theme.settingsBg, "--ui-input-bg": theme.inputBg,
         "--ui-grain-opacity": theme.grainOpacity,
         "--ui-eagle-blend": theme.eagleBlend, "--ui-eagle-shadow": theme.eagleShadow,
-        "--ui-sticky-bg": theme.stickyBg,
+        "--ui-sticky-bg": theme.stickyBg, "--ui-title-color": theme.titleColor,
       }}
     >
       <style>{`
@@ -118,6 +143,28 @@ function OpenCITE() {
           60%     { transform: rotate(-6deg) scale(1.1); }
           80%     { transform: rotate(5deg) scale(1.1); }
         }
+        /* OLED — remap hardcoded Tailwind stone/amber/red to high-contrast values */
+        [data-theme="oled"] .text-stone-900,[data-theme="oled"] .text-stone-800 { color:#ffffff; }
+        [data-theme="oled"] .text-stone-700,[data-theme="oled"] .text-stone-600 { color:#d0d0d0; }
+        [data-theme="oled"] .text-stone-500,[data-theme="oled"] .text-stone-400 { color:#909090; }
+        [data-theme="oled"] .text-amber-50  { color:#000000; }
+        [data-theme="oled"] .text-amber-900 { color:#fbbf24; }
+        [data-theme="oled"] .text-red-900   { color:#f87171; }
+        [data-theme="oled"] .hover\:text-red-900:hover { color:#ef4444; }
+        [data-theme="oled"] .app-title:hover { color:#fca5a5; }
+        [data-theme="oled"] .placeholder-stone-400::placeholder { color:#555555; }
+        [data-theme="oled"] .bg-white,[data-theme="oled"] .bg-amber-50 { background-color:#111111; }
+        [data-theme="oled"] .bg-stone-50\/40 { background-color:rgba(20,20,20,0.6); }
+        [data-theme="oled"] .bg-stone-50    { background-color:#111111; }
+        [data-theme="oled"] .bg-stone-700   { background-color:#2a2a2a; }
+        [data-theme="oled"] .bg-stone-900   { background-color:#e8e8e8; }
+        [data-theme="oled"] .hover\:bg-stone-900:hover { background-color:#cccccc; }
+        [data-theme="oled"] .hover\:bg-red-900:hover   { background-color:#333333; }
+        [data-theme="oled"] .border-stone-900 { border-color:#ffffff; }
+        [data-theme="oled"] .border-stone-400 { border-color:#444444; }
+        [data-theme="oled"] .border-stone-300 { border-color:#333333; }
+        [data-theme="oled"] .border-stone-200 { border-color:#2a2a2a; }
+        [data-theme="oled"] .focus\:border-red-900:focus { border-color:#ef4444; }
       `}</style>
       <div className="grain" />
 
@@ -215,6 +262,8 @@ function OpenCITE() {
         <ConnectCard />
         <Footer />
       </div>
+
+      {showAuthModal && <AuthModal onDismiss={dismissModal} />}
     </div>
   );
 }

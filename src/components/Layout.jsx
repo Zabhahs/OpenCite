@@ -45,7 +45,9 @@ function AuthButton() {
     setOpen(true);
   };
 
-  if (status === "loading") return null;
+  if (status === "loading") return (
+    <span className="mono-font text-xs uppercase tracking-widest text-stone-400 select-none">↳ …</span>
+  );
 
   const navBtn = "mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition";
 
@@ -150,8 +152,8 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick
         <div className="flex items-center gap-4 mb-3">
           <h1
             onClick={onLogoClick}
-            className="display-font text-5xl md:text-7xl font-black leading-none text-stone-900 cursor-pointer hover:text-red-900 transition-colors select-none"
-            style={{ letterSpacing: "-0.02em" }}
+            className="display-font text-5xl md:text-7xl font-black leading-none cursor-pointer hover:text-red-900 transition-colors select-none app-title"
+            style={{ letterSpacing: "-0.02em", color: "var(--ui-title-color)" }}
           >
             {APP_NAME}
           </h1>
@@ -246,7 +248,73 @@ export function KofiOverlay() {
   return null;
 }
 
-// ---------- ConnectCard ----------
+// ---------- AuthModal ----------
+// Shown on first visit (2s delay) and again after 3 searches if unauthenticated.
+// Dismissed by signing in or clicking "Continue anonymously".
+// Once dismissed, localStorage key 'opencite_auth_prompted' prevents re-showing.
+
+export function AuthModal({ onDismiss }) {
+  const { signIn } = useAuth();
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.80)", backdropFilter: "blur(4px)" }}
+      onClick={onDismiss}
+    >
+      <div
+        className="bg-amber-50 border-2 border-stone-900 p-8 max-w-sm w-full mx-4"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Brand row */}
+        <div className="flex items-center gap-3 mb-5">
+          <img
+            src="/android-chrome-512x512.png"
+            alt="OpenCITE"
+            className="h-12 w-auto shrink-0"
+            style={{ mixBlendMode: "multiply" }}
+          />
+          <div>
+            <h2 className="display-font text-2xl font-black text-stone-900" style={{ letterSpacing: "-0.02em" }}>
+              OpenCITE
+            </h2>
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">
+              Free scholarly search
+            </p>
+          </div>
+        </div>
+
+        <p className="display-font text-stone-800 leading-snug mb-6 text-sm">
+          Sign in to sync your saved library and search history across all your devices.
+        </p>
+
+        {/* Google sign-in */}
+        <button
+          onClick={() => { signIn("google"); onDismiss(); }}
+          className="w-full flex items-center justify-center gap-3 bg-white border-2 border-stone-900 px-4 py-3 mono-font text-xs uppercase tracking-widest text-stone-900 hover:bg-stone-900 hover:text-amber-50 transition mb-3"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <button
+          onClick={onDismiss}
+          className="w-full mono-font text-[10px] uppercase tracking-widest text-stone-500 hover:text-stone-900 transition py-2"
+        >
+          Continue anonymously →
+        </button>
+
+        <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mt-4 text-center leading-relaxed">
+          Anonymous use always supported · Sign in anytime from the nav bar
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function ConnectCard() {
   return (

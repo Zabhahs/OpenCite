@@ -34,6 +34,9 @@ model User {
   // Flexible demographic / preference blob (analytics, Phase 5)
   demographics         Json?
 
+  // User API keys + custom journals — AES-256-GCM encrypted blob (v.15)
+  settings             Json?
+
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

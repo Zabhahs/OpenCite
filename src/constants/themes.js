@@ -12,6 +12,7 @@ export const THEMES = {
     eagleBlend: "multiply",
     eagleShadow: "0 3px 12px rgba(0,0,0,0.5)",
     stickyBg: "#ede0c4",
+    titleColor: "#1c1917",
   },
   blueGrey: {
     label: "Blue-grey",
@@ -26,6 +27,7 @@ export const THEMES = {
     eagleBlend: "multiply",
     eagleShadow: "0 2px 8px rgba(0,0,0,0.25)",
     stickyBg: "#cbd5e1",
+    titleColor: "#0f172a",
   },
   oled: {
     label: "OLED Night",
@@ -40,6 +42,7 @@ export const THEMES = {
     eagleBlend: "screen",
     eagleShadow: "0 0 0 rgba(0,0,0,0)",
     stickyBg: "#000000",
+    titleColor: "#ef4444",
   },
 };
 
