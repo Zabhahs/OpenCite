@@ -60,10 +60,31 @@ export async function signIn(provider, { callbackUrl = window.location.href } = 
 }
 
 // ─── signOut ──────────────────────────────────────────────────────────────────
+// Auth.js v5 requires POST for signout too — same hidden-form pattern as signIn.
 
-export function signOut({ callbackUrl = window.location.href } = {}) {
-  const params = new URLSearchParams({ callbackUrl });
-  window.location.href = `${BASE}/signout?${params}`;
+export async function signOut({ callbackUrl = window.location.href } = {}) {
+  try {
+    const csrfRes = await fetch(`${BASE}/csrf`, { credentials: "include" });
+    const { csrfToken } = await csrfRes.json();
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `${BASE}/signout`;
+
+    const fields = { csrfToken, callbackUrl };
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+  } catch {
+    window.location.href = `${BASE}/signout?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  }
 }
 
 // ─── getCsrfToken ─────────────────────────────────────────────────────────────

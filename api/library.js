@@ -53,8 +53,8 @@ function setCorsHeaders(req, res) {
 // ── Auth session helper ───────────────────────────────────────────────────────
 
 async function getSession(req) {
-  const protocol = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  const protocol = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
+  const host = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
   const sessionUrl = `${protocol}://${host}/api/auth/session`;
   try {
     const res = await fetch(sessionUrl, {
