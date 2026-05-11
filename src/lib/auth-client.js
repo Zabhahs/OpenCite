@@ -2,12 +2,14 @@
 // Thin fetch wrappers for Vite frontend ↔ /api/auth/* serverless handler.
 // Mirrors the surface of next-auth/react without requiring Next.js.
 // Import these in AuthContext.jsx — do not call fetch("/api/auth/...") directly anywhere else.
+//
+// FIX v.16: Auth.js v5 requires POST to /api/auth/signin/{provider}, not GET.
+//           Previous implementation used window.location.href (GET) → UnknownAction error.
+//           Now submits a hidden form with CSRF token to satisfy Auth.js POST requirement.
 
 const BASE = "/api/auth";
 
 // ─── getSession ───────────────────────────────────────────────────────────────
-// Returns the current session object or null.
-// Shape: { user: { id, name, email, image }, expires } | null
 
 export async function getSession() {
   try {
@@ -17,7 +19,6 @@ export async function getSession() {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    // Auth.js returns {} (empty object) when no session — normalise to null
     if (!data || !data.user) return null;
     return data;
   } catch {
@@ -26,17 +27,39 @@ export async function getSession() {
 }
 
 // ─── signIn ───────────────────────────────────────────────────────────────────
-// Redirects to the provider OAuth flow.
-// provider: "google" | "apple" | "microsoft-entra-id"
-// callbackUrl: where to land after auth (defaults to current page)
+// Auth.js v5 requires a POST to /api/auth/signin/{provider} with a CSRF token.
+// We fetch the CSRF token first, then submit a hidden form — this satisfies
+// Auth.js's CSRF check and triggers the OAuth redirect correctly.
 
-export function signIn(provider, { callbackUrl = window.location.href } = {}) {
-  const params = new URLSearchParams({ callbackUrl });
-  window.location.href = `${BASE}/signin/${provider}?${params}`;
+export async function signIn(provider, { callbackUrl = window.location.href } = {}) {
+  try {
+    // 1. Get CSRF token from Auth.js
+    const csrfRes = await fetch(`${BASE}/csrf`, { credentials: "include" });
+    const { csrfToken } = await csrfRes.json();
+
+    // 2. POST via hidden form — fetch() can't follow cross-origin OAuth redirects
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `${BASE}/signin/${provider}`;
+
+    const fields = { csrfToken, callbackUrl };
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+  } catch {
+    // Fallback: direct redirect (no CSRF — may fail on some Auth.js versions)
+    window.location.href = `${BASE}/signin/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  }
 }
 
 // ─── signOut ──────────────────────────────────────────────────────────────────
-// Ends session server-side then redirects.
 
 export function signOut({ callbackUrl = window.location.href } = {}) {
   const params = new URLSearchParams({ callbackUrl });
@@ -44,8 +67,6 @@ export function signOut({ callbackUrl = window.location.href } = {}) {
 }
 
 // ─── getCsrfToken ─────────────────────────────────────────────────────────────
-// Needed if you POST to /api/auth/* endpoints directly (e.g. credentials provider).
-// Unused in Phase 1 (OIDC only) — exported for Phase 4 SIWE use.
 
 export async function getCsrfToken() {
   try {
