@@ -143,6 +143,15 @@ function OpenCITE() {
           60%     { transform: rotate(-6deg) scale(1.1); }
           80%     { transform: rotate(5deg) scale(1.1); }
         }
+        @keyframes eagleBounce {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  25%     { transform: translateY(-6px) rotate(-5deg); }
+  75%     { transform: translateY(-3px) rotate(3deg); }
+}
+@keyframes eagleEnter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
         /* OLED — remap hardcoded Tailwind stone/amber/red to high-contrast values */
         [data-theme="oled"] .text-stone-900,[data-theme="oled"] .text-stone-800 { color:#ffffff; }
         [data-theme="oled"] .text-stone-700,[data-theme="oled"] .text-stone-600 { color:#d0d0d0; }
