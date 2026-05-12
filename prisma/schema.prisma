@@ -16,7 +16,7 @@ datasource db {
 // ─── Core user record ────────────────────────────────────────────────────────
 
 model User {
-  internal_id          String    @id @default(uuid())
+  id                   String    @id @default(uuid()) @map("internal_id")
   email                String?   @unique
   emailVerified        DateTime?
   name                 String?
@@ -68,7 +68,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
 
-  user User @relation(fields: [userId], references: [internal_id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -80,7 +80,7 @@ model Session {
   userId       String
   expires      DateTime
 
-  user User @relation(fields: [userId], references: [internal_id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -102,7 +102,7 @@ model search_history {
   query   String
   ts      BigInt
 
-  user    User   @relation(fields: [user_id], references: [internal_id], onDelete: Cascade)
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, query], name: "user_id_query")
   @@map("search_history")
@@ -117,7 +117,7 @@ model library_items {
   result      Json
   saved_at    BigInt
 
-  user        User   @relation(fields: [user_id], references: [internal_id], onDelete: Cascade)
+  user        User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, library_key], name: "user_id_library_key")
   @@map("library_items")

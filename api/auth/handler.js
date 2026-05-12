@@ -52,8 +52,8 @@ const authConfig = {
   callbacks: {
     // Expose internal_id (UUID) on the session. Read by BillingContext + API routes.
     session({ session, user }) {
-      if (session.user && user?.internal_id) {
-        session.user.id = user.internal_id;
+      if (session.user && user?.id) {
+        session.user.id = user.id;
       }
       return session;
     },

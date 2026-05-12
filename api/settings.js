@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   // ── GET ─────────────────────────────────────────────────────────────────────
   if (req.method === "GET") {
     const row = await prisma.user.findUnique({
-      where:  { internal_id: userId },
+      where:  { id: userId },
       select: { settings: true },
     });
 
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
     try {
       await prisma.user.update({
-        where: { internal_id: userId },
+        where: { id: userId },
         data:  { settings: encrypt(settings) },
       });
       return res.status(200).json({ ok: true });
