@@ -24,6 +24,10 @@ export const parseOpenAlexWork = (w, idx) => {
     url: oaUrl || (doi ? `https://doi.org/${doi}` : ""),
     abstract: reconstructAbstract(w.abstract_inverted_index),
     isOA: !!w.open_access?.is_oa,
-    type: w.type || "article"
+    type: w.type || "article",
+    // v.17 enrichment
+    keywords: (w.keywords || []).map(k => k.display_name || k).filter(Boolean),
+    citedBy: typeof w.cited_by_count === "number" ? w.cited_by_count : null,
+    language: w.language || "",
   };
 };

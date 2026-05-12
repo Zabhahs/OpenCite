@@ -39,7 +39,11 @@ export const DOAJ_ADAPTER = {
         url: fulltext || (doi ? `https://doi.org/${doi}` : ""),
         abstract: stripHtml(b.abstract || ""),
         isOA: true,
-        type: "article"
+        type: "article",
+        // v.17 enrichment
+        keywords: Array.isArray(b.keywords) ? b.keywords : [],
+        subjects: (b.subject || []).map(s => s.term || s).filter(Boolean),
+        language: Array.isArray(b.journal?.language) ? b.journal.language[0] || "" : "",
       };
     });
     return { results, hasMore: offset + results.length < (data.total || 0) };

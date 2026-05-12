@@ -33,7 +33,34 @@ const apaAuthors = (authors) => {
   return names.slice(0, 19).join(", ") + ", ... " + names[names.length - 1];
 };
 
-// ---------- MLA 9 + APA 7 (unchanged) ----------
+// ---------- Editor formatting helpers ----------
+
+const mlaEditors = (editors) => {
+  const names = (editors || []).filter(Boolean);
+  if (!names.length) return "";
+  if (names.length === 1) return `edited by ${names[0]}`;
+  if (names.length === 2) return `edited by ${names[0]} and ${names[1]}`;
+  return `edited by ${names[0]} et al.`;
+};
+
+const apaEditors = (editors) => {
+  const names = (editors || []).filter(Boolean).map(initializeName);
+  if (!names.length) return "";
+  const joined = names.length <= 20
+    ? (names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + ", & " + names[names.length - 1])
+    : names.slice(0, 19).join(", ") + ", ... " + names[names.length - 1];
+  return `In ${joined} (Ed${names.length > 1 ? "s" : ""}.)`;
+};
+
+// ---------- Type detection helper ----------
+
+const isBookChapter = (r) => {
+  const t = (r._type || r.type || "").toLowerCase();
+  return t === "book-chapter" || t === "book-section" || t === "book-part"
+    || t === "inbook" || t === "reference-entry";
+};
+
+// ---------- MLA 9 + APA 7 ----------
 // Returns array of segments: [{ text, italic? }]
 // This shape lets the ResultCard render <em> inline without a full HTML parser.
 
@@ -46,6 +73,28 @@ export const buildMLA = (r) => {
     if (r.url) segs.push({ text: r.url });
     return segs;
   }
+
+  // v.17 — Book chapter: "Chapter Title." Container Title, ed. by Editors, Publisher, Year, pp. Pages.
+  if (isBookChapter(r)) {
+    const segs = [];
+    const auth = mlaAuthors(r.authors);
+    if (auth) segs.push({ text: auth + " " });
+    if (r.title) segs.push({ text: `"${r.title}." ` });
+    if (r.journal) {
+      segs.push({ text: r.journal, italic: true });
+      segs.push({ text: ", " });
+    }
+    const edStr = mlaEditors(r.editors);
+    if (edStr) segs.push({ text: edStr + ", " });
+    if (r.publisher) segs.push({ text: r.publisher + ", " });
+    if (r.year) segs.push({ text: r.year });
+    if (r.pages) segs.push({ text: `, pp. ${r.pages}` });
+    segs.push({ text: ". " });
+    if (r.doi) segs.push({ text: `https://doi.org/${r.doi}` });
+    else if (r.url) segs.push({ text: r.url });
+    return segs;
+  }
+
   const segs = [];
   const auth = mlaAuthors(r.authors);
   if (auth) segs.push({ text: auth + " " });
@@ -56,7 +105,8 @@ export const buildMLA = (r) => {
   if (r.issue) tail.push(`no. ${r.issue}`);
   if (r.year) tail.push(r.year);
   if (r.pages) tail.push(`pp. ${r.pages}`);
-  if (r.url) tail.push(r.url);
+  if (r.doi) tail.push(`https://doi.org/${r.doi}`);
+  else if (r.url) tail.push(r.url);
   if (tail.length) segs.push({ text: ", " + tail.join(", ") + "." });
   else if (r.journal) segs.push({ text: "." });
   return segs;
@@ -70,9 +120,32 @@ export const buildAPA = (r) => {
     if (r.title) segs.push({ text: r.title, italic: true });
     segs.push({ text: ". " });
     if (r.publisher) segs.push({ text: r.publisher + ". " });
-    if (r.url) segs.push({ text: r.url });
+    if (r.doi) segs.push({ text: `https://doi.org/${r.doi}` });
+    else if (r.url) segs.push({ text: r.url });
     return segs;
   }
+
+  // v.17 — Book chapter: Author (Year). Chapter title. In Editor (Ed.), Book Title (pp. Pages). Publisher. DOI
+  if (isBookChapter(r)) {
+    const segs = [];
+    const auth = apaAuthors(r.authors);
+    if (auth) segs.push({ text: auth + " " });
+    segs.push({ text: `(${r.year || "n.d."}). ` });
+    if (r.title) segs.push({ text: r.title + ". " });
+    const edStr = apaEditors(r.editors);
+    if (edStr) segs.push({ text: edStr + ", " });
+    else if (r.journal) segs.push({ text: "In " });
+    if (r.journal) {
+      segs.push({ text: r.journal, italic: true });
+    }
+    if (r.pages) segs.push({ text: ` (pp. ${r.pages})` });
+    segs.push({ text: ". " });
+    if (r.publisher) segs.push({ text: r.publisher + ". " });
+    if (r.doi) segs.push({ text: `https://doi.org/${r.doi}` });
+    else if (r.url) segs.push({ text: r.url });
+    return segs;
+  }
+
   const segs = [];
   const auth = apaAuthors(r.authors);
   if (auth) segs.push({ text: auth + " " });
@@ -86,7 +159,8 @@ export const buildAPA = (r) => {
   }
   if (r.pages) segs.push({ text: `, ${r.pages}` });
   segs.push({ text: ". " });
-  if (r.url) segs.push({ text: r.url });
+  if (r.doi) segs.push({ text: `https://doi.org/${r.doi}` });
+  else if (r.url) segs.push({ text: r.url });
   return segs;
 };
 
@@ -117,6 +191,7 @@ const CSL_TYPE_MAP = {
   "article":       "article-journal",
   "book":          "book",
   "book-chapter":  "chapter",
+  "report":        "report",
   "thesis":        "thesis",
   "dataset":       "dataset",
   "image":         "graphic",
@@ -126,18 +201,11 @@ const CSL_TYPE_MAP = {
 
 /**
  * buildCSL(ncr) → CSL-JSON object (not a string — caller can JSON.stringify).
- *
- * CSL-JSON is the pivot format. BibTeX and RIS are derived from this.
- * Consumes _type and _authorsParsed from the NCR.
- * Lossless for all NCR fields. Non-article types (datasets, images) use
- * appropriate CSL type strings per the CSL schema.
- *
- * @param {object} ncr - Normalized Citation Record from normalizeRecord()
- * @returns {object}   - CSL-JSON item (ready for Zotero, citation.js, etc.)
  */
 export const buildCSL = (ncr) => {
   const type = CSL_TYPE_MAP[ncr._type] || "document";
   const authors = (ncr._authorsParsed || []).map(_cslAuthor);
+  const editors = (ncr._editorsParsed || []).map(_cslAuthor);
   const year = parseInt(ncr.year, 10);
 
   return _defined({
@@ -145,6 +213,7 @@ export const buildCSL = (ncr) => {
     type,
     title:             ncr.title || undefined,
     author:            authors.length ? authors : undefined,
+    editor:            editors.length ? editors : undefined,
     issued:            !isNaN(year) ? { "date-parts": [[year]] } : undefined,
     "container-title": ncr.journal  || undefined,
     publisher:         ncr.publisher || undefined,
@@ -155,6 +224,8 @@ export const buildCSL = (ncr) => {
     URL:               ncr.url      || undefined,
     abstract:          ncr.abstract || undefined,
     source:            ncr.source   || undefined,
+    language:          ncr.language || undefined,
+    keyword:           ncr.keywords?.length ? ncr.keywords.join(", ") : undefined,
   });
 };
 
@@ -163,7 +234,8 @@ export const buildCSL = (ncr) => {
 const BIBTEX_TYPE_MAP = {
   "article":       "article",
   "book":          "book",
-  "book-chapter":  "inbook",
+  "book-chapter":  "incollection",
+  "report":        "techreport",
   "thesis":        "phdthesis",
   "dataset":       "misc",
   "image":         "misc",
@@ -185,18 +257,11 @@ const _bibtexKey = (ncr) => {
   return `${family}${year}${word.replace(/\W/g, "")}`.toLowerCase().slice(0, 40);
 };
 
-const _bibtexField = (tag, value, width = 10) =>
+const _bibtexField = (tag, value, width = 12) =>
   value ? `  ${tag.padEnd(width)} = {${_bibtexEscape(value)}}` : null;
 
 /**
  * buildBibTeX(ncr) → BibTeX string.
- *
- * Entry type driven by _type. Datasets and images use @misc with
- * howpublished for URL — standard practice for non-article BibLaTeX.
- * Author string: "Family, Given and Family2, Given2" (BibTeX convention).
- *
- * @param {object} ncr - Normalized Citation Record
- * @returns {string}   - BibTeX entry string
  */
 export const buildBibTeX = (ncr) => {
   const entryType = BIBTEX_TYPE_MAP[ncr._type] || "misc";
@@ -206,20 +271,28 @@ export const buildBibTeX = (ncr) => {
     .map(a => a.literal || `${a.family}, ${a.given}`)
     .join(" and ");
 
+  const editorStr = (ncr._editorsParsed || [])
+    .map(a => a.literal || `${a.family}, ${a.given}`)
+    .join(" and ");
+
   const isNonArticle = ncr._type === "dataset" || ncr._type === "image";
+  const isChapter = ncr._type === "book-chapter";
 
   const fields = [
     _bibtexField("author",    authorStr),
     _bibtexField("title",     ncr.title),
-    _bibtexField("journal",   ncr.journal),
+    // book-chapter: booktitle is the container, not journal
+    _bibtexField(isChapter ? "booktitle" : "journal", ncr.journal),
+    _bibtexField("editor",    editorStr),
     _bibtexField("year",      ncr.year),
     _bibtexField("volume",    ncr.volume),
     _bibtexField("number",    ncr.issue),
     _bibtexField("pages",     ncr.pages),
     _bibtexField("publisher", ncr.publisher),
     _bibtexField("doi",       ncr.doi),
+    _bibtexField("language",  ncr.language),
+    _bibtexField("keywords",  ncr.keywords?.length ? ncr.keywords.join(", ") : ""),
     _bibtexField("url",       isNonArticle ? undefined : ncr.url),
-    // datasets and images: howpublished carries the URL (standard @misc pattern)
     isNonArticle && ncr.url
       ? `  howpublished = {\\url{${_bibtexEscape(ncr.url)}}}`
       : null,
@@ -234,6 +307,7 @@ const RIS_TYPE_MAP = {
   "article":       "JOUR",
   "book":          "BOOK",
   "book-chapter":  "CHAP",
+  "report":        "RPRT",
   "thesis":        "THES",
   "dataset":       "DATA",
   "image":         "GEN",
@@ -243,13 +317,6 @@ const RIS_TYPE_MAP = {
 
 /**
  * buildRIS(ncr) → RIS string.
- *
- * Field order follows Endnote/Zotero convention.
- * Pages field split on en-dash or hyphen into SP/EP tags.
- * Multiple authors each get their own AU line.
- *
- * @param {object} ncr - Normalized Citation Record
- * @returns {string}   - RIS formatted string (UTF-8)
  */
 export const buildRIS = (ncr) => {
   const ty = RIS_TYPE_MAP[ncr._type] || "GEN";
@@ -259,14 +326,22 @@ export const buildRIS = (ncr) => {
     lines.push(`AU  - ${a.literal || `${a.family}, ${a.given}`}`);
   });
 
+  // v.17 — editors
+  (ncr._editorsParsed || []).forEach((a) => {
+    lines.push(`A2  - ${a.literal || `${a.family}, ${a.given}`}`);
+  });
+
   if (ncr.title)     lines.push(`TI  - ${ncr.title}`);
-  if (ncr.journal)   lines.push(`JO  - ${ncr.journal}`);
+
+  // RIS: T2 = secondary title (book title for chapters, journal for articles)
+  if (ncr.journal)   lines.push(ncr._type === "book-chapter" ? `T2  - ${ncr.journal}` : `JO  - ${ncr.journal}`);
+
   if (ncr.year)      lines.push(`PY  - ${ncr.year}`);
   if (ncr.volume)    lines.push(`VL  - ${ncr.volume}`);
   if (ncr.issue)     lines.push(`IS  - ${ncr.issue}`);
 
   if (ncr.pages) {
-    const [sp, ep] = String(ncr.pages).split(/[-\u2013]/); // hyphen or en-dash
+    const [sp, ep] = String(ncr.pages).split(/[-\u2013]/);
     if (sp?.trim()) lines.push(`SP  - ${sp.trim()}`);
     if (ep?.trim()) lines.push(`EP  - ${ep.trim()}`);
   }
@@ -275,6 +350,12 @@ export const buildRIS = (ncr) => {
   if (ncr.url)       lines.push(`UR  - ${ncr.url}`);
   if (ncr.abstract)  lines.push(`AB  - ${ncr.abstract}`);
   if (ncr.publisher) lines.push(`PB  - ${ncr.publisher}`);
+  if (ncr.language)  lines.push(`LA  - ${ncr.language}`);
+
+  // v.17 — keywords
+  (ncr.keywords || []).forEach((kw) => {
+    lines.push(`KW  - ${kw}`);
+  });
 
   lines.push("ER  - ");
   return lines.join("\n");

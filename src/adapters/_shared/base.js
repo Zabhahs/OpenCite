@@ -22,6 +22,7 @@ export class AbstractAdapter {
   static sanitize(result) {
     const str = (v) => (v == null ? "" : String(v).trim());
     const arr = (v) => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
+    const num = (v) => (typeof v === "number" && !isNaN(v) ? v : null);
     return {
       ...result,
       title:     str(result.title) || "Untitled",
@@ -36,6 +37,12 @@ export class AbstractAdapter {
       url:       str(result.url),
       abstract:  str(result.abstract),
       type:      str(result.type) || "article",
+      // v.17 — optional enrichment fields (adapters may omit any of these)
+      editors:   arr(result.editors),
+      keywords:  arr(result.keywords),
+      subjects:  arr(result.subjects),
+      language:  str(result.language),
+      citedBy:   num(result.citedBy),
     };
   }
 }
@@ -43,20 +50,25 @@ export class AbstractAdapter {
 /**
  * UnifiedResult shape — all fields optional except title.
  * @typedef {Object} UnifiedResult
- * @property {string} id
- * @property {string} source
- * @property {string} title
+ * @property {string}   id
+ * @property {string}   source
+ * @property {string}   title
  * @property {string[]} authors
- * @property {string} year
- * @property {string} journal
- * @property {string} publisher
- * @property {string} volume
- * @property {string} issue
- * @property {string} pages
- * @property {string} doi
- * @property {string} url
- * @property {string} abstract
- * @property {boolean} isOA
- * @property {string} type
- * @property {string} [previewImage]
+ * @property {string}   year
+ * @property {string}   journal
+ * @property {string}   publisher
+ * @property {string}   volume
+ * @property {string}   issue
+ * @property {string}   pages
+ * @property {string}   doi
+ * @property {string}   url
+ * @property {string}   abstract
+ * @property {boolean}  isOA
+ * @property {string}   type
+ * @property {string}   [previewImage]
+ * @property {string[]} [editors]     — v.17: book/collection editors
+ * @property {string[]} [keywords]    — v.17: author-assigned keywords
+ * @property {string[]} [subjects]    — v.17: controlled vocabulary terms
+ * @property {string}   [language]    — v.17: ISO 639 language code
+ * @property {number}   [citedBy]     — v.17: citation count (relevance signal)
  */

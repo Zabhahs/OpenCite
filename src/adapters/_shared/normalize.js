@@ -20,31 +20,43 @@
 // ---------------------------------------------------------------------------
 
 const TYPE_MAP = {
-  "article":         "article",
-  "journal-article": "article",
-  "article-journal": "article",
-  "review-article":  "article",
-  "proceedings":     "article",
-  "book":            "book",
-  "book-chapter":    "book-chapter",
-  "inbook":          "book-chapter",
-  "monograph":       "book",
-  "thesis":          "thesis",
-  "dissertation":    "thesis",
-  "dataset":         "dataset",
-  "data":            "dataset",
-  "genomic-data":    "dataset",      // PANGAEA, ENA
-  "structured-data": "dataset",      // OpenNeuro
-  "archaeological-data": "dataset",  // Open Context
-  "image":           "image",
-  "photograph":      "image",
-  "graphic":         "image",
-  "primary-source":  "primary-source",
-  "manuscript":      "primary-source", // Princeton DPUL, Northwestern
-  "textual":         "misc",           // Internet Archive, Thaqalayn
-  "misc":            "misc",
-  "other":           "misc",
-  "document":        "misc",
+  "article":            "article",
+  "journal-article":    "article",
+  "article-journal":    "article",
+  "review-article":     "article",
+  "proceedings":        "article",
+  "proceedings-article":"article",
+  "posted-content":     "article",
+  "peer-review":        "article",
+  "report":             "report",
+  "report-component":   "report",
+  "book":               "book",
+  "book-chapter":       "book-chapter",
+  "book-section":       "book-chapter",
+  "book-part":          "book-chapter",
+  "inbook":             "book-chapter",
+  "reference-entry":    "book-chapter",
+  "edited-book":        "book",
+  "monograph":          "book",
+  "reference-book":     "book",
+  "thesis":             "thesis",
+  "dissertation":       "thesis",
+  "dataset":            "dataset",
+  "data":               "dataset",
+  "genomic-data":       "dataset",
+  "structured-data":    "dataset",
+  "archaeological-data":"dataset",
+  "image":              "image",
+  "photograph":         "image",
+  "graphic":            "image",
+  "primary-source":     "primary-source",
+  "manuscript":         "primary-source",
+  "textual":            "misc",
+  "misc":               "misc",
+  "other":              "misc",
+  "document":           "misc",
+  "component":          "misc",
+  "standard":           "misc",
 };
 
 const inferType = (raw) =>
@@ -136,6 +148,9 @@ export const normalizeRecord = (sanitized, adapterKey, dedupMap) => {
     // Structured authors for CSL-JSON / BibTeX / RIS export
     // Does NOT replace r.authors (string[]) — MLA/APA/UI still use that
     _authorsParsed: parseAuthors(sanitized.authors),
+
+    // v.17 — Structured editors (same shape as _authorsParsed)
+    _editorsParsed: parseAuthors(sanitized.editors),
 
     // Sentinel
     _normalized: true,

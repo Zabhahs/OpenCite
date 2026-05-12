@@ -1,6 +1,27 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 
+// S2 publicationTypes → UnifiedResult type mapping
+const S2_TYPE_MAP = {
+  "JournalArticle": "journal-article",
+  "Conference":     "proceedings-article",
+  "Review":         "review-article",
+  "CaseReport":     "article",
+  "ClinicalTrial":  "article",
+  "Dataset":        "dataset",
+  "Editorial":      "article",
+  "LettersAndComments": "article",
+  "MetaAnalysis":   "review-article",
+  "Study":          "article",
+  "Book":           "book",
+  "BookSection":    "book-chapter",
+};
+
+const inferS2Type = (publicationTypes) => {
+  if (!Array.isArray(publicationTypes) || !publicationTypes.length) return "article";
+  return S2_TYPE_MAP[publicationTypes[0]] || "article";
+};
+
 export const SEMANTIC_SCHOLAR_ADAPTER = {
   id: "S2",
   name: "Semantic Scholar",
@@ -18,7 +39,7 @@ export const SEMANTIC_SCHOLAR_ADAPTER = {
     if (!settings.s2Key) throw new Error("Semantic Scholar requires an API key. Add yours in settings (⚙) — it's free but takes a few days for approval.");
     const offset = opts.offset || 0;
     const limit = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const fields = "title,authors,year,venue,abstract,openAccessPdf,externalIds,journal";
+    const fields = "title,authors,year,venue,abstract,openAccessPdf,externalIds,journal,publicationTypes,citationCount,fieldsOfStudy";
     const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}&fields=${fields}`;
     const r = await fetch(url, { headers: { Accept: "application/json", "x-api-key": settings.s2Key } });
     if (!r.ok) {
@@ -45,7 +66,10 @@ export const SEMANTIC_SCHOLAR_ADAPTER = {
         url: oaUrl || (doi ? `https://doi.org/${doi}` : (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : "")),
         abstract: p.abstract || "",
         isOA: !!oaUrl,
-        type: "article"
+        type: inferS2Type(p.publicationTypes),
+        // v.17 enrichment
+        subjects: Array.isArray(p.fieldsOfStudy) ? p.fieldsOfStudy : [],
+        citedBy: typeof p.citationCount === "number" ? p.citationCount : null,
       };
     });
     return { results, hasMore: offset + results.length < (data.total || 0) };

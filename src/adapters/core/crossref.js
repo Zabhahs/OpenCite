@@ -27,6 +27,9 @@ export const CROSSREF_ADAPTER = {
       const authors = (it.author || [])
         .map(a => [a.given, a.family].filter(Boolean).join(" "))
         .filter(Boolean);
+      const editors = (it.editor || [])
+        .map(a => [a.given, a.family].filter(Boolean).join(" "))
+        .filter(Boolean);
       const dateParts = it.issued?.["date-parts"]?.[0] || it.published?.["date-parts"]?.[0] || [];
       const year = dateParts[0] ? String(dateParts[0]) : "";
       const journal = Array.isArray(it["container-title"]) ? it["container-title"][0] : (it["container-title"] || "");
@@ -43,7 +46,11 @@ export const CROSSREF_ADAPTER = {
         url: it.URL || (doi ? `https://doi.org/${doi}` : ""),
         abstract: stripHtml(it.abstract || ""),
         isOA: false,
-        type: "article"
+        type: it.type || "article",
+        // v.17 enrichment
+        editors,
+        subjects: Array.isArray(it.subject) ? it.subject : [],
+        language: it.language || "",
       };
     });
     return { results, hasMore: offset + results.length < (data.message?.["total-results"] || 0) };

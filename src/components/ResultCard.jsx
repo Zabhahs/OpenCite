@@ -1,5 +1,6 @@
 // OpenCITE — ResultCard
 // Displays a single search result with citation, save, and copy functionality.
+// v.17: book-chapter awareness, editors, enrichment metadata display.
 
 import React, { useState } from "react";
 import { buildMLA, buildAPA, segmentsToPlain } from "../lib/citations.js";
@@ -10,20 +11,26 @@ import { useEagleTooltip } from "../hooks/useEagleTooltip.js";
 const EAGLE_LIBRARY_MSG =
   "Saved! ★ Open your Library to select favourites and export them as BibTeX, RIS, or CSL-JSON.";
 
-export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary }) {
+const isBookChapter = (r) => {
+  const t = (r._type || r.type || "").toLowerCase();
+  return t === "book-chapter" || t === "book-section" || t === "book-part"
+    || t === "inbook" || t === "reference-entry";
+};
+
+export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup }) {
   const mlaSegs = buildMLA(result);
   const apaSegs = buildAPA(result);
   const cardId = result.id;
   const [imgFailed, setImgFailed] = useState(false);
   const [citationsOpen, setCitationsOpen] = useState(false);
   const hasImage = result.previewImage && !imgFailed;
+  const chapter = isBookChapter(result);
 
   // Eagle tooltip — one-time, triggered on first ever library save
   const eagle = useEagleTooltip("eagle_library_prompted");
 
   const handleToggleLibrary = () => {
     if (!isInLibrary) {
-      // Saving — show eagle if first time
       eagle.show();
     }
     onToggleLibrary(result);
@@ -41,13 +48,19 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
         {result.year && (
           <span className="mono-font text-xs text-stone-600">{result.year}</span>
         )}
+        {/* v.17 — type badge for non-article types */}
+        {chapter && (
+          <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-200 text-stone-700 px-1.5 py-0.5">
+            chapter
+          </span>
+        )}
         {!result.isOA && (
           <span className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
             may be paywalled
           </span>
         )}
 
-        {/* ── Star save button — high contrast, larger ── */}
+        {/* Star save button */}
         {onToggleLibrary && (
           <button
             onClick={handleToggleLibrary}
@@ -75,7 +88,7 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
         )}
       </div>
 
-      {/* Eagle tooltip — renders inline below the header row */}
+      {/* Eagle tooltip */}
       <EagleTooltip {...eagle.props} message={EAGLE_LIBRARY_MSG} />
 
       <div className={hasImage ? "grid grid-cols-[120px_1fr] md:grid-cols-[160px_1fr] gap-4 md:gap-5" : ""}>
@@ -99,17 +112,62 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
           >
             {result.title}
           </h4>
+
+          {/* v.17 — Book title subheader for chapters NOT already inside a group wrapper */}
+          {chapter && !isChapterInGroup && result.journal && (
+            <p className="display-font text-sm text-stone-700 mb-1 break-words">
+              In: <em>{result.journal}</em>
+            </p>
+          )}
+
           {result.authors?.length > 0 && (
             <p className="display-font italic text-sm text-stone-700 mb-1 break-words">
               {result.authors.slice(0, 4).join(", ")}
               {result.authors.length > 4 ? ", et al." : ""}
             </p>
           )}
-          {(result.journal || result.publisher) && (
-            <p className="mono-font text-[10px] uppercase tracking-wider text-stone-600 mb-3 break-words">
-              {result.journal || result.publisher}
+
+          {/* v.17 — Editors */}
+          {result.editors?.length > 0 && (
+            <p className="display-font text-sm text-stone-600 mb-1 break-words">
+              Ed. {result.editors.slice(0, 3).join(", ")}
+              {result.editors.length > 3 ? ", et al." : ""}
             </p>
           )}
+
+          {(result.journal || result.publisher) && !isChapterInGroup && (
+            <p className="mono-font text-[10px] uppercase tracking-wider text-stone-600 mb-2 break-words">
+              {/* For chapters already showing journal as "In: ...", show publisher only */}
+              {chapter && result.journal ? result.publisher : (result.journal || result.publisher)}
+            </p>
+          )}
+
+          {/* v.17 — Enrichment metadata row */}
+          {(result.citedBy != null || result.keywords?.length > 0 || result.subjects?.length > 0 || result.language) && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {result.citedBy != null && result.citedBy > 0 && (
+                <span className="mono-font text-[9px] uppercase tracking-widest bg-amber-100 text-amber-800 px-1.5 py-0.5">
+                  {result.citedBy.toLocaleString()} cited
+                </span>
+              )}
+              {result.language && (
+                <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-200 text-stone-600 px-1.5 py-0.5">
+                  {result.language}
+                </span>
+              )}
+              {(result.keywords || []).slice(0, 3).map((kw, ki) => (
+                <span key={ki} className="mono-font text-[9px] uppercase tracking-widest bg-stone-100 text-stone-600 px-1.5 py-0.5">
+                  {kw}
+                </span>
+              ))}
+              {(result.subjects || []).slice(0, 2).map((s, si) => (
+                <span key={si} className="mono-font text-[9px] uppercase tracking-widest bg-emerald-100 text-emerald-800 px-1.5 py-0.5">
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+
           {result.abstract && (
             <p className="text-sm text-stone-800 leading-relaxed mb-3 break-words">
               {truncate(result.abstract, hasImage ? 200 : 280)}
@@ -129,7 +187,7 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
         </a>
       )}
 
-      {/* Citations — MLA + APA only */}
+      {/* Citations — MLA + APA */}
       <div className="border border-stone-300 bg-white">
         <button
           onClick={() => setCitationsOpen((o) => !o)}
