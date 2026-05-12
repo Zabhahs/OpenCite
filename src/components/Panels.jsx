@@ -1,8 +1,77 @@
-import React, { useState } from "react";
+// OpenCITE — Panels
+// SettingsPanel, HistoryPanel, LibraryPanel
+// LibraryPanel v.16: select mode toggle, multi-format export (Bibliography · BibTeX · RIS · CSL-JSON)
+
+import React, { useState, useCallback } from "react";
 import { TAG_VOCAB, ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { DEFAULT_CURATED_JOURNALS, REGION_ORDER } from "../constants/defaults.js";
 import { ResultCard } from "./ResultCard.jsx";
 import { libraryKey } from "../lib/library.js";
+import {
+  buildMLA, buildAPA, segmentsToPlain,
+  buildBibTeX, buildRIS, buildCSL,
+} from "../lib/citations.js";
+import { normalizeRecord, createDedupMap } from "../adapters/_shared/normalize.js";
+import { AbstractAdapter } from "../adapters/_shared/base.js";
+
+// ── toNCR — re-normalize stripped library items for export ────────────────────
+// Library items are stored with citation-essential fields only (no _type/_authorsParsed).
+// This runs them back through the normalize pipeline before export. Idempotent.
+
+function toNCR(item) {
+  if (item._normalized) return item;
+  const sanitized = AbstractAdapter.sanitize(item);
+  const dedupMap = createDedupMap();
+  return normalizeRecord(sanitized, item.source || "library", dedupMap) ?? sanitized;
+}
+
+// ── Download helper ───────────────────────────────────────────────────────────
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const datestamp = () => new Date().toISOString().slice(0, 10);
+
+// ── Export handlers ───────────────────────────────────────────────────────────
+
+function exportBibliography(items) {
+  const lines = [
+    "OPENCITE LIBRARY EXPORT",
+    `Generated ${new Date().toLocaleString()}`,
+    `${items.length} item${items.length !== 1 ? "s" : ""}`,
+    "",
+    "=== MLA 9 ===", "",
+    ...items.flatMap(item => [segmentsToPlain(buildMLA(item)), ""]),
+    "",
+    "=== APA 7 ===", "",
+    ...items.flatMap(item => [segmentsToPlain(buildAPA(item)), ""]),
+  ];
+  downloadFile(lines.join("\n"), `opencite-bibliography-${datestamp()}.txt`, "text/plain");
+}
+
+function exportBibTeX(items) {
+  const content = items.map(item => buildBibTeX(toNCR(item))).join("\n\n");
+  downloadFile(content, `opencite-export-${datestamp()}.bib`, "text/plain");
+}
+
+function exportRIS(items) {
+  const content = items.map(item => buildRIS(toNCR(item))).join("\n\n");
+  downloadFile(content, `opencite-export-${datestamp()}.ris`, "text/plain");
+}
+
+function exportCSL(items) {
+  const content = JSON.stringify(items.map(item => buildCSL(toNCR(item))), null, 2);
+  downloadFile(content, `opencite-export-${datestamp()}.json`, "application/json");
+}
 
 // ---------- AddJournalForm ----------
 
@@ -24,9 +93,11 @@ export function AddJournalForm({ onAdd }) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-2">
-      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Journal name"
+      <input type="text" value={name} onChange={e => setName(e.target.value)}
+        placeholder="Journal name"
         className="flex-1 bg-white border border-stone-400 px-3 py-2 text-sm focus:outline-none focus:border-stone-900" />
-      <input type="text" value={issn} onChange={e => setIssn(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()}
+      <input type="text" value={issn} onChange={e => setIssn(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && submit()}
         placeholder="ISSN (e.g. 2150-8925)"
         className="sm:w-44 bg-white border border-stone-400 px-3 py-2 mono-font text-sm focus:outline-none focus:border-stone-900" />
       <button onClick={submit}
@@ -73,7 +144,8 @@ export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
               <summary className="cursor-pointer list-none flex items-center justify-between p-3 hover:bg-stone-100/60 transition">
                 <span className="display-font font-bold text-stone-900">{TAG_VOCAB.region[region]}</span>
                 <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">
-                  {groups[region].filter(isEnabled).length}/{groups[region].length} on <span className="ml-2 inline-block group-open:rotate-180 transition">▾</span>
+                  {groups[region].filter(isEnabled).length}/{groups[region].length} on{" "}
+                  <span className="ml-2 inline-block group-open:rotate-180 transition">▾</span>
                 </span>
               </summary>
               <div className="border-t border-stone-300 p-3 space-y-3">
@@ -242,36 +314,144 @@ export function HistoryPanel({ entries, onRerun, onRemove, onClear, historyMax }
 
 // ---------- LibraryPanel ----------
 
-export function LibraryPanel({ items, onToggle, onExport, onClear, onCopy, copied }) {
+export function LibraryPanel({ items, onToggle, onExportBibliography, onClear, onCopy, copied }) {
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState(new Set());
+
+  const toggleSelect = useCallback((key) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }, []);
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedKeys(new Set());
+  };
+
+  const selectedItems = items.filter(item => selectedKeys.has(libraryKey(item)));
+  const hasSelection = selectedItems.length > 0;
+
   return (
     <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
-      <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+
+      {/* ── Header row ── */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700">
-          Saved library {items.length > 0 && `· ${items.length} item${items.length !== 1 ? "s" : ""}`}
+          Saved library{items.length > 0 ? ` · ${items.length} item${items.length !== 1 ? "s" : ""}` : ""}
         </h2>
-        {items.length > 0 && (
-          <div className="flex items-center gap-3">
-            <button onClick={onExport} className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition">↓ Export bibliography</button>
-            <button onClick={() => { if (confirm(`Remove all ${items.length} items from your library?`)) onClear(); }}
-              className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition">Clear all</button>
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {items.length > 0 && !selectMode && (
+            <>
+              <button
+                onClick={() => exportBibliography(items)}
+                className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition"
+              >
+                ↓ Export all
+              </button>
+              <button
+                onClick={() => setSelectMode(true)}
+                className="mono-font text-[10px] uppercase tracking-widest bg-stone-900 text-amber-50 px-3 py-1.5 hover:bg-red-900 transition"
+              >
+                ✓ Select to export
+              </button>
+              <button
+                onClick={() => { if (confirm(`Remove all ${items.length} items from your library?`)) onClear(); }}
+                className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition"
+              >
+                Clear all
+              </button>
+            </>
+          )}
+          {selectMode && (
+            <button
+              onClick={exitSelectMode}
+              className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition"
+            >
+              ✕ Cancel
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── Select mode export bar ── */}
+      {selectMode && (
+        <div className="mb-4 p-3 border border-stone-300 bg-white">
+          <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500 mb-2">
+            {hasSelection ? `${selectedItems.length} selected` : "Tap items to select"}
+          </p>
+          {hasSelection && (
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["↓ Bibliography", () => { exportBibliography(selectedItems); exitSelectMode(); }],
+                ["↓ BibTeX", () => { exportBibTeX(selectedItems); exitSelectMode(); }],
+                ["↓ RIS", () => { exportRIS(selectedItems); exitSelectMode(); }],
+                ["↓ CSL-JSON", () => { exportCSL(selectedItems); exitSelectMode(); }],
+              ].map(([label, handler]) => (
+                <button
+                  key={label}
+                  onClick={handler}
+                  className="mono-font text-[10px] uppercase tracking-widest border border-stone-700 text-stone-700 px-3 py-1.5 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Item list ── */}
       {items.length === 0 ? (
         <div className="py-3">
           <p className="display-font italic text-stone-700 mb-1">No saved items yet.</p>
-          <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Tap the ☆ on any result to save it.</p>
+          <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Tap the ★ on any result to save it.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {items.map((item, i) => (
-            <ResultCard key={libraryKey(item)} result={item} index={i}
-              onCopy={onCopy} copied={copied} isInLibrary={true} onToggleLibrary={onToggle} />
-          ))}
+          {items.map((item, i) => {
+            const key = libraryKey(item);
+            const isSelected = selectedKeys.has(key);
+
+            return (
+              <div
+                key={key}
+                onClick={selectMode ? () => toggleSelect(key) : undefined}
+                className={[
+                  "relative transition-all",
+                  selectMode ? "cursor-pointer" : "",
+                  isSelected ? "ring-2 ring-amber-500 ring-offset-1" : "",
+                ].join(" ")}
+              >
+                {/* Checkmark overlay */}
+                {selectMode && (
+                  <div className="absolute top-3 right-3 z-10 flex items-center justify-center w-6 h-6 rounded-full border-2 border-stone-400 bg-white transition-all"
+                    style={isSelected ? { borderColor: "#b45309", backgroundColor: "#b45309" } : {}}>
+                    {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+                  </div>
+                )}
+                <div style={selectMode ? { pointerEvents: "none" } : {}}>
+                  <ResultCard
+                    result={item}
+                    index={i}
+                    onCopy={onCopy}
+                    copied={copied}
+                    isInLibrary={true}
+                    onToggleLibrary={selectMode ? null : onToggle}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
+
       <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 pt-3 mt-3 border-t border-stone-300">
-        Stored locally · click ★ on any item to remove · export creates a .txt with MLA + APA
+        {selectMode
+          ? "Select items above · export formats download a file · deselects on exit"
+          : "Stored locally · ★ to remove · 'Select to export' for BibTeX, RIS, CSL-JSON"}
       </p>
     </section>
   );
