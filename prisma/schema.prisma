@@ -1,5 +1,5 @@
 // OpenCITE — Prisma Schema
-// Provider: Supabase (PostgreSQL)
+// Provider: Vercel Postgres (PostgreSQL)
 // Auth adapter: @auth/prisma-adapter (Auth.js v5)
 // Phase 4 hook: agent_wallet_address (SIWE / Base L2)
 
@@ -9,8 +9,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pgBouncer pooler — runtime
-  directUrl = env("DIRECT_URL")     // direct connection — migrations only
+  url       = env("POSTGRES_PRISMA_URL")      // pgBouncer pooler — runtime
+  directUrl = env("POSTGRES_URL_NON_POOLING") // direct connection — migrations only
 }
 
 // ─── Core user record ────────────────────────────────────────────────────────

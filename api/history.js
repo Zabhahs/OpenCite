@@ -3,57 +3,15 @@
 // Runtime: Node.js (Prisma)
 // Auth: session cookie via Auth.js — unauthenticated requests rejected
 //
-// GET    /api/history          → load all entries for user (ordered ts DESC)
-// POST   /api/history          → add entry  { query }
-// DELETE /api/history          → remove one { query } or clear all { clear: true }
-//
-// FIX v.16: replaced Access-Control-Allow-Origin: * with origin-aware CORS.
-//           Wildcard + credentials: "include" = browsers reject the cookie.
+// GET    /api/history  → load all entries for user (ordered ts DESC)
+// POST   /api/history  → add entry  { query }
+// DELETE /api/history  → remove one { query } or clear all { clear: true }
 
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis;
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// ── Trusted origins for CORS ──────────────────────────────────────────────────
-
-const ALLOWED_ORIGINS = [
-  "https://citation.today",
-  "https://opencite.space",
-];
-
-function setCorsHeaders(req, res) {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(".vercel.app"))) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  }
-}
-
-// ── Auth session helper ───────────────────────────────────────────────────────
-
-async function getSession(req) {
-  const protocol = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
-  const host = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
-  const sessionUrl = `${protocol}://${host}/api/auth/session`;
-  try {
-    const res = await fetch(sessionUrl, {
-      headers: { cookie: req.headers.cookie ?? "" },
-    });
-    const data = await res.json();
-    return data?.user?.id ? data.user : null;
-  } catch {
-    return null;
-  }
-}
-
-// ── Handler ───────────────────────────────────────────────────────────────────
+import { prisma } from "./_shared/prisma.js";
+import { setCorsHeaders, getSession } from "./_shared/auth.js";
 
 export default async function handler(req, res) {
-  setCorsHeaders(req, res);
+  setCorsHeaders(req, res, "GET, POST, DELETE, OPTIONS");
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -66,9 +24,9 @@ export default async function handler(req, res) {
   // ── GET — load history ──────────────────────────────────────────────────────
   if (req.method === "GET") {
     const rows = await prisma.search_history.findMany({
-      where: { user_id: userId },
+      where:   { user_id: userId },
       orderBy: { ts: "desc" },
-      select: { query: true, ts: true },   // minimal — no id, no meta
+      select:  { query: true, ts: true },
     });
     return res.status(200).json(rows);
   }
@@ -79,14 +37,13 @@ export default async function handler(req, res) {
     const q = (query ?? "").trim();
     if (!q) return res.status(400).json({ error: "Missing query" });
 
-    // Upsert: update ts if query already exists (mirrors localStorage filter+prepend)
     await prisma.search_history.upsert({
       where:  { user_id_query: { user_id: userId, query: q } },
       update: { ts: Date.now() },
       create: { user_id: userId, query: q, ts: Date.now() },
     });
 
-    // Fire-and-forget trim to HISTORY_MAX (50) — no await, doesn't block response
+    // Fire-and-forget trim to HISTORY_MAX (50)
     prisma.search_history.findMany({
       where:   { user_id: userId },
       orderBy: { ts: "desc" },
@@ -113,9 +70,7 @@ export default async function handler(req, res) {
     }
 
     if (query) {
-      await prisma.search_history.deleteMany({
-        where: { user_id: userId, query },
-      });
+      await prisma.search_history.deleteMany({ where: { user_id: userId, query } });
       return res.status(200).json({ ok: true });
     }
 

@@ -3,17 +3,12 @@
 // Runtime: Node.js (Prisma)
 // Auth: session cookie via Auth.js — unauthenticated requests rejected
 //
-// GET    /api/library          → load all saved items (ordered saved_at DESC)
-// POST   /api/library          → save item   { result: UnifiedResult }
-// DELETE /api/library          → remove one  { library_key } or clear all { clear: true }
-//
-// FIX v.16: replaced Access-Control-Allow-Origin: * with origin-aware CORS.
+// GET    /api/library  → load all saved items (ordered saved_at DESC)
+// POST   /api/library  → save item   { result: UnifiedResult }
+// DELETE /api/library  → remove one  { library_key } or clear all { clear: true }
 
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis;
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+import { prisma } from "./_shared/prisma.js";
+import { setCorsHeaders, getSession } from "./_shared/auth.js";
 
 // ── Citation-essential fields — everything else stripped ──────────────────────
 
@@ -33,44 +28,10 @@ function libraryKey(result) {
   return `${result.source}:${result.id}`;
 }
 
-// ── Trusted origins for CORS ──────────────────────────────────────────────────
-
-const ALLOWED_ORIGINS = [
-  "https://citation.today",
-  "https://opencite.space",
-];
-
-function setCorsHeaders(req, res) {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(".vercel.app"))) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  }
-}
-
-// ── Auth session helper ───────────────────────────────────────────────────────
-
-async function getSession(req) {
-  const protocol = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
-  const host = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
-  const sessionUrl = `${protocol}://${host}/api/auth/session`;
-  try {
-    const res = await fetch(sessionUrl, {
-      headers: { cookie: req.headers.cookie ?? "" },
-    });
-    const data = await res.json();
-    return data?.user?.id ? data.user : null;
-  } catch {
-    return null;
-  }
-}
-
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  setCorsHeaders(req, res);
+  setCorsHeaders(req, res, "GET, POST, DELETE, OPTIONS");
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -87,7 +48,6 @@ export default async function handler(req, res) {
       orderBy: { saved_at: "desc" },
       select:  { result: true, saved_at: true, library_key: true },
     });
-    // Rehydrate to the shape useLibrary expects: { ...result, savedAt }
     const items = rows.map(r => ({ ...r.result, savedAt: r.saved_at }));
     return res.status(200).json(items);
   }
@@ -119,9 +79,7 @@ export default async function handler(req, res) {
     }
 
     if (library_key) {
-      await prisma.library_items.deleteMany({
-        where: { user_id: userId, library_key },
-      });
+      await prisma.library_items.deleteMany({ where: { user_id: userId, library_key } });
       return res.status(200).json({ ok: true });
     }
 

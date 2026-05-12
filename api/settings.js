@@ -4,20 +4,14 @@
 // Auth: session cookie via Auth.js — unauthenticated requests rejected
 //
 // Stores user API keys + custom journals as an AES-256-GCM encrypted blob
-// in users.settings (JSONB). The encryption key lives only in the
-// SETTINGS_ENCRYPTION_KEY Vercel env var — never in the DB.
+// in users.settings (JSONB). Key lives in SETTINGS_ENCRYPTION_KEY env var only.
 //
 // GET  /api/settings  → decrypt and return settings object
 // POST /api/settings  → encrypt and upsert settings object
-//
-// FIX v.16: replaced Access-Control-Allow-Origin: * with origin-aware CORS.
 
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis;
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+import { prisma } from "./_shared/prisma.js";
+import { setCorsHeaders, getSession } from "./_shared/auth.js";
 
 // ── Encryption ────────────────────────────────────────────────────────────────
 // AES-256-GCM: authenticated encryption — ciphertext is tamper-proof.
@@ -31,7 +25,7 @@ function getKey() {
 
 function encrypt(obj) {
   const key = getKey();
-  const iv  = randomBytes(12);
+  const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(JSON.stringify(obj), "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -40,54 +34,18 @@ function encrypt(obj) {
 
 function decrypt(blob) {
   const key = getKey();
-  const buf       = Buffer.from(blob, "base64");
-  const iv        = buf.subarray(0, 12);
-  const tag       = buf.subarray(12, 28);
-  const encrypted = buf.subarray(28);
-  const decipher  = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
-  return JSON.parse(plain);
-}
-
-// ── Trusted origins for CORS ──────────────────────────────────────────────────
-
-const ALLOWED_ORIGINS = [
-  "https://citation.today",
-  "https://opencite.space",
-];
-
-function setCorsHeaders(req, res) {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(".vercel.app"))) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  }
-}
-
-// ── Auth session helper ───────────────────────────────────────────────────────
-
-async function getSession(req) {
-  const protocol = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
-  const host = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
-  const sessionUrl = `${protocol}://${host}/api/auth/session`;
-  try {
-    const res = await fetch(sessionUrl, {
-      headers: { cookie: req.headers.cookie ?? "" },
-    });
-    const data = await res.json();
-    return data?.user?.id ? data.user : null;
-  } catch {
-    return null;
-  }
+  const buf = Buffer.from(blob, "base64");
+  const decipher = createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12));
+  decipher.setAuthTag(buf.subarray(12, 28));
+  return JSON.parse(
+    Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString("utf8")
+  );
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  setCorsHeaders(req, res);
+  setCorsHeaders(req, res, "GET, POST, OPTIONS");
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -107,12 +65,10 @@ export default async function handler(req, res) {
     if (!row?.settings) return res.status(200).json({ settings: null });
 
     try {
-      // settings column stores the encrypted blob as a JSON string value
-      const blob      = typeof row.settings === "string" ? row.settings : JSON.stringify(row.settings);
-      const decrypted = decrypt(blob);
-      return res.status(200).json({ settings: decrypted });
+      const blob = typeof row.settings === "string" ? row.settings : JSON.stringify(row.settings);
+      return res.status(200).json({ settings: decrypt(blob) });
     } catch {
-      // Wrong key or corrupted blob — return null so client falls back to localStorage
+      // Wrong key or corrupted blob — fall back to localStorage on client
       return res.status(200).json({ settings: null });
     }
   }
@@ -125,14 +81,13 @@ export default async function handler(req, res) {
     }
 
     try {
-      const encrypted = encrypt(settings);
       await prisma.user.update({
         where: { internal_id: userId },
-        data:  { settings: encrypted },
+        data:  { settings: encrypt(settings) },
       });
       return res.status(200).json({ ok: true });
     } catch (e) {
-      console.error("Settings save error:", e.message);
+      console.error("[settings] save error:", e.message);
       return res.status(500).json({ error: "Failed to save settings" });
     }
   }
