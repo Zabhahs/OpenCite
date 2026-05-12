@@ -1,8 +1,13 @@
 // OpenCITE — useHistory
 // Auth-aware: signed-in users sync to DB via /api/history (fire-and-forget writes).
 // Anonymous users fall through to localStorage via lib/history.js — unchanged behaviour.
+//
+// Sync strategy mirrors useSettings:
+//   load()       — reads localStorage (fast, offline-safe), called once on mount
+//   syncFromDB() — called when user signs in; DB wins on conflict
+//   add/remove/clear — writes localStorage always + fire-and-forget POST if signed in
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { history } from "../lib/history.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
@@ -20,26 +25,52 @@ async function apiFetch(method, body) {
 export function useHistory() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
-  // ── load ──────────────────────────────────────────────────────────────────
-  // Called once on mount by the component that renders history.
-  const load = async () => {
-    if (user) {
+  // Always-current ref so syncFromDB() never reads stale closure values
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
+
+  // ── Sync from DB when user signs in (and local state is ready) ────────────
+  useEffect(() => {
+    if (user?.id && loaded) syncFromDB();
+  }, [user?.id, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── syncFromDB — fires once on sign-in ────────────────────────────────────
+  const syncFromDB = async () => {
+    try {
       const res = await apiFetch("GET");
-      if (res.ok) {
-        const rows = await res.json();
-        setEntries(rows);          // [{ query, ts }] — same shape as localStorage
+      if (!res.ok) return;
+      const rows = await res.json();
+
+      if (!rows || rows.length === 0) {
+        // No DB record yet — push current localStorage entries up (first-time sync)
+        const local = entriesRef.current;
+        local.forEach(e => apiFetch("POST", { query: e.query })); // fire-and-forget
         return;
       }
-      // DB fetch failed — fall through to localStorage silently
+
+      // DB wins — update state and localStorage
+      setEntries(rows);
+      try {
+        const { storage } = await import("../lib/storage.js");
+        storage.set("history", rows);
+      } catch {}
+    } catch {
+      // Network error — stay on localStorage silently
     }
-    setEntries(history.load());
+  };
+
+  // ── load — localStorage read (called once on mount by App.jsx) ─────────────
+  const load = () => {
+    const raw = history.load();
+    setEntries(raw);
+    setLoaded(true);
   };
 
   // ── add ───────────────────────────────────────────────────────────────────
-  // Write is fire-and-forget for signed-in users — UI updates immediately.
   const add = (query) => {
-    const next = history.add(query);   // always write localStorage (offline resilience)
+    const next = history.add(query);
     setEntries(next);
     if (user) apiFetch("POST", { query }); // non-blocking
     return next;
