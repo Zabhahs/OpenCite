@@ -20,47 +20,77 @@
 // ---------------------------------------------------------------------------
 
 const TYPE_MAP = {
-  "article":            "article",
-  "journal-article":    "article",
-  "article-journal":    "article",
-  "review-article":     "article",
-  "proceedings":        "article",
-  "proceedings-article":"article",
-  "posted-content":     "article",
-  "peer-review":        "article",
-  "report":             "report",
-  "report-component":   "report",
-  "book":               "book",
-  "book-chapter":       "book-chapter",
-  "book-section":       "book-chapter",
-  "book-part":          "book-chapter",
-  "inbook":             "book-chapter",
-  "reference-entry":    "book-chapter",
-  "edited-book":        "book",
-  "monograph":          "book",
-  "reference-book":     "book",
-  "thesis":             "thesis",
-  "dissertation":       "thesis",
-  "dataset":            "dataset",
-  "data":               "dataset",
-  "genomic-data":       "dataset",
-  "structured-data":    "dataset",
-  "archaeological-data":"dataset",
-  "image":              "image",
-  "photograph":         "image",
-  "graphic":            "image",
-  "primary-source":     "primary-source",
-  "manuscript":         "primary-source",
-  "textual":            "misc",
-  "misc":               "misc",
-  "other":              "misc",
-  "document":           "misc",
-  "component":          "misc",
-  "standard":           "misc",
+  // Journal / article
+  "article":                "article",
+  "journal-article":        "article",
+  "article-journal":        "article",
+  "review-article":         "article",
+  "proceedings":            "article",
+  "proceedings-article":    "article",
+  "posted-content":         "article",
+  "peer-review":            "article",
+  // Books
+  "book":                   "book",
+  "edited-book":            "book",
+  "monograph":              "book",
+  "reference-book":         "book",
+  "book-chapter":           "book-chapter",
+  "book-section":           "book-chapter",
+  "book-part":              "book-chapter",
+  "inbook":                 "book-chapter",
+  "reference-entry":        "book-chapter",
+  // Reports / grey literature
+  "report":                 "report",
+  "report-component":       "report",
+  // Theses
+  "thesis":                 "thesis",
+  "dissertation":           "thesis",
+  // Datasets
+  "dataset":                "dataset",
+  "data":                   "dataset",
+  "genomic-data":           "dataset",
+  "structured-data":        "dataset",
+  "archaeological-data":    "dataset",
+  // Images / visual
+  "image":                  "image",
+  "photograph":             "image",
+  "graphic":                "image",
+  "visual":                 "image",
+  // Primary sources / archival
+  "primary-source":         "primary-source",
+  "manuscript":             "primary-source",
+  "textual":                "primary-source",
+  // v.18 — heritage library types emitted by CA, Delpher, NLS, ONB, BnF
+  "newspaper":              "primary-source",
+  "Newspaper":              "primary-source",
+  "newspaper page":         "primary-source",
+  "magazine":               "primary-source",
+  "periodical":             "primary-source",
+  "serial":                 "primary-source",
+  "map":                    "primary-source",
+  "maps":                   "primary-source",
+  "photograph":             "primary-source",
+  "photographs":            "primary-source",
+  "still image":            "image",
+  "moving image":           "misc",
+  "sound":                  "misc",
+  "audio":                  "misc",
+  "ephemera":               "primary-source",
+  "pamphlet":               "primary-source",
+  "letter":                 "primary-source",
+  "correspondence":         "primary-source",
+  "text":                   "primary-source",
+  "Text":                   "primary-source",
+  // Misc / fallback
+  "misc":                   "misc",
+  "other":                  "misc",
+  "document":               "misc",
+  "component":              "misc",
+  "standard":               "misc",
 };
 
 const inferType = (raw) =>
-  TYPE_MAP[String(raw || "").toLowerCase().trim()] || "misc";
+  TYPE_MAP[String(raw || "").trim()] || "misc";
 
 // ---------------------------------------------------------------------------
 // Author parsing
@@ -82,7 +112,6 @@ export const parseAuthors = (authors) => {
 
     const commaIdx = str.indexOf(",");
     if (commaIdx > 0) {
-      // "Last, First [Middle]" — already in citation-ready order
       return {
         family: str.slice(0, commaIdx).trim(),
         given:  str.slice(commaIdx + 1).trim(),
@@ -91,23 +120,18 @@ export const parseAuthors = (authors) => {
 
     const parts = str.split(/\s+/);
     if (parts.length >= 2) {
-      // "First [Middle] Last"
       return {
         family: parts[parts.length - 1],
         given:  parts.slice(0, -1).join(" "),
       };
     }
 
-    // Single token — institution, acronym, or anonymous
     return { literal: str, family: str, given: "" };
   }).filter(Boolean);
 };
 
 // ---------------------------------------------------------------------------
 // Request-scoped dedup
-// One Map per runSearch() call. Prevents duplicate results when two launchers
-// target the same adapter, or when an API returns overlapping pages.
-// Key: adapterKey + canonical identifier (DOI > URL > id > title).
 // ---------------------------------------------------------------------------
 
 export const createDedupMap = () => new Map();
@@ -121,39 +145,19 @@ const dedupKey = (adapterKey, r) => {
 // normalizeRecord — main export
 // ---------------------------------------------------------------------------
 
-/**
- * normalizeRecord(sanitized, adapterKey, dedupMap) → NCR | null
- *
- * @param {object} sanitized   - Output of AbstractAdapter.sanitize()
- * @param {string} adapterKey  - Stable adapter identifier (adapter.key or adapter.name)
- * @param {Map}    dedupMap    - Request-scoped Map from createDedupMap()
- * @returns {object|null}      - NCR, or null if duplicate within this request
- */
 export const normalizeRecord = (sanitized, adapterKey, dedupMap) => {
-  // Idempotency guard — already normalized records pass through unchanged
   if (sanitized._normalized) return sanitized;
 
-  // Dedup within this request
   const key = dedupKey(adapterKey, sanitized);
   if (dedupMap.has(key)) return null;
   dedupMap.set(key, true);
 
   return {
-    // All existing UnifiedResult fields — preserved, unchanged
     ...sanitized,
-
-    // Canonical type string — downstream never reads r.type raw again
-    _type: inferType(sanitized.type),
-
-    // Structured authors for CSL-JSON / BibTeX / RIS export
-    // Does NOT replace r.authors (string[]) — MLA/APA/UI still use that
+    _type:          inferType(sanitized.type),
     _authorsParsed: parseAuthors(sanitized.authors),
-
-    // v.17 — Structured editors (same shape as _authorsParsed)
     _editorsParsed: parseAuthors(sanitized.editors),
-
-    // Sentinel
-    _normalized: true,
+    _normalized:    true,
   };
 };
 
@@ -161,10 +165,6 @@ export const normalizeRecord = (sanitized, adapterKey, dedupMap) => {
 // validateNCR — dev/test utility. Not called in the production hot path.
 // ---------------------------------------------------------------------------
 
-/**
- * validateNCR(ncr) → { valid: boolean, missing: string[] }
- * Use in tests or adapter development to confirm output shape.
- */
 export const validateNCR = (ncr) => {
   const required = ["title", "url", "_type", "_authorsParsed", "_normalized"];
   const missing = required.filter((f) => ncr[f] == null || ncr[f] === "");
@@ -172,7 +172,7 @@ export const validateNCR = (ncr) => {
 };
 
 // ---------------------------------------------------------------------------
-// PHASE 2 HOOK POINT (document here, implement in Phase 2)
+// PHASE 2 HOOK POINT
 //
 // Before normalizeRecord() call in runSearch():
 //   const cached = await kv.get(kvKey(adapterKey, query));
@@ -182,5 +182,5 @@ export const validateNCR = (ncr) => {
 //   await kv.set(kvKey(adapterKey, query), JSON.stringify(results), { ex: 300 });
 //
 // Cache key: `opencite:${adapterKey}:${sha1(query.toLowerCase().trim())}`
-// TTL: 300s (5 minutes) — balances freshness vs. upstream load.
+// TTL: 300s (5 minutes)
 // ---------------------------------------------------------------------------

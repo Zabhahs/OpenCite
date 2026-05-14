@@ -1,109 +1,40 @@
-import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
-import { AbstractAdapter } from "./_shared/base.js";
-import { normalizeRecord, createDedupMap } from "./_shared/normalize.js";
-
-// Core adapters
-import { DOAJ_ADAPTER } from "./core/doaj.js";
-import { OPENALEX_ADAPTER } from "./core/openalex.js";
-import { CROSSREF_ADAPTER } from "./core/crossref.js";
-import { CURATED_JOURNALS_ADAPTER } from "./core/curatedJournals.js";
-
-// Extension adapters
-import { SEMANTIC_SCHOLAR_ADAPTER } from "./extensions/semanticScholar.js";
-import {
-  EUROPEANA_ADAPTER,
-  MET_ADAPTER,
-  SMITHSONIAN_ADAPTER,
-  DPLA_ADAPTER,
-  RIJKSMUSEUM_ADAPTER,
-  INTERNET_ARCHIVE_ADAPTER,
-  BDPI_ADAPTER,
-  GALLICA_ADAPTER,
-  THAQALAYN_ADAPTER,
-  NCBI_ADAPTER,
-  OPENCONTEXT_ADAPTER,
-  NORTHWESTERN_ADAPTER,
-  PRINCETON_DPUL_ADAPTER,
-  PANGAEA_ADAPTER,
-  OPENNEURO_ADAPTER,
-  ENA_ADAPTER
-} from "./extensions/index.js";
-
 /**
- * ADAPTERS — the canonical ordered registry.
- * Order determines render order in the results view.
- * Core adapters are always enabled; extensions are opt-in.
- */
-export const ADAPTERS = [
-  // Core — always on
-  DOAJ_ADAPTER,
-  OPENALEX_ADAPTER,
-  CROSSREF_ADAPTER,
-  CURATED_JOURNALS_ADAPTER,
-  // Extensions — scholarly
-  SEMANTIC_SCHOLAR_ADAPTER,
-  // Extensions — cultural & primary sources
-  EUROPEANA_ADAPTER,
-  MET_ADAPTER,
-  SMITHSONIAN_ADAPTER,
-  DPLA_ADAPTER,
-  RIJKSMUSEUM_ADAPTER,
-  INTERNET_ARCHIVE_ADAPTER,
-  BDPI_ADAPTER,
-  // Extensions — sciences
-  NCBI_ADAPTER,
-  OPENCONTEXT_ADAPTER,
-  // Extensions — Islamicate / heritage
-  GALLICA_ADAPTER,
-  THAQALAYN_ADAPTER,
-  // Extensions — v.11
-  NORTHWESTERN_ADAPTER,
-  PRINCETON_DPUL_ADAPTER,
-  PANGAEA_ADAPTER,
-  OPENNEURO_ADAPTER,
-  ENA_ADAPTER,
-];
-
-/** True if this adapter runs by default without user opt-in. */
-export const isAdapterDefaultEnabled = (adapter) =>
-  adapter.category === ADAPTER_CATEGORY.CORE;
-
-/**
- * runSearch — registry wrapper around adapter.search().
+ * extensions/index.js — re-export barrel.
  *
- * Pipeline (in order):
- *   1. adapter.search()          — raw upstream fetch
- *   2. AbstractAdapter.sanitize() — null safety, UnifiedResult contract
- *   3. normalizeRecord()          — NCR enforcement, type canonicalization,
- *                                   author parsing, request-scoped dedup
+ * No adapter logic lives here. Each adapter is in its own file.
+ * To add a new adapter: create the file, export the constant, add it here.
+ * To remove one: delete the file, remove the export line below, remove from
+ * src/adapters/index.js ADAPTERS array.
  *
- * Single chokepoint for all upstream data.
- * Phase 2 (rate limiting): KV cache check/write goes here — see hook comments.
- * Phase 2 (billing):       BillingContext.deduct() goes here after KV check.
- * Phase 5 (telemetry):     log query + adapterKey here for KV buffering.
+ * File count threshold: split into subdirectory groups (e.g. heritage/, science/)
+ * if this barrel grows past ~30 lines of imports.
  */
-export const runSearch = async (adapter, query, settings, opts = {}) => {
-  // PHASE 2 HOOK — KV cache check (slot before upstream fetch)
-  // const cacheKey = `opencite:${adapterKey}:${sha1(query)}`;
-  // const cached = await kv.get(cacheKey);
-  // if (cached) return JSON.parse(cached);
 
-  const adapterKey = adapter.id || adapter.name || "unknown";
-  const dedupMap = createDedupMap();
+// Pre-v.18 extensions
+export { EUROPEANA_ADAPTER }        from "./europeana.js";
+export { MET_ADAPTER }              from "./met.js";
+export { SMITHSONIAN_ADAPTER }      from "./smithsonian.js";
+export { DPLA_ADAPTER }             from "./dpla.js";
+export { RIJKSMUSEUM_ADAPTER }      from "./rijksmuseum.js";
+export { INTERNET_ARCHIVE_ADAPTER } from "./internetArchive.js";
+export { BDPI_ADAPTER }             from "./bdpi.js";
+export { GALLICA_ADAPTER }          from "./gallica.js";
+export { THAQALAYN_ADAPTER }        from "./thaqalayn.js";
+export { NCBI_ADAPTER }             from "./ncbi.js";
+export { OPENCONTEXT_ADAPTER }      from "./openContext.js";
+export { NORTHWESTERN_ADAPTER }     from "./northwestern.js";
+export { PRINCETON_DPUL_ADAPTER }   from "./princetonDpul.js";
+export { PANGAEA_ADAPTER }          from "./pangaea.js";
+export { OPENNEURO_ADAPTER }        from "./openNeuro.js";
+export { ENA_ADAPTER }              from "./ena.js";
 
-  const raw = await adapter.search(query, settings, opts);
-  const rawResults = Array.isArray(raw) ? raw : (raw.results || []);
-  const hasMore = Array.isArray(raw) ? false : !!raw.hasMore;
-
-  const results = rawResults
-    .map(AbstractAdapter.sanitize)
-    .map((r) => normalizeRecord(r, adapterKey, dedupMap))
-    .filter(Boolean); // null = duplicate within this request — drop it
-
-  // PHASE 2 HOOK — KV cache write (slot after results built)
-  // await kv.set(cacheKey, JSON.stringify({ results, hasMore }), { ex: 300 });
-
-  return { results, hasMore };
-};
-
-export { ADAPTER_CATEGORY };
+// v.18 SOW heritage adapters
+export { CHRONICLING_AMERICA_ADAPTER } from "./chroniclingAmerica.js";
+export { ONB_ADAPTER }              from "./onb.js";
+export { BDH_ADAPTER }              from "./bdh.js";
+export { BNF_API_ADAPTER }          from "./bnfApi.js";
+export { BRITISH_LIBRARY_ADAPTER }  from "./britishLibrary.js";
+export { DELPHER_ADAPTER }          from "./delpher.js";
+export { LC_DATASETS_ADAPTER }      from "./lcDatasets.js";
+export { MEXICANA_ADAPTER }         from "./mexicana.js";
+export { NLS_ADAPTER }              from "./nls.js";
