@@ -4,12 +4,14 @@ export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q');
   const start = searchParams.get('start') || '0';
-  const rows = searchParams.get('rows') || '10';
+  const rows = searchParams.get('rows') || '3';
 
   if (!query) return new Response(JSON.stringify({ error: 'No query' }), { status: 400 });
 
-  // Correct endpoint — /sets/.json is dead (404). Current API is /query/.json
-  const targetUrl = `https://opencontext.org/query/.json?q=${encodeURIComponent(query)}&start=${start}&rows=${rows}`;
+  // CRITICAL: response=uri-meta returns actual item records.
+  // Without this, the API returns geo-facet region buckets ("Region (1)", "Region (2)"...)
+  // which have no useful metadata. rows controls page size.
+  const targetUrl = `https://opencontext.org/query/.json?q=${encodeURIComponent(query)}&rows=${rows}&start=${start}&response=uri-meta`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -50,34 +52,57 @@ export default async function handler(req) {
       });
     }
 
-    // Open Context query API returns GeoJSON features + oc-api metadata
-    const features = data.features || data['oc-api:has-results'] || [];
-    const total = parseInt(data?.totalResults || data?.['oc-api:total-results'] || data?.['oai:totalResults'] || "0", 10) || features.length;
+    // With response=uri-meta, actual item records are in data['oc-api:has-results']
+    // Each record has: uri, label, project-label, project-href, published, updated,
+    // context-label, item-type, thumbnail-uri, latitude, longitude
+    const items = data['oc-api:has-results'] || [];
+    const total = parseInt(
+      data?.['oai:totalResults'] ||
+      data?.['oc-api:total-results'] ||
+      data?.totalResults ||
+      "0", 10
+    );
 
-    const normalizedResults = features.map((f) => {
-      const props = f.properties || {};
-      // URI can be on the feature itself or in properties
-      const uri = props.uri || props.id || f.id || f['@id'] || "";
-      const label = props.label || props['rdfs:label'] || f.label || "Untitled Record";
-      const project = props['oc-api:project-label'] || props['label:proj'] || props.project || "Open Context";
+    const normalizedResults = items
+      // Filter out any geo-facet region buckets that slip through (no label or type=region)
+      .filter(item => item.label && item.label !== '' && item['item-type'] !== 'region')
+      .map(item => {
+        const uri = item.uri || item['@id'] || "";
+        const canonicalUri = uri.replace('http://opencontext.org', 'https://opencontext.org');
 
-      return {
-        id: `oc-${uri.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
-        source: "OPENCONTEXT",
-        title: label,
-        authors: props.creator ? [props.creator] : [],
-        year: String(props.published || props['dc-terms:date'] || props.created || "").match(/\d{4}/)?.[0] || "",
-        journal: project,
-        publisher: "Open Context",
-        url: uri.startsWith('http') ? uri : `https://opencontext.org${uri}`,
-        abstract: props.description || props['dc-terms:abstract'] || props['rdfs:comment'] || "",
-        isOA: true,
-        type: "archaeological-data",
-        previewImage: props.thumbnail || ""
-      };
-    });
+        // published is ISO date string e.g. "2013-07-31T00:00:00"
+        const year = String(item.published || item.updated || "").match(/\d{4}/)?.[0] || "";
 
-    return new Response(JSON.stringify({ results: normalizedResults, total }), {
+        // item-type can be: subjects, media, documents, projects, persons, predicates, types
+        // Map to our type vocab
+        const itemType = item['item-type'] || "";
+        const type = itemType === 'projects' ? 'dataset'
+          : itemType === 'documents' ? 'primary-source'
+          : itemType === 'media' ? 'primary-source'
+          : 'archaeological-data';
+
+        return {
+          id: `oc-${canonicalUri.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
+          source: "OPENCONTEXT",
+          title: item.label || "Untitled Record",
+          authors: item['context-label'] ? [] : [], // OC records don't surface authors at this level
+          year,
+          journal: item['project-label'] || "Open Context",
+          publisher: "Open Context",
+          url: canonicalUri,
+          abstract: [
+            item['context-label'] ? `Context: ${item['context-label']}` : '',
+            item['item-type'] ? `Type: ${item['item-type']}` : ''
+          ].filter(Boolean).join(' · '),
+          isOA: true,
+          type,
+          previewImage: item['thumbnail-uri'] || ""
+        };
+      });
+
+    const hasMore = (parseInt(start, 10) + normalizedResults.length) < total;
+
+    return new Response(JSON.stringify({ results: normalizedResults, total, hasMore }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
