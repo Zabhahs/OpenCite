@@ -10,6 +10,17 @@
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession } from "./_shared/auth.js";
 
+// ── Body parser — req.body is undefined in raw Node.js serverless functions ──
+async function parseBody(req) {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", chunk => { data += chunk; });
+    req.on("end", () => {
+      try { resolve(JSON.parse(data)); } catch { resolve({}); }
+    });
+  });
+}
+
 export default async function handler(req, res) {
   setCorsHeaders(req, res, "GET, POST, DELETE, OPTIONS");
   res.setHeader("Content-Type", "application/json");
@@ -28,12 +39,13 @@ export default async function handler(req, res) {
       orderBy: { ts: "desc" },
       select:  { query: true, ts: true },
     });
-    return res.status(200).json(rows);
+    // BigInt cannot be JSON-serialized — convert ts to Number
+    return res.status(200).json(rows.map(r => ({ ...r, ts: Number(r.ts) })));
   }
 
   // ── POST — add entry ────────────────────────────────────────────────────────
   if (req.method === "POST") {
-    const { query } = req.body ?? {};
+    const { query } = await parseBody(req);
     const q = (query ?? "").trim();
     if (!q) return res.status(400).json({ error: "Missing query" });
 
@@ -62,7 +74,7 @@ export default async function handler(req, res) {
 
   // ── DELETE — remove one or clear all ───────────────────────────────────────
   if (req.method === "DELETE") {
-    const { query, clear } = req.body ?? {};
+    const { query, clear } = await parseBody(req);
 
     if (clear) {
       await prisma.search_history.deleteMany({ where: { user_id: userId } });

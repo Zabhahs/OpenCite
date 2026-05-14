@@ -8,11 +8,14 @@ export default async function handler(req) {
 
   if (!query) return new Response(JSON.stringify({ error: 'No query' }), { status: 400 });
 
-  // 1. Construct the target URL internally (safer than passing it as a param)
   const targetUrl = `https://www.iberoamericadigital.net/BDPI/OpenSearch.do?Field=todos&text=${encodeURIComponent(query)}&start=${start}&rows=${rows}&format=json`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
     const response = await fetch(targetUrl, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Referer': 'https://www.iberoamericadigital.net/BDPI/Search.do',
@@ -20,16 +23,14 @@ export default async function handler(req) {
       },
       redirect: 'follow'
     });
+    clearTimeout(timeout);
 
     if (!response.ok) throw new Error(`BDPI Upstream Error: ${response.status}`);
 
     const rawText = await response.text();
-    
-    // 2. Data Cleaning: BDPI often returns JSON with leading/trailing junk
     const jsonString = rawText.replace(/^[^{[]+/, "").replace(/[^}\]]+$/, "");
     const data = JSON.parse(jsonString);
 
-    // 3. Normalization: Map BDPI's specific fields to YOUR internal schema
     const normalizedResults = (data.items || data.docs || []).map(it => ({
       id: `bdpi-${it.id || Math.random().toString(36).substr(2, 9)}`,
       source: "BDPI",
@@ -48,13 +49,21 @@ export default async function handler(req) {
       total: data.totalResults || data.count || normalizedResults.length
     }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*' 
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 502 });
+    clearTimeout(timeout);
+    const isTimeout = error.name === "AbortError";
+    // Return 200 with empty results — adapter checks r.ok and throws on non-200,
+    // which renders as an error banner. Empty results render as "No matches." instead.
+    return new Response(JSON.stringify({
+      results: [],
+      total: 0,
+      error: isTimeout ? "BDPI timed out" : error.message
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }

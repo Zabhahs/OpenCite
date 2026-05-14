@@ -10,6 +10,17 @@
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession } from "./_shared/auth.js";
 
+// ── Body parser — req.body is undefined in raw Node.js serverless functions ──
+async function parseBody(req) {
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", chunk => { data += chunk; });
+    req.on("end", () => {
+      try { resolve(JSON.parse(data)); } catch { resolve({}); }
+    });
+  });
+}
+
 // ── Citation-essential fields — everything else stripped ──────────────────────
 
 const RESULT_FIELDS = ["title", "authors", "year", "source", "doi", "url", "journal", "publisher", "id"];
@@ -48,13 +59,14 @@ export default async function handler(req, res) {
       orderBy: { saved_at: "desc" },
       select:  { result: true, saved_at: true, library_key: true },
     });
-    const items = rows.map(r => ({ ...r.result, savedAt: r.saved_at }));
+    // BigInt cannot be JSON-serialized — convert saved_at to Number
+    const items = rows.map(r => ({ ...r.result, savedAt: Number(r.saved_at) }));
     return res.status(200).json(items);
   }
 
   // ── POST — save item ────────────────────────────────────────────────────────
   if (req.method === "POST") {
-    const { result } = req.body ?? {};
+    const { result } = await parseBody(req);
     if (!result) return res.status(400).json({ error: "Missing result" });
 
     const key = libraryKey(result);
@@ -71,7 +83,7 @@ export default async function handler(req, res) {
 
   // ── DELETE — remove one or clear all ───────────────────────────────────────
   if (req.method === "DELETE") {
-    const { library_key, clear } = req.body ?? {};
+    const { library_key, clear } = await parseBody(req);
 
     if (clear) {
       await prisma.library_items.deleteMany({ where: { user_id: userId } });
