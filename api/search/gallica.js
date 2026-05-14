@@ -24,16 +24,47 @@ export default async function handler(req) {
     });
     clearTimeout(timeout);
 
-    if (!response.ok) throw new Error(`Gallica Upstream Error: ${response.status}`);
+    // ── DIAGNOSTIC ───────────────────────────────────────────────────────────
+    console.log('[GALLICA] status:', response.status);
+    console.log('[GALLICA] content-type:', response.headers.get('content-type'));
+    console.log('[GALLICA] final URL after redirects:', response.url);
+    const rawText = await response.text();
+    console.log('[GALLICA] raw response (first 500 chars):', rawText.slice(0, 500));
+    // ── END DIAGNOSTIC ───────────────────────────────────────────────────────
 
-    // Guard against Gallica returning HTML instead of JSON (happens when server is degraded)
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('text/html')) {
-      throw new Error('Gallica returned HTML — service may be degraded');
+    if (!response.ok) {
+      return new Response(JSON.stringify({ results: [], total: 0, error: `Gallica status ${response.status}` }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      console.log('[GALLICA] got HTML response — service degraded or blocking');
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'Gallica returned HTML' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.log('[GALLICA] JSON parse failed:', parseErr.message);
+      console.log('[GALLICA] attempted to parse (first 300):', rawText.slice(0, 300));
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'Gallica JSON parse failed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    console.log('[GALLICA] parsed data top-level keys:', Object.keys(data));
     const records = data?.srw?.records?.[0]?.record || [];
+    console.log('[GALLICA] records count:', records.length);
+    console.log('[GALLICA] numberOfRecords:', data?.srw?.numberOfRecords?.[0]);
+
     const total = parseInt(data?.srw?.numberOfRecords?.[0] || "0", 10);
 
     const normalizedResults = records.map((rec) => {
@@ -61,10 +92,11 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
+    console.log('[GALLICA] fetch threw:', error.name, error.message);
     return new Response(JSON.stringify({
       results: [],
       total: 0,
-      error: isTimeout ? "Gallica timed out" : error.message
+      error: isTimeout ? "Gallica timed out (8s)" : error.message
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

@@ -24,16 +24,54 @@ export default async function handler(req) {
     });
     clearTimeout(timeout);
 
-    if (!response.ok) throw new Error(`Open Context Upstream Error: ${response.status}`);
+    // ── DIAGNOSTIC ───────────────────────────────────────────────────────────
+    console.log('[OPENCONTEXT] status:', response.status);
+    console.log('[OPENCONTEXT] content-type:', response.headers.get('content-type'));
+    console.log('[OPENCONTEXT] final URL after redirects:', response.url);
+    const rawText = await response.text();
+    console.log('[OPENCONTEXT] raw response (first 500 chars):', rawText.slice(0, 500));
+    // ── END DIAGNOSTIC ───────────────────────────────────────────────────────
 
-    // OpenContext returns HTML error pages when the service is rate-limiting or down
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('text/html')) {
-      throw new Error('Open Context returned HTML — service may be rate-limiting');
+    if (!response.ok) {
+      return new Response(JSON.stringify({ results: [], total: 0, error: `Open Context status ${response.status}` }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      console.log('[OPENCONTEXT] got HTML response — UA blocked or rate-limited');
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'Open Context returned HTML' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.log('[OPENCONTEXT] JSON parse failed:', parseErr.message);
+      console.log('[OPENCONTEXT] attempted to parse (first 300):', rawText.slice(0, 300));
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'Open Context JSON parse failed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    console.log('[OPENCONTEXT] parsed data top-level keys:', Object.keys(data));
+
     const features = data.features || data.oc_api?.["has-results"] || [];
+    console.log('[OPENCONTEXT] features/results count:', features.length);
+    console.log('[OPENCONTEXT] totalResults field:', data?.totalResults || data?.["oc-api:total"]);
+
+    // Log first feature shape to confirm field mapping
+    if (features.length > 0) {
+      console.log('[OPENCONTEXT] first feature keys:', Object.keys(features[0]));
+      console.log('[OPENCONTEXT] first feature properties keys:', Object.keys(features[0].properties || {}));
+    }
+
     const total = parseInt(data?.totalResults || data?.["oc-api:total"] || "0", 10) || features.length;
 
     const normalizedResults = features.map((f) => {
@@ -63,10 +101,11 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
+    console.log('[OPENCONTEXT] fetch threw:', error.name, error.message);
     return new Response(JSON.stringify({
       results: [],
       total: 0,
-      error: isTimeout ? "Open Context timed out" : error.message
+      error: isTimeout ? "Open Context timed out (8s)" : error.message
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

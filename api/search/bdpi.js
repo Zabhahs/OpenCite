@@ -25,11 +25,36 @@ export default async function handler(req) {
     });
     clearTimeout(timeout);
 
-    if (!response.ok) throw new Error(`BDPI Upstream Error: ${response.status}`);
-
+    // ── DIAGNOSTIC ───────────────────────────────────────────────────────────
+    console.log('[BDPI] status:', response.status);
+    console.log('[BDPI] content-type:', response.headers.get('content-type'));
+    console.log('[BDPI] final URL after redirects:', response.url);
     const rawText = await response.text();
+    console.log('[BDPI] raw response (first 500 chars):', rawText.slice(0, 500));
+    // ── END DIAGNOSTIC ───────────────────────────────────────────────────────
+
+    if (!response.ok) {
+      return new Response(JSON.stringify({ results: [], total: 0, error: `BDPI status ${response.status}` }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
     const jsonString = rawText.replace(/^[^{[]+/, "").replace(/[^}\]]+$/, "");
-    const data = JSON.parse(jsonString);
+    let data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (parseErr) {
+      console.log('[BDPI] JSON parse failed:', parseErr.message);
+      console.log('[BDPI] attempted to parse (first 300):', jsonString.slice(0, 300));
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'BDPI JSON parse failed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    console.log('[BDPI] parsed data top-level keys:', Object.keys(data));
+    console.log('[BDPI] items count:', (data.items || data.docs || []).length);
 
     const normalizedResults = (data.items || data.docs || []).map(it => ({
       id: `bdpi-${it.id || Math.random().toString(36).substr(2, 9)}`,
@@ -55,12 +80,11 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
-    // Return 200 with empty results — adapter checks r.ok and throws on non-200,
-    // which renders as an error banner. Empty results render as "No matches." instead.
+    console.log('[BDPI] fetch threw:', error.name, error.message);
     return new Response(JSON.stringify({
       results: [],
       total: 0,
-      error: isTimeout ? "BDPI timed out" : error.message
+      error: isTimeout ? "BDPI timed out (8s)" : error.message
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
