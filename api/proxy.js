@@ -17,6 +17,16 @@ const ALLOWED_DOMAINS = [
   'accounts.google.com',
   'appleid.apple.com',
   'login.microsoftonline.com',
+  // v.18 — SOW heritage adapters
+  'search.onb.ac.at',           // ONB/ANNO — Austrian National Library SRU
+  'datos.bne.es',               // BDH/BNE — Biblioteca Digital Hispánica
+  'api.bnf.fr',                 // BnF API — catalog metadata layer
+  'catalogue.bnf.fr',           // BnF catalog SRU fallback
+  'www.delpher.nl',             // KB/Delpher — Dutch National Library
+  'data.nls.uk',                // NLS Data Foundry — National Library of Scotland
+  'www.nls.uk',                 // NLS alternate hostname
+  'api.bl.uk',                  // British Library metadata API
+  'data.bl.uk',                 // British Library linked data
 ];
 
 export default async function handler(req) {
