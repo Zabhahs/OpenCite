@@ -20,7 +20,7 @@ export const DELPHER_ADAPTER = {
     try {
       r = await fetch(sruUrl, { headers: { Accept: 'application/json' } });
     } catch {
-      r = await proxiedFetch(sruUrl);
+      r = await proxiedFetch(sruUrl, {}, { adapterId: "DELPHER" });
     }
     if (!r.ok) throw new Error(`Delpher ${r.status}`);
     const data = await r.json();
@@ -29,9 +29,7 @@ export const DELPHER_ADAPTER = {
     const results = items.map((it, i) => {
       const creators = [].concat(it.creator || it.author || []).filter(Boolean);
       const date = it.date || it.publication_date || '';
-      // subjects: Delpher exposes dcterms:subject or subject in their JSON shape
       const subjects = [].concat(it.subject || it['dcterms:subject'] || []).filter(Boolean).map(String);
-      // type passthrough: "newspaper", "book", "magazine", "article" — feeds into TYPE_MAP via normalize
       const rawType = it.type || it['dc:type'] || 'primary-source';
       return {
         id: `delpher-${it.identifier || `${offset}-${i}`}`,
@@ -39,7 +37,6 @@ export const DELPHER_ADAPTER = {
         title: stripHtml(String(it.title || it.heading || 'Untitled')),
         authors: creators.map(String),
         year: String(date).match(/\d{4}/)?.[0] || '',
-        // paper_title / publication is the containing newspaper or series title
         journal: it.paper_title || it.publication || '',
         publisher: 'Koninklijke Bibliotheek',
         volume: '', issue: '', pages: '', doi: '',

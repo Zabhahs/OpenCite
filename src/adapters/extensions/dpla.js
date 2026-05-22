@@ -17,7 +17,11 @@ export const DPLA_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
-    const r = await proxiedFetch(`https://api.dp.la/v2/items?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(settings.dplaKey)}`);
+    const r = await proxiedFetch(
+      `https://api.dp.la/v2/items?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(settings.dplaKey)}`,
+      {},
+      { adapterId: "DPLA" }
+    );
     if (!r.ok) throw new Error(`DPLA ${r.status}`);
     const data = await r.json();
     const results = (data.docs || []).map((d, i) => {

@@ -20,7 +20,7 @@ export const NLS_ADAPTER = {
     try {
       r = await fetch(url, { headers: { Accept: 'application/json' } });
     } catch {
-      r = await proxiedFetch(url);
+      r = await proxiedFetch(url, {}, { adapterId: "NLS" });
     }
     if (!r.ok) throw new Error(`NLS Data Foundry ${r.status}`);
     const data = await r.json();
@@ -29,13 +29,11 @@ export const NLS_ADAPTER = {
     const results = items.map((it, i) => {
       const creators = [].concat(it.creator || it.author || []).filter(Boolean);
       const itemUrl  = it.url || it.identifier || '';
-      // subjects: NLS exposes subject, topic, or tag arrays at collection level
       const subjects = [
         ...[].concat(it.subject || []),
         ...[].concat(it.topic || []),
         ...[].concat(it.tags || []),
       ].filter(Boolean).map(String);
-      // type: NLS uses format or type to distinguish newspapers, maps, photographs, etc.
       const rawType = it.type || it.format || it.mediaType || 'primary-source';
       return {
         id: `nls-${it.id || `${offset}-${i}`}`,

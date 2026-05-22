@@ -18,7 +18,7 @@ export const OPENNEURO_ADAPTER = {
     try {
       r = await fetch(onUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ query: gqlQuery }) });
     } catch {
-      r = await proxiedFetch(onUrl, { method: "POST", body: JSON.stringify({ query: gqlQuery }) });
+      r = await proxiedFetch(onUrl, { method: "POST", body: JSON.stringify({ query: gqlQuery }) }, { adapterId: "OPENNEURO" });
     }
     if (!r.ok) throw new Error(`OpenNeuro ${r.status}`);
     const data = await r.json();

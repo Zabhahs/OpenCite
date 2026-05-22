@@ -20,7 +20,7 @@ export const ONB_ADAPTER = {
     try {
       r = await fetch(sruUrl, { headers: { Accept: "application/xml, text/xml" } });
     } catch {
-      r = await proxiedFetch(sruUrl);
+      r = await proxiedFetch(sruUrl, {}, { adapterId: "ONB" });
     }
     if (!r.ok) throw new Error(`ONB SRU ${r.status}`);
     const xml = await r.text();

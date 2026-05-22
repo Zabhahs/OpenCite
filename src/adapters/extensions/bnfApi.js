@@ -20,23 +20,13 @@ export const BNF_API_ADAPTER = {
     try {
       r = await fetch(sruUrl, { headers: { Accept: 'application/xml, text/xml' } });
     } catch {
-      r = await proxiedFetch(sruUrl);
+      r = await proxiedFetch(sruUrl, {}, { adapterId: "BNF_API" });
     }
     if (!r.ok) throw new Error(`BnF SRU ${r.status}`);
     const xml = await r.text();
     const total = sruTotal(xml);
     const records = sruRecords(xml);
     const results = records.map((rec, i) => {
-      // UNIMARC field reference:
-      //   200$a — title proper
-      //   700$a — personal name (author family)
-      //   710$a — corporate body author
-      //   210$d — date of publication
-      //   101$a — language of text
-      //   003    — record identifier / persistent URL
-      //   600$a  — subject: personal name
-      //   606$a  — subject: topical term
-      //   607$a  — subject: geographic name
       const title     = unimarcOne(rec, '200', 'a') || 'Untitled';
       const authorFam = unimarcOne(rec, '700', 'a');
       const authorGiv = unimarcOne(rec, '700', 'b');
@@ -45,7 +35,6 @@ export const BNF_API_ADAPTER = {
       const date      = unimarcOne(rec, '210', 'd');
       const language  = unimarcOne(rec, '101', 'a');
       const identifier= unimarcOne(rec, '003');
-      // Subject headings: personal (600), topical (606), geographic (607)
       const subjects  = [
         ...unimarcAll(rec, '600', 'a'),
         ...unimarcAll(rec, '606', 'a'),

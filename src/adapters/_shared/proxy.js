@@ -1,17 +1,14 @@
+// OpenCITE — proxiedFetch SSOT (v.19)
+// Pass ctx = { adapterId: "BDH" } to get per-adapter proxy logs.
+import { log } from "../../lib/log.js";
+
 const PROXY_BASE = "/api/proxy";
 
-/**
- * proxiedFetch — routes requests through the Vercel CORS proxy.
- * Use for adapters that are CORS-blocked in browsers (pattern 2)
- * or as a fallback after a direct fetch fails (pattern 3).
- *
- * The proxy handles:
- *   - Setting the polite User-Agent OpenContext requires
- *   - Access-Control-Allow-Origin: *
- *   - GET and POST forwarding
- *   - Domain allowlist gating
- */
-export async function proxiedFetch(url, options = {}) {
+export async function proxiedFetch(url, options = {}, ctx = {}) {
+  const adapterId = ctx.adapterId;
+  const startMs = Date.now();
+  if (adapterId) log(adapterId, "proxy-attempt", { url: url.slice(0, 120) });
+
   const proxyUrl =
     `${PROXY_BASE}?url=${encodeURIComponent(url)}` +
     (options.method && options.method !== "GET" ? `&method=${options.method}` : "");
@@ -19,5 +16,17 @@ export async function proxiedFetch(url, options = {}) {
     options.method === "POST"
       ? { method: "POST", headers: { "Content-Type": "application/json" }, body: options.body }
       : {};
-  return fetch(proxyUrl, fetchOpts);
+
+  try {
+    const response = await fetch(proxyUrl, fetchOpts);
+    if (adapterId) {
+      const ms = Date.now() - startMs;
+      if (response.ok) log(adapterId, "proxy-ok", { status: response.status, ms });
+      else log.err(adapterId, "proxy-fail", { status: response.status, ms });
+    }
+    return response;
+  } catch (err) {
+    if (adapterId) log.err(adapterId, "proxy-throw", { err: err.name, msg: err.message, ms: Date.now() - startMs });
+    throw err;
+  }
 }

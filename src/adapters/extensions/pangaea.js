@@ -17,7 +17,11 @@ export const PANGAEA_ADAPTER = {
       query: { query_string: { query } }, size: pageSize, from: offset,
       _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract"]
     };
-    const r = await proxiedFetch("https://ws.pangaea.de/es/pangaea/panmd/_search", { method: "POST", body: JSON.stringify(body) });
+    const r = await proxiedFetch(
+      "https://ws.pangaea.de/es/pangaea/panmd/_search",
+      { method: "POST", body: JSON.stringify(body) },
+      { adapterId: "PANGAEA" }
+    );
     if (!r.ok) throw new Error(`PANGAEA ${r.status}`);
     const data = await r.json();
     const hits = data.hits?.hits || [];

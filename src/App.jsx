@@ -25,26 +25,32 @@ import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.j
 import { AuthProvider } from "./contexts/AuthContext.jsx";
 import { useAuth } from "./contexts/AuthContext.jsx";
 
-/* ============================================================================
-   App.jsx — thin orchestrator.
-   All business logic lives in hooks/. All UI lives in components/.
-   This file wires them together and owns panel visibility state.
-============================================================================ */
+// v.19 — admin gate + debug log
+import { isAdmin } from "./lib/admin.js";
+import { installDebugLog, getDebugLog } from "./lib/log.js";
 
 function OpenCITE() {
   const [query, setQuery] = useState("");
-  const [activePanel, setActivePanel] = useState(null); // "settings" | "history" | "library" | null
+  const [activePanel, setActivePanel] = useState(null);
   const [copied, setCopied] = useState({ id: null, style: null });
   const inputRef = useRef(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchCount, setSearchCount] = useState(0);
-  const { status } = useAuth();
+  const { status, user } = useAuth();
+
+  // v.19 — admin status drives debug logger install + UI exposure
+  const admin = isAdmin(user);
 
   const { themeKey, theme, changeTheme } = useTheme();
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
   const hist = useHistory();
   const lib = useLibrary();
   const { sectionStates, hasSearched, search, loadMore, reset } = useSearch(settings, isEnabled);
+
+  // v.19 — install debug logger ring buffer once when admin signs in
+  useEffect(() => {
+    if (admin) installDebugLog();
+  }, [admin]);
 
   // Bootstrap: load persisted state once on mount
   useEffect(() => {
@@ -79,7 +85,6 @@ function OpenCITE() {
     setShowAuthModal(false);
   }, []);
 
-  // Show modal on first visit (2s delay) — gives page time to load
   useEffect(() => {
     if (status !== "unauthenticated") return;
     try { if (localStorage.getItem("opencite_auth_prompted")) return; } catch {}
@@ -87,13 +92,24 @@ function OpenCITE() {
     return () => clearTimeout(t);
   }, [status]);
 
-  // Logo click — close any open panel and return to landing state
+  // v.19 — triple-click logo: admin copies debug log; otherwise standard reset
+  const logoClicks = useRef({ count: 0, timer: null });
   const handleLogoClick = useCallback(() => {
+    if (admin) {
+      logoClicks.current.count++;
+      clearTimeout(logoClicks.current.timer);
+      logoClicks.current.timer = setTimeout(() => { logoClicks.current.count = 0; }, 600);
+      if (logoClicks.current.count >= 3) {
+        logoClicks.current.count = 0;
+        navigator.clipboard.writeText(getDebugLog()).catch(() => {});
+        return;
+      }
+    }
     setQuery("");
     setActivePanel(null);
     reset();
     inputRef.current?.focus();
-  }, [reset]);
+  }, [admin, reset]);
 
   const copyText = (text, id, style) => {
     navigator.clipboard.writeText(text);
@@ -144,15 +160,14 @@ function OpenCITE() {
           80%     { transform: rotate(5deg) scale(1.1); }
         }
         @keyframes eagleBounce {
-  0%,100% { transform: translateY(0) rotate(0deg); }
-  25%     { transform: translateY(-6px) rotate(-5deg); }
-  75%     { transform: translateY(-3px) rotate(3deg); }
-}
-@keyframes eagleEnter {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-        /* OLED — remap hardcoded Tailwind stone/amber/red to high-contrast values */
+          0%,100% { transform: translateY(0) rotate(0deg); }
+          25%     { transform: translateY(-6px) rotate(-5deg); }
+          75%     { transform: translateY(-3px) rotate(3deg); }
+        }
+        @keyframes eagleEnter {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         [data-theme="oled"] .text-stone-900,[data-theme="oled"] .text-stone-800 { color:#ffffff; }
         [data-theme="oled"] .text-stone-700,[data-theme="oled"] .text-stone-600 { color:#d0d0d0; }
         [data-theme="oled"] .text-stone-500,[data-theme="oled"] .text-stone-400 { color:#909090; }
@@ -217,6 +232,7 @@ function OpenCITE() {
             adapters={ADAPTERS}
             isEnabled={isEnabled}
             onToggle={toggleAdapter}
+            admin={admin}
           />
         )}
 

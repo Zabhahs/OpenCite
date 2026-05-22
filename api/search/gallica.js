@@ -1,15 +1,17 @@
+import { log } from "../_shared/log.js";
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q');
-  const start = searchParams.get('start') || '1'; // Gallica is 1-indexed
+  const start = searchParams.get('start') || '1';
   const rows = searchParams.get('rows') || '10';
 
   if (!query) return new Response(JSON.stringify({ error: 'No query' }), { status: 400 });
 
-  // Gallica SRU endpoint — mode=json is ignored, it always returns XML.
-  // Removed &mode=json — it caused no harm but was misleading.
+  log("GALLICA", "start", { q: query, start });
+
   const targetUrl = `https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=${encodeURIComponent('dc.any all "' + query + '"')}&startRecord=${start}&maximumRecords=${rows}&recordSchema=dc`;
 
   const controller = new AbortController();
@@ -27,6 +29,7 @@ export default async function handler(req) {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      log.err("GALLICA", "upstream-fail", { status: response.status });
       return new Response(JSON.stringify({ results: [], total: 0, error: `Gallica status ${response.status}` }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -34,33 +37,38 @@ export default async function handler(req) {
     }
 
     const xmlText = await response.text();
+    log("GALLICA", "upstream-ok", { status: response.status, bytes: xmlText.length });
 
-    // Parse XML using DOMParser (available in Edge Runtime)
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'application/xml');
+    // DOMParser may not exist in Vercel Edge V8 — this catch will surface that
+    let parser, doc;
+    try {
+      parser = new DOMParser();
+      doc = parser.parseFromString(xmlText, 'application/xml');
+    } catch (domErr) {
+      log.err("GALLICA", "domparser-unavailable", { err: domErr.name, msg: domErr.message });
+      return new Response(JSON.stringify({ results: [], total: 0, error: 'DOMParser unavailable in Edge runtime' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
 
-    // Check for parse errors
     const parseError = doc.querySelector('parsererror');
     if (parseError) {
+      log.err("GALLICA", "xml-parse-fail", { sample: xmlText.slice(0, 200) });
       return new Response(JSON.stringify({ results: [], total: 0, error: 'Gallica XML parse failed' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // Extract total records count
-    // srw:numberOfRecords is in the SRW namespace
     const numberOfRecordsEl = doc.getElementsByTagNameNS('http://www.loc.gov/zing/srw/', 'numberOfRecords')[0];
     const total = parseInt(numberOfRecordsEl?.textContent || "0", 10);
-
-    // Extract records
     const records = doc.getElementsByTagNameNS('http://www.loc.gov/zing/srw/', 'record');
 
     const getText = (el, ns, localName) => {
       const els = el.getElementsByTagNameNS(ns, localName);
       return els[0]?.textContent?.trim() || "";
     };
-
     const getAll = (el, ns, localName) => {
       const els = el.getElementsByTagNameNS(ns, localName);
       return Array.from(els).map(e => e.textContent?.trim()).filter(Boolean);
@@ -68,17 +76,13 @@ export default async function handler(req) {
 
     const DC_NS = 'http://purl.org/dc/elements/1.1/';
     const normalizedResults = Array.from(records).map((rec) => {
-      // Each record contains recordData > oai_dc:dc > dc:* elements
       const title = getText(rec, DC_NS, 'title') || "Untitled";
       const creators = getAll(rec, DC_NS, 'creator');
       const date = getText(rec, DC_NS, 'date');
       const description = getText(rec, DC_NS, 'description');
       const identifiers = getAll(rec, DC_NS, 'identifier');
-
-      // Find the ARK identifier (Gallica permanent URL)
       const ark = identifiers.find(id => id.includes('ark:') || id.includes('gallica.bnf.fr')) || identifiers[0] || "";
       const year = date.match(/\d{4}/)?.[0] || "";
-
       return {
         id: `gallica-${ark.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
         source: "GALLICA",
@@ -93,6 +97,8 @@ export default async function handler(req) {
       };
     });
 
+    log("GALLICA", "parse-ok", { items: normalizedResults.length, total });
+
     return new Response(JSON.stringify({ results: normalizedResults, total }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -101,6 +107,7 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
+    log.err("GALLICA", isTimeout ? "upstream-timeout" : "edge-error", { err: error.name, msg: error.message });
     return new Response(JSON.stringify({
       results: [],
       total: 0,

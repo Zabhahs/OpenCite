@@ -1,3 +1,5 @@
+import { log } from "../_shared/log.js";
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
@@ -8,9 +10,8 @@ export default async function handler(req) {
 
   if (!query) return new Response(JSON.stringify({ error: 'No query' }), { status: 400 });
 
-  // CRITICAL: response=uri-meta returns actual item records.
-  // Without this, the API returns geo-facet region buckets ("Region (1)", "Region (2)"...)
-  // which have no useful metadata. rows controls page size.
+  log("OPENCONTEXT", "start", { q: query, start });
+
   const targetUrl = `https://opencontext.org/query/.json?q=${encodeURIComponent(query)}&rows=${rows}&start=${start}&response=uri-meta`;
 
   const controller = new AbortController();
@@ -28,6 +29,7 @@ export default async function handler(req) {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      log.err("OPENCONTEXT", "upstream-fail", { status: response.status });
       return new Response(JSON.stringify({ results: [], total: 0, error: `Open Context status ${response.status}` }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -36,6 +38,7 @@ export default async function handler(req) {
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
+      log.err("OPENCONTEXT", "got-html", { contentType });
       return new Response(JSON.stringify({ results: [], total: 0, error: 'Open Context returned HTML' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -46,15 +49,13 @@ export default async function handler(req) {
     try {
       data = await response.json();
     } catch {
+      log.err("OPENCONTEXT", "json-parse-fail", {});
       return new Response(JSON.stringify({ results: [], total: 0, error: 'Open Context JSON parse failed' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // With response=uri-meta, actual item records are in data['oc-api:has-results']
-    // Each record has: uri, label, project-label, project-href, published, updated,
-    // context-label, item-type, thumbnail-uri, latitude, longitude
     const items = data['oc-api:has-results'] || [];
     const total = parseInt(
       data?.['oai:totalResults'] ||
@@ -64,28 +65,21 @@ export default async function handler(req) {
     );
 
     const normalizedResults = items
-      // Filter out any geo-facet region buckets that slip through (no label or type=region)
       .filter(item => item.label && item.label !== '' && item['item-type'] !== 'region')
       .map(item => {
         const uri = item.uri || item['@id'] || "";
         const canonicalUri = uri.replace('http://opencontext.org', 'https://opencontext.org');
-
-        // published is ISO date string e.g. "2013-07-31T00:00:00"
         const year = String(item.published || item.updated || "").match(/\d{4}/)?.[0] || "";
-
-        // item-type can be: subjects, media, documents, projects, persons, predicates, types
-        // Map to our type vocab
         const itemType = item['item-type'] || "";
         const type = itemType === 'projects' ? 'dataset'
           : itemType === 'documents' ? 'primary-source'
           : itemType === 'media' ? 'primary-source'
           : 'archaeological-data';
-
         return {
           id: `oc-${canonicalUri.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
           source: "OPENCONTEXT",
           title: item.label || "Untitled Record",
-          authors: item['context-label'] ? [] : [], // OC records don't surface authors at this level
+          authors: [],
           year,
           journal: item['project-label'] || "Open Context",
           publisher: "Open Context",
@@ -101,6 +95,7 @@ export default async function handler(req) {
       });
 
     const hasMore = (parseInt(start, 10) + normalizedResults.length) < total;
+    log("OPENCONTEXT", "parse-ok", { items: normalizedResults.length, total });
 
     return new Response(JSON.stringify({ results: normalizedResults, total, hasMore }), {
       status: 200,
@@ -110,6 +105,7 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
+    log.err("OPENCONTEXT", isTimeout ? "upstream-timeout" : "edge-error", { err: error.name, msg: error.message });
     return new Response(JSON.stringify({
       results: [],
       total: 0,

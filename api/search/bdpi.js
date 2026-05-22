@@ -1,3 +1,5 @@
+import { log } from "../_shared/log.js";
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
@@ -8,14 +10,13 @@ export default async function handler(req) {
 
   if (!query) return new Response(JSON.stringify({ error: 'No query' }), { status: 400 });
 
-  // Correct endpoint — /BDPI/OpenSearch.do is dead (404).
-  // The live API is /gdl/ExternalSearch.do (JSONP format).
-  // pageNumber is 1-indexed; convert start offset to page number.
   const pageSize = parseInt(rows, 10) || 10;
   const pageNumber = Math.floor(parseInt(start, 10) / pageSize) + 1;
   const CALLBACK = 'opencite_cb';
 
   const targetUrl = `https://www.iberoamericadigital.net/gdl/ExternalSearch.do?field1val=${encodeURIComponent(query)}&numfields=1&field1=todos&pageNumber=${pageNumber}&jsonCallback=${CALLBACK}`;
+
+  log("BDPI", "start", { q: query, page: pageNumber });
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -33,6 +34,7 @@ export default async function handler(req) {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      log.err("BDPI", "upstream-fail", { status: response.status });
       return new Response(JSON.stringify({ results: [], total: 0, error: `BDPI status ${response.status}` }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -40,14 +42,13 @@ export default async function handler(req) {
     }
 
     const rawText = await response.text();
+    log("BDPI", "upstream-ok", { status: response.status, bytes: rawText.length });
 
-    // BDPI returns JSONP: opencite_cb({...}) — strip the callback wrapper
-    // Pattern: CALLBACK_NAME({...}) or CALLBACK_NAME([...])
     const jsonMatch = rawText.match(/^\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\(\s*([\s\S]*)\s*\)\s*;?\s*$/);
     if (!jsonMatch) {
-      // Try raw JSON fallback (some responses skip the wrapper)
       const stripped = rawText.replace(/^[^{[]+/, "").replace(/[^}\]]+$/, "");
       if (!stripped) {
+        log.err("BDPI", "parse-fail", { reason: "no-jsonp-wrapper", sample: rawText.slice(0, 200) });
         return new Response(JSON.stringify({ results: [], total: 0, error: 'BDPI: unexpected response format' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -60,14 +61,13 @@ export default async function handler(req) {
       const jsonStr = jsonMatch ? jsonMatch[1] : rawText.replace(/^[^{[]+/, "").replace(/[^}\]]+$/, "");
       data = JSON.parse(jsonStr);
     } catch {
+      log.err("BDPI", "json-parse-fail", { sample: rawText.slice(0, 200) });
       return new Response(JSON.stringify({ results: [], total: 0, error: 'BDPI JSON parse failed' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // BDPI ExternalSearch response shape: { results: [...], total: N } or { items: [...] }
-    // Each result has: titulo, autor, fecha, enlace, descripcion, miniatura
     const items = data.results || data.items || data.docs || [];
     const total = data.total || data.totalResults || data.count || items.length;
 
@@ -86,6 +86,8 @@ export default async function handler(req) {
       previewImage: it.miniatura || it.thumbnail || it.image || ""
     }));
 
+    log("BDPI", "parse-ok", { items: normalizedResults.length, total });
+
     return new Response(JSON.stringify({ results: normalizedResults, total }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -94,6 +96,7 @@ export default async function handler(req) {
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
+    log.err("BDPI", isTimeout ? "upstream-timeout" : "edge-error", { err: error.name, msg: error.message });
     return new Response(JSON.stringify({
       results: [],
       total: 0,

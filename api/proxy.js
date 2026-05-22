@@ -1,3 +1,5 @@
+import { log } from "./_shared/log.js";
+
 export const config = {
   runtime: 'edge',
 };
@@ -13,24 +15,23 @@ const ALLOWED_DOMAINS = [
   'api.dp.la',
   'gallica.bnf.fr',
   'www.iberoamericadigital.net',
-  // Phase 1 — OIDC provider discovery endpoints
   'accounts.google.com',
   'appleid.apple.com',
   'login.microsoftonline.com',
-  // v.18 — SOW heritage adapters
-  'search.onb.ac.at',           // ONB/ANNO — Austrian National Library SRU
-  'datos.bne.es',               // BDH/BNE — Biblioteca Digital Hispánica
-  'api.bnf.fr',                 // BnF API — catalog metadata layer
-  'catalogue.bnf.fr',           // BnF catalog SRU fallback
-  'www.delpher.nl',             // KB/Delpher — Dutch National Library
-  'data.nls.uk',                // NLS Data Foundry — National Library of Scotland
-  'www.nls.uk',                 // NLS alternate hostname
-  'api.bl.uk',                  // British Library metadata API
-  'data.bl.uk',                 // British Library linked data
+  'search.onb.ac.at',
+  'datos.bne.es',
+  'api.bnf.fr',
+  'catalogue.bnf.fr',
+  'www.delpher.nl',
+  'data.nls.uk',
+  'www.nls.uk',
+  'api.bl.uk',
+  'data.bl.uk',
 ];
 
 export default async function handler(req) {
-  // 1. Handle CORS Preflight
+  const startMs = Date.now();
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -48,12 +49,7 @@ export default async function handler(req) {
 
   if (!targetUrlStr) return new Response('Missing target URL', { status: 400 });
 
-  // 2. Robust URL Decoding (Prevents 404s from double-encoding)
-  try {
-    targetUrlStr = decodeURIComponent(targetUrlStr);
-  } catch (e) {
-    // If decoding fails, we proceed with the raw string as a fallback
-  }
+  try { targetUrlStr = decodeURIComponent(targetUrlStr); } catch (e) {}
 
   let targetUrl;
   try {
@@ -62,42 +58,36 @@ export default async function handler(req) {
     return new Response('Invalid target URL', { status: 400 });
   }
 
-  // 3. Security: Domain Validation
   if (!ALLOWED_DOMAINS.includes(targetUrl.hostname)) {
+    log.warn("proxy", "reject", { hostname: targetUrl.hostname });
     return new Response(`Domain ${targetUrl.hostname} not allowlisted`, { status: 403 });
   }
 
-  // 4. Architect-Level Header Spoofing (The "Opaque" Strategy)
-  // This tricks legacy servers (BDPI/Gallica) into seeing a real browser
+  const targetMethod = searchParams.get('method') === 'POST' || req.method === 'POST' ? 'POST' : 'GET';
+  log("proxy", "request", { hostname: targetUrl.hostname, method: targetMethod });
+
   const headers = new Headers();
   headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
   headers.set('Accept', 'application/json, text/javascript, */*; q=0.01');
   headers.set('Accept-Language', 'en-US,en;q=0.9');
-  
-  // Spoofing the Referer is critical for BDPI's legacy .do endpoints
   headers.set('Referer', `https://${targetUrl.hostname}/`);
-
-  const targetMethod = searchParams.get('method') === 'POST' || req.method === 'POST' ? 'POST' : 'GET';
 
   const fetchOptions = {
     method: targetMethod,
     headers: headers,
-    redirect: 'follow', // Essential for handling library SSO/Redirection hops
+    redirect: 'follow',
   };
 
-  // Attach body for POST requests (Northwestern / OpenNeuro)
   if (targetMethod === 'POST' && req.body) {
     fetchOptions.body = req.body;
   }
 
   try {
     const upstreamRes = await fetch(targetUrl.href, fetchOptions);
-    
-    // 5. Clean Up Response Headers
+    log("proxy", "upstream-ok", { hostname: targetUrl.hostname, status: upstreamRes.status, ms: Date.now() - startMs });
+
     const responseHeaders = new Headers(upstreamRes.headers);
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    
-    // Ensure the browser doesn't try to execute scripts from the proxy
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
     return new Response(upstreamRes.body, {
@@ -105,10 +95,11 @@ export default async function handler(req) {
       headers: responseHeaders,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ 
-      error: 'Proxy Execution Error', 
-      details: error.message 
-    }), { 
+    log.err("proxy", "upstream-error", { hostname: targetUrl.hostname, err: error.name, msg: error.message, ms: Date.now() - startMs });
+    return new Response(JSON.stringify({
+      error: 'Proxy Execution Error',
+      details: error.message
+    }), {
       status: 502,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });

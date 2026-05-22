@@ -1,20 +1,4 @@
-/**
- * api/search/bl.js — Vercel edge route
- *
- * British Library — data.bl.uk linked open data + bl.uk catalogue search.
- *
- * The BL exposes two useful surfaces:
- *   1. data.bl.uk SPARQL endpoint — structured linked data, CORS-blocked
- *   2. explore.bl.uk catalogue search — HTML scrape (fragile, avoid)
- *
- * Strategy: SPARQL via data.bl.uk/sparql with a DC-based query.
- * Returns JSON (application/sparql-results+json).
- *
- * Query params accepted:
- *   q     — search string
- *   start — offset (SPARQL OFFSET)
- *   rows  — page size (SPARQL LIMIT, max 50)
- */
+import { log } from "../_shared/log.js";
 
 export const config = { runtime: 'edge' };
 
@@ -51,13 +35,15 @@ export default async function handler(req) {
   }
 
   const { searchParams } = new URL(req.url);
-  const query  = searchParams.get('q') || '';
-  const start  = parseInt(searchParams.get('start') || '0', 10);
-  const rows   = Math.min(parseInt(searchParams.get('rows') || '20', 10), 50);
+  const query = searchParams.get('q') || '';
+  const start = parseInt(searchParams.get('start') || '0', 10);
+  const rows  = Math.min(parseInt(searchParams.get('rows') || '20', 10), 50);
 
   if (!query.trim()) {
     return new Response(JSON.stringify({ results: [], total: 0 }), { status: 200, headers: corsHeaders });
   }
+
+  log("BL", "start", { q: query, start, rows });
 
   const sparql = buildSparql(query, rows, start);
   const sparqlUrl = `${BL_SPARQL}?query=${encodeURIComponent(sparql)}&format=application%2Fsparql-results%2Bjson`;
@@ -70,15 +56,18 @@ export default async function handler(req) {
         'User-Agent': 'OpenCITE/1.0 (academic meta-search)',
       },
     });
-    if (!res.ok) throw new Error(`BL SPARQL ${res.status}`);
+    if (!res.ok) {
+      log.err("BL", "upstream-fail", { status: res.status });
+      throw new Error(`BL SPARQL ${res.status}`);
+    }
     data = await res.json();
+    log("BL", "upstream-ok", { status: res.status });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message, results: [], total: 0 }), { status: 502, headers: corsHeaders });
   }
 
   const bindings = data?.results?.bindings || [];
 
-  // Group by ?item to collapse multi-value fields (subject can repeat)
   const itemMap = new Map();
   for (const b of bindings) {
     const uri = b.item?.value || '';
@@ -101,11 +90,9 @@ export default async function handler(req) {
 
   const results = [...itemMap.values()].map((it, i) => {
     const year = String(it.date).match(/\d{4}/)?.[0] || '';
-    // Derive a clean type label from RDF type URI
     const typeRaw = it.type.split(/[/#]/).pop() || 'primary-source';
     const typeMap = { Book: 'book', Article: 'article', Thesis: 'thesis', Manuscript: 'primary-source' };
     const type = typeMap[typeRaw] || 'primary-source';
-
     return {
       id: `bl-${start}-${i}`,
       source: 'BL',
@@ -116,12 +103,13 @@ export default async function handler(req) {
       volume: '', issue: '', pages: '', doi: '',
       url: it.uri.startsWith('http') ? it.uri : '',
       abstract: it.description,
-      isOA: true,
-      type,
+      isOA: true, type,
       subjects: it.subjects,
       language: it.lang,
     };
   });
+
+  log("BL", "parse-ok", { items: results.length, hasMore: results.length === rows });
 
   return new Response(
     JSON.stringify({ results, total: results.length, hasMore: results.length === rows }),

@@ -1,33 +1,10 @@
-/**
- * api/search/mexicana.js — Vercel edge route
- *
- * Mexicana (Mexican Ministry of Culture digital aggregator) exposes an
- * OAI-PMH endpoint that returns Dublin Core XML. This server route handles:
- *   - OAI-PMH verb=ListRecords with metadataPrefix=oai_dc
- *   - Free-text pre-filter via the `set` param where available, then
- *     client-side keyword filter on title/description (OAI-PMH has no
- *     full-text search — we fetch a page and filter locally)
- *   - XML parsing (DOMParser not available in Edge; use string extraction)
- *   - Pagination via OAI-PMH resumptionToken
- *
- * Query params accepted:
- *   q      — search string (filtered client-side against title + description)
- *   start  — record offset (approximated via token caching — see note)
- *   rows   — page size (capped at 100 by OAI-PMH spec; we use 50)
- *
- * Pagination note: OAI-PMH uses opaque resumptionTokens, not numeric offsets.
- * For start=0 we issue a fresh ListRecords. For subsequent pages the client
- * must pass the token returned in the previous response as `token`. This
- * deviates slightly from the unified adapter pattern but is unavoidable with
- * OAI-PMH. The client adapter passes `opts.token` through the fetch URL.
- */
+import { log } from "../_shared/log.js";
 
 export const config = { runtime: 'edge' };
 
 const OAI_BASE = 'https://mexicana.cultura.gob.mx/oai';
 const PAGE_SIZE = 50;
 
-/** Naive regex-based XML field extractor — no DOMParser in Edge runtime. */
 const extractAll = (xml, tag) => {
   const re = new RegExp(`<(?:[^:>]+:)?${tag}[^>]*>([\\s\\S]*?)<\\/(?:[^:>]+:)?${tag}>`, 'gi');
   const results = [];
@@ -39,12 +16,10 @@ const extractAll = (xml, tag) => {
 };
 
 const extractOne = (xml, tag) => extractAll(xml, tag)[0] || '';
-
 const extractResumptionToken = (xml) => {
   const m = xml.match(/<resumptionToken[^>]*>([\s\S]*?)<\/resumptionToken>/i);
   return m ? m[1].trim() : null;
 };
-
 const extractRecords = (xml) => {
   const re = /<record>([\s\S]*?)<\/record>/gi;
   const records = [];
@@ -64,11 +39,12 @@ export default async function handler(req) {
   }
 
   const { searchParams } = new URL(req.url);
-  const query   = searchParams.get('q') || '';
-  const token   = searchParams.get('token') || '';   // OAI resumptionToken from prior page
-  const rows    = Math.min(parseInt(searchParams.get('rows') || '20', 10), PAGE_SIZE);
+  const query = searchParams.get('q') || '';
+  const token = searchParams.get('token') || '';
+  const rows  = Math.min(parseInt(searchParams.get('rows') || '20', 10), PAGE_SIZE);
 
-  // Build OAI-PMH URL
+  log("MEXICANA", "start", { q: query, hasToken: !!token });
+
   let oaiUrl;
   if (token) {
     oaiUrl = `${OAI_BASE}?verb=ListRecords&resumptionToken=${encodeURIComponent(token)}`;
@@ -84,22 +60,25 @@ export default async function handler(req) {
         'Accept': 'text/xml, application/xml',
       },
     });
-    if (!res.ok) throw new Error(`Mexicana OAI-PMH ${res.status}`);
+    if (!res.ok) {
+      log.err("MEXICANA", "upstream-fail", { status: res.status });
+      throw new Error(`Mexicana OAI-PMH ${res.status}`);
+    }
     xml = await res.text();
+    log("MEXICANA", "upstream-ok", { bytes: xml.length });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message, results: [], total: 0 }), { status: 502, headers: corsHeaders });
   }
 
-  // Check for OAI error response
   if (xml.includes('<error')) {
     const errCode = extractOne(xml, 'error');
+    log.err("MEXICANA", "oai-error", { code: errCode });
     return new Response(JSON.stringify({ error: `OAI-PMH error: ${errCode}`, results: [], total: 0 }), { status: 200, headers: corsHeaders });
   }
 
   const rawRecords = extractRecords(xml);
   const nextToken  = extractResumptionToken(xml);
 
-  // Client-side keyword filter (OAI-PMH has no query param)
   const q = query.toLowerCase();
   const matched = q
     ? rawRecords.filter(r => {
@@ -122,27 +101,21 @@ export default async function handler(req) {
     const language   = extractOne(rec, 'language');
     const type       = extractOne(rec, 'type');
     const publisher  = extractOne(rec, 'publisher');
-    // Identifier may be a URL or URN
     const url = identifier.startsWith('http') ? identifier : '';
     const year = String(date).match(/\d{4}/)?.[0] || '';
-
     return {
       id: `mexicana-${i}-${year}`,
       source: 'MEXICANA',
-      title,
-      authors: creators,
-      year,
-      journal: '',
-      publisher,
+      title, authors: creators, year,
+      journal: '', publisher,
       volume: '', issue: '', pages: '', doi: '',
-      url,
-      abstract: description,
-      isOA: true,
-      type: type || 'primary-source',
-      subjects,
-      language,
+      url, abstract: description,
+      isOA: true, type: type || 'primary-source',
+      subjects, language,
     };
   });
+
+  log("MEXICANA", "parse-ok", { items: results.length, total: matched.length, hasMore: !!nextToken });
 
   return new Response(
     JSON.stringify({

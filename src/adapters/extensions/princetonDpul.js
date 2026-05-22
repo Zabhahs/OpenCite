@@ -15,7 +15,7 @@ export const PRINCETON_DPUL_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://dpul.princeton.edu/catalog.json?q=${encodeURIComponent(query)}&per_page=${pageSize}&page=${page}`;
-    const r = await proxiedFetch(url);
+    const r = await proxiedFetch(url, {}, { adapterId: "PRINCETON_DPUL" });
     if (!r.ok) throw new Error(`Princeton DPUL ${r.status}`);
     const data = await r.json();
     const docs = data.data || data.response?.docs || [];

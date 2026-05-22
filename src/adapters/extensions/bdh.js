@@ -18,7 +18,7 @@ export const BDH_ADAPTER = {
     try {
       r = await fetch(url, { headers: { Accept: 'application/json' } });
     } catch {
-      r = await proxiedFetch(url);
+      r = await proxiedFetch(url, {}, { adapterId: "BDH" });
     }
     if (!r.ok) throw new Error(`BDH/BNE ${r.status}`);
     const data = await r.json();

@@ -19,7 +19,7 @@ export const NORTHWESTERN_ADAPTER = {
     try {
       r = await fetch(nuUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
     } catch {
-      r = await proxiedFetch(nuUrl, { method: "POST", body: JSON.stringify(body) });
+      r = await proxiedFetch(nuUrl, { method: "POST", body: JSON.stringify(body) }, { adapterId: "NORTHWESTERN" });
     }
     if (!r.ok) throw new Error(`Northwestern ${r.status}`);
     const data = await r.json();
