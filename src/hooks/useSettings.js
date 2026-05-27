@@ -14,8 +14,53 @@ import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { ADAPTERS, isAdapterDefaultEnabled } from "../adapters/index.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { apiCall } from "../lib/api.js";
+import { storage } from "../lib/storage.js";
 
 const apiFetch = (method, body) => apiCall("/api/settings", method, body);
+
+const LEGACY_KEYS = [
+  "europeanaKey", "openAlexKey", "openAlexEmail", "crossrefEmail",
+  "s2Key", "smithsonianKey", "dplaKey", "rijksKey",
+  "curatedJournals", "enabledSources", "viewMode",
+];
+
+function migrateLegacyKeys() {
+  try {
+    const eu            = localStorage.getItem("europeanaKey")   || "";
+    const openAlexKey   = localStorage.getItem("openAlexKey")    || "";
+    const legacyEmail   = localStorage.getItem("openAlexEmail")  || "";
+    const crossrefEmail = localStorage.getItem("crossrefEmail")  || legacyEmail || "";
+    const s2Key          = localStorage.getItem("s2Key")          || "";
+    const smithsonianKey = localStorage.getItem("smithsonianKey") || "";
+    const dplaKey        = localStorage.getItem("dplaKey")        || "";
+    const rijksKey       = localStorage.getItem("rijksKey")       || "";
+
+    let enabledSources = {};
+    try {
+      const raw = localStorage.getItem("enabledSources");
+      if (raw) { const obj = JSON.parse(raw); if (obj && typeof obj === "object") enabledSources = obj; }
+    } catch {}
+
+    let curatedJournals = DEFAULT_CURATED_JOURNALS;
+    try {
+      const raw = localStorage.getItem("curatedJournals");
+      if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) curatedJournals = arr; }
+    } catch {}
+
+    const viewMode = localStorage.getItem("viewMode") || "unified";
+
+    const migrated = { europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, smithsonianKey, dplaKey, rijksKey, curatedJournals, enabledSources, viewMode };
+    storage.set("settings", migrated);
+
+    for (const key of LEGACY_KEYS) {
+      try { localStorage.removeItem(key); } catch {}
+    }
+
+    return migrated;
+  } catch {
+    return null;
+  }
+}
 
 export function useSettings() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -31,51 +76,23 @@ export function useSettings() {
     if (user?.id && loaded) syncFromDB();
   }, [user?.id, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── load — localStorage read (called once on mount by App.jsx) ─────────────
+  // ── load — reads namespaced storage; migrates legacy bare keys on first run ─
   const load = () => {
     try {
-      const eu            = localStorage.getItem("europeanaKey")   || "";
-      const openAlexKey   = localStorage.getItem("openAlexKey")    || "";
-      const legacyEmail   = localStorage.getItem("openAlexEmail")  || "";
-      const crossrefEmail = localStorage.getItem("crossrefEmail")  || legacyEmail || "";
-      if (legacyEmail && !localStorage.getItem("crossrefEmail")) {
-        try { localStorage.setItem("crossrefEmail", legacyEmail); localStorage.removeItem("openAlexEmail"); } catch {}
+      const stored = storage.get("settings");
+      if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+        setSettings({ ...DEFAULT_SETTINGS, ...stored });
+      } else {
+        const migrated = migrateLegacyKeys();
+        setSettings(migrated ? { ...DEFAULT_SETTINGS, ...migrated } : DEFAULT_SETTINGS);
       }
-      const s2Key          = localStorage.getItem("s2Key")          || "";
-      const smithsonianKey = localStorage.getItem("smithsonianKey") || "";
-      const dplaKey        = localStorage.getItem("dplaKey")        || "";
-      const rijksKey       = localStorage.getItem("rijksKey")       || "";
-      let enabledSources   = {};
-      try {
-        const raw = localStorage.getItem("enabledSources");
-        if (raw) { const obj = JSON.parse(raw); if (obj && typeof obj === "object") enabledSources = obj; }
-      } catch {}
-      let curatedJournals = DEFAULT_CURATED_JOURNALS;
-      try {
-        const raw = localStorage.getItem("curatedJournals");
-        if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) curatedJournals = arr; }
-      } catch {}
-      let viewMode = "unified";
-      try { viewMode = localStorage.getItem("viewMode") || "unified"; } catch {}
-      setSettings({ europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, smithsonianKey, dplaKey, rijksKey, curatedJournals, enabledSources, viewMode });
     } catch {}
     setLoaded(true);
   };
 
-  // ── persistLocally — localStorage write without triggering DB call ─────────
+  // ── persistLocally — single namespaced write ──────────────────────────────
   const persistLocally = (next) => {
-    try {
-      localStorage.setItem("europeanaKey",    next.europeanaKey    || "");
-      localStorage.setItem("openAlexKey",     next.openAlexKey     || "");
-      localStorage.setItem("crossrefEmail",   next.crossrefEmail   || "");
-      localStorage.setItem("s2Key",           next.s2Key           || "");
-      localStorage.setItem("smithsonianKey",  next.smithsonianKey  || "");
-      localStorage.setItem("dplaKey",         next.dplaKey         || "");
-      localStorage.setItem("rijksKey",        next.rijksKey        || "");
-      localStorage.setItem("curatedJournals", JSON.stringify(next.curatedJournals  || []));
-      localStorage.setItem("enabledSources",  JSON.stringify(next.enabledSources   || {}));
-      if (next.viewMode) localStorage.setItem("viewMode", next.viewMode);
-    } catch {}
+    storage.set("settings", next);
   };
 
   // ── syncFromDB — fires once on sign-in ────────────────────────────────────

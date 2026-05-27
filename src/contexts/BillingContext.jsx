@@ -19,20 +19,17 @@ import React, { createContext, useContext } from "react";
  *
  * The registry's runSearch() calls deduct() — adapter files are untouched.
  */
-const BillingContext = createContext({
+const STUB_VALUE = {
   credits: Infinity,
   tier: "free",
   deduct: () => Promise.resolve(true),
-});
+};
+
+const BillingContext = createContext(STUB_VALUE);
 
 export function BillingProvider({ children }) {
-  // Phase 2+: replace stub with real KV credit balance + tier from auth
-  const value = {
-    credits: Infinity,
-    tier: "free",
-    deduct: () => Promise.resolve(true),
-  };
-  return <BillingContext.Provider value={value}>{children}</BillingContext.Provider>;
+  // Phase 2+: replace STUB_VALUE with real KV credit balance + tier from auth
+  return <BillingContext.Provider value={STUB_VALUE}>{children}</BillingContext.Provider>;
 }
 
 export function useBilling() {
