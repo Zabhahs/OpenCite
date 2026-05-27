@@ -13,17 +13,9 @@ import { DEFAULT_SETTINGS, DEFAULT_CURATED_JOURNALS } from "../constants/default
 import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { ADAPTERS, isAdapterDefaultEnabled } from "../adapters/index.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { apiCall } from "../lib/api.js";
 
-const API = "/api/settings";
-
-function apiFetch(method, body) {
-  return fetch(API, {
-    method,
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-}
+const apiFetch = (method, body) => apiCall("/api/settings", method, body);
 
 export function useSettings() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -63,7 +55,9 @@ export function useSettings() {
         const raw = localStorage.getItem("curatedJournals");
         if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) curatedJournals = arr; }
       } catch {}
-      setSettings({ europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, smithsonianKey, dplaKey, rijksKey, curatedJournals, enabledSources });
+      let viewMode = "unified";
+      try { viewMode = localStorage.getItem("viewMode") || "unified"; } catch {}
+      setSettings({ europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, smithsonianKey, dplaKey, rijksKey, curatedJournals, enabledSources, viewMode });
     } catch {}
     setLoaded(true);
   };
@@ -80,6 +74,7 @@ export function useSettings() {
       localStorage.setItem("rijksKey",        next.rijksKey        || "");
       localStorage.setItem("curatedJournals", JSON.stringify(next.curatedJournals  || []));
       localStorage.setItem("enabledSources",  JSON.stringify(next.enabledSources   || {}));
+      if (next.viewMode) localStorage.setItem("viewMode", next.viewMode);
     } catch {}
   };
 

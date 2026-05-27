@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
@@ -128,6 +128,44 @@ function OpenCITE() {
     inputRef.current?.focus();
   }, [admin, reset]);
 
+  // ── Derived view-mode state (memoized — avoids recomputation on every render) ──
+  const isUnified = (settings.viewMode || "unified") === "unified";
+  const enabledAdapters = useMemo(() => ADAPTERS.filter(isEnabled), [settings, isEnabled]);
+  const allDone = useMemo(
+    () => enabledAdapters.length > 0 && enabledAdapters.every(a => sectionStates[a.id] && !sectionStates[a.id].loading),
+    [enabledAdapters, sectionStates]
+  );
+
+  const sortedAdapters = useMemo(() => {
+    if (!allDone) return enabledAdapters;
+    const sectionAvgScore = (id) => {
+      const results = filteredSections[id]?.results || [];
+      if (!results.length) return 0;
+      return results.reduce((sum, r) => sum + (r._score ?? 0), 0) / results.length;
+    };
+    return [...enabledAdapters].sort((a, b) => {
+      const cntA = sectionStates[a.id]?.results?.length || 0;
+      const cntB = sectionStates[b.id]?.results?.length || 0;
+      if (cntA > 0 && cntB === 0) return -1;
+      if (cntA === 0 && cntB > 0) return 1;
+      return sectionAvgScore(b.id) - sectionAvgScore(a.id);
+    });
+  }, [allDone, enabledAdapters, sectionStates, filteredSections]);
+
+  const { withResults, withoutResults } = useMemo(() => {
+    const withResults = sortedAdapters.filter(a => {
+      const s = sectionStates[a.id];
+      return s && (s.loading || s.error || (s.results?.length || 0) > 0);
+    });
+    const withoutResults = allDone
+      ? sortedAdapters.filter(a => {
+          const s = sectionStates[a.id];
+          return s && !s.loading && !s.error && !(s.results?.length > 0);
+        })
+      : [];
+    return { withResults, withoutResults };
+  }, [sortedAdapters, sectionStates, allDone]);
+
   const copyText = (text, id, style) => {
     navigator.clipboard.writeText(text);
     setCopied({ id, style });
@@ -154,59 +192,6 @@ function OpenCITE() {
         "--ui-sticky-bg": theme.stickyBg, "--ui-title-color": theme.titleColor,
       }}
     >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300..1000;1,300..1000&family=JetBrains+Mono:wght@400;500&display=swap');
-        .display-font { font-family: 'Avenir Next','Avenir','Mulish',-apple-system,BlinkMacSystemFont,system-ui,sans-serif; }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        .grain::before { content:''; position:fixed; inset:0; pointer-events:none; opacity:var(--ui-grain-opacity,0.04); z-index:1; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-        .fade-in { animation: fade 0.5s ease-out; }
-        @keyframes fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .underline-thick { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; }
-        .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
-        @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
-        .ticker-track { display:flex; gap:0.5rem; animation:ticker 80s linear infinite; width:max-content; will-change:transform; }
-        .ticker-track:hover { animation-play-state:paused; }
-        @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
-        .eagle-header { mix-blend-mode:var(--ui-eagle-blend,multiply); filter:drop-shadow(var(--ui-eagle-shadow)); transition:transform 0.2s ease; }
-        .eagle-shake { animation: eagle-shake 0.45s ease; }
-        @keyframes eagle-shake {
-          0%,100% { transform: rotate(0deg) scale(1.1); }
-          20%     { transform: rotate(-10deg) scale(1.1); }
-          40%     { transform: rotate(9deg) scale(1.1); }
-          60%     { transform: rotate(-6deg) scale(1.1); }
-          80%     { transform: rotate(5deg) scale(1.1); }
-        }
-        @keyframes eagleBounce {
-          0%,100% { transform: translateY(0) rotate(0deg); }
-          25%     { transform: translateY(-6px) rotate(-5deg); }
-          75%     { transform: translateY(-3px) rotate(3deg); }
-        }
-        @keyframes eagleEnter {
-          from { opacity: 0; transform: translateY(-6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        [data-theme="oled"] .text-stone-900,[data-theme="oled"] .text-stone-800 { color:#ffffff; }
-        [data-theme="oled"] .text-stone-700,[data-theme="oled"] .text-stone-600 { color:#d0d0d0; }
-        [data-theme="oled"] .text-stone-500,[data-theme="oled"] .text-stone-400 { color:#909090; }
-        [data-theme="oled"] .text-amber-50  { color:#000000; }
-        [data-theme="oled"] .text-amber-900 { color:#fbbf24; }
-        [data-theme="oled"] .text-red-900   { color:#f87171; }
-        [data-theme="oled"] .hover\:text-red-900:hover { color:#ef4444; }
-        [data-theme="oled"] .app-title:hover { color:#fca5a5; }
-        [data-theme="oled"] .placeholder-stone-400::placeholder { color:#555555; }
-        [data-theme="oled"] .bg-white,[data-theme="oled"] .bg-amber-50 { background-color:#111111; }
-        [data-theme="oled"] .bg-stone-50\/40 { background-color:rgba(20,20,20,0.6); }
-        [data-theme="oled"] .bg-stone-50    { background-color:#111111; }
-        [data-theme="oled"] .bg-stone-700   { background-color:#2a2a2a; }
-        [data-theme="oled"] .bg-stone-900   { background-color:#e8e8e8; }
-        [data-theme="oled"] .hover\:bg-stone-900:hover { background-color:#cccccc; }
-        [data-theme="oled"] .hover\:bg-red-900:hover   { background-color:#333333; }
-        [data-theme="oled"] .border-stone-900 { border-color:#ffffff; }
-        [data-theme="oled"] .border-stone-400 { border-color:#444444; }
-        [data-theme="oled"] .border-stone-300 { border-color:#333333; }
-        [data-theme="oled"] .border-stone-200 { border-color:#2a2a2a; }
-        [data-theme="oled"] .focus\:border-red-900:focus { border-color:#ef4444; }
-      `}</style>
       <div className="grain" />
 
       <div className="relative max-w-4xl mx-auto px-6 py-10 md:py-16" style={{ zIndex: 2 }}>
@@ -225,7 +210,6 @@ function OpenCITE() {
           <LibraryPanel
             items={lib.items}
             onToggle={lib.toggle}
-            onExport={lib.exportBibliography}
             onClear={lib.clear}
             onCopy={copyText}
             copied={copied}
@@ -270,117 +254,78 @@ function OpenCITE() {
           />
         )}
 
-        {hasSearched && (() => {
-          const isUnified   = (settings.viewMode || "unified") === "unified";
-          const enabledAdapters = ADAPTERS.filter(isEnabled);
-          const allDone     = enabledAdapters.length > 0 && enabledAdapters.every(a => sectionStates[a.id] && !sectionStates[a.id].loading);
+        {hasSearched && (
+          <div className="space-y-12">
+            {/* D2 — sparse results prompt */}
+            {isSparseResults && (
+              <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
+                <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
+                  Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
+                </p>
+              </div>
+            )}
 
-          // Average _score for a section (used to rank sections in source view)
-          const sectionAvgScore = (id) => {
-            const results = filteredSections[id]?.results || [];
-            if (!results.length) return 0;
-            return results.reduce((sum, r) => sum + (r._score ?? 0), 0) / results.length;
-          };
-
-          // Sort sections once all adapters have settled; preserve arrival order while loading
-          const sortedAdapters = allDone
-            ? [...enabledAdapters].sort((a, b) => {
-                const cntA = sectionStates[a.id]?.results?.length || 0;
-                const cntB = sectionStates[b.id]?.results?.length || 0;
-                // Sections with results before empty/errored
-                if (cntA > 0 && cntB === 0) return -1;
-                if (cntA === 0 && cntB > 0) return 1;
-                // Among sections with results: rank by avg relevance score
-                return sectionAvgScore(b.id) - sectionAvgScore(a.id);
-              })
-            : enabledAdapters;
-
-          // Split for source view: adapters with actual results / still loading / errored stay in
-          // the main list; adapters that genuinely returned 0 results collapse to a chip row
-          const withResults    = sortedAdapters.filter(a => {
-            const s = sectionStates[a.id];
-            return s && (s.loading || s.error || (s.results?.length || 0) > 0);
-          });
-          const withoutResults = allDone
-            ? sortedAdapters.filter(a => {
-                const s = sectionStates[a.id];
-                return s && !s.loading && !s.error && !(s.results?.length > 0);
-              })
-            : [];
-
-          return (
-            <div className="space-y-12">
-              {/* D2 — sparse results prompt */}
-              {isSparseResults && (
-                <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
-                  <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
-                    Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
-                  </p>
-                </div>
-              )}
-
-              {isUnified ? (
-                /* ── Unified view ── */
-                <>
-                  <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />
-                  <UnifiedResultList
-                    filteredSections={filteredSections}
-                    sectionStates={sectionStates}
+            {isUnified ? (
+              /* ── Unified view ── */
+              <>
+                <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />
+                <UnifiedResultList
+                  filteredSections={filteredSections}
+                  sectionStates={sectionStates}
+                  onCopy={copyText}
+                  copied={copied}
+                  isInLibrary={lib.isInLibrary}
+                  onToggleLibrary={lib.toggle}
+                  onLoadMoreAll={handleLoadMoreAll}
+                  searchKey={searchCount}
+                />
+              </>
+            ) : (
+              /* ── Source view ── */
+              <>
+                {withResults.map(adapter => (
+                  <SourceSection
+                    key={adapter.id}
+                    adapter={adapter}
+                    state={filteredSections[adapter.id] || {}}
                     onCopy={copyText}
                     copied={copied}
                     isInLibrary={lib.isInLibrary}
                     onToggleLibrary={lib.toggle}
-                    onLoadMoreAll={handleLoadMoreAll}
-                    searchKey={searchCount}
+                    onLoadMore={(id) => loadMore(id, query)}
                   />
-                </>
-              ) : (
-                /* ── Source view ── */
-                <>
-                  {withResults.map(adapter => (
-                    <SourceSection
-                      key={adapter.id}
-                      adapter={adapter}
-                      state={filteredSections[adapter.id] || {}}
-                      onCopy={copyText}
-                      copied={copied}
-                      isInLibrary={lib.isInLibrary}
-                      onToggleLibrary={lib.toggle}
-                      onLoadMore={(id) => loadMore(id, query)}
-                    />
-                  ))}
+                ))}
 
-                  {/* Zero-result sources — collapsed chip row at bottom */}
-                  {withoutResults.length > 0 && (
-                    <div className="border-t border-stone-200 pt-5">
-                      <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mb-2">
-                        No matches in
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {withoutResults.map(a => (
-                          <span
-                            key={a.id}
-                            className={`mono-font text-[9px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-0.5 opacity-30`}
-                          >
-                            {a.name}
-                          </span>
-                        ))}
-                      </div>
+                {/* Zero-result sources — collapsed chip row at bottom */}
+                {withoutResults.length > 0 && (
+                  <div className="border-t border-stone-200 pt-5">
+                    <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mb-2">
+                      No matches in
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {withoutResults.map(a => (
+                        <span
+                          key={a.id}
+                          className={`mono-font text-[9px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-0.5 opacity-30`}
+                        >
+                          {a.name}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                </>
-              )}
+                  </div>
+                )}
+              </>
+            )}
 
-              {/* D3 — external launcher prompt on sparse results */}
-              {isSparseResults && (
-                <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
-                  No API results? These external archives may have what you need ↓
-                </p>
-              )}
-              <LauncherBlock query={query} launchers={LAUNCHERS} />
-            </div>
-          );
-        })()}
+            {/* D3 — external launcher prompt on sparse results */}
+            {isSparseResults && (
+              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
+                No API results? These external archives may have what you need ↓
+              </p>
+            )}
+            <LauncherBlock query={query} launchers={LAUNCHERS} />
+          </div>
+        )}
 
         {!hasSearched && loaded && (
           <div className="py-12 text-center">

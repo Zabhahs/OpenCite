@@ -358,7 +358,7 @@ export function HistoryPanel({ entries, onRerun, onRemove, onClear, historyMax }
 
 // ---------- LibraryPanel ----------
 
-export function LibraryPanel({ items, onToggle, onExportBibliography, onClear, onCopy, copied }) {
+export function LibraryPanel({ items, onToggle, onClear, onCopy, copied }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
 

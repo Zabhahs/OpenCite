@@ -10,17 +10,9 @@
 import { useState, useEffect, useRef } from "react";
 import { history } from "../lib/history.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { apiCall } from "../lib/api.js";
 
-const API = "/api/history";
-
-async function apiFetch(method, body) {
-  return fetch(API, {
-    method,
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-}
+const apiFetch = (method, body) => apiCall("/api/history", method, body);
 
 export function useHistory() {
   const { user } = useAuth();

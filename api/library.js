@@ -9,17 +9,7 @@
 
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession } from "./_shared/auth.js";
-
-// ── Body parser — req.body is undefined in raw Node.js serverless functions ──
-async function parseBody(req) {
-  return new Promise((resolve) => {
-    let data = "";
-    req.on("data", chunk => { data += chunk; });
-    req.on("end", () => {
-      try { resolve(JSON.parse(data)); } catch { resolve({}); }
-    });
-  });
-}
+import { parseBody } from "./_shared/parseBody.js";
 
 // ── Citation-essential fields — everything else stripped ──────────────────────
 

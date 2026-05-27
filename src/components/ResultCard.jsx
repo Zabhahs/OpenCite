@@ -3,19 +3,13 @@
 // v.17: book-chapter awareness, editors, enrichment metadata display.
 
 import React, { useState } from "react";
-import { buildMLA, buildAPA, segmentsToPlain } from "../lib/citations.js";
+import { buildMLA, buildAPA, segmentsToPlain, isBookChapter } from "../lib/citations.js";
 import { truncate } from "../lib/helpers.js";
 import { EagleTooltip } from "./EagleTooltip.jsx";
 import { useEagleTooltip } from "../hooks/useEagleTooltip.js";
 
 const EAGLE_LIBRARY_MSG =
   "Saved! ★ Open your Library to select favourites and export them as BibTeX, RIS, or CSL-JSON.";
-
-const isBookChapter = (r) => {
-  const t = (r._type || r.type || "").toLowerCase();
-  return t === "book-chapter" || t === "book-section" || t === "book-part"
-    || t === "inbook" || t === "reference-entry";
-};
 
 export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup }) {
   const mlaSegs = buildMLA(result);

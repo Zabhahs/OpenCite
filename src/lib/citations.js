@@ -54,7 +54,7 @@ const apaEditors = (editors) => {
 
 // ---------- Type detection helper ----------
 
-const isBookChapter = (r) => {
+export const isBookChapter = (r) => {
   const t = (r._type || r.type || "").toLowerCase();
   return t === "book-chapter" || t === "book-section" || t === "book-part"
     || t === "inbook" || t === "reference-entry";

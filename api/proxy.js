@@ -4,7 +4,7 @@ export const config = {
   runtime: 'edge',
 };
 
-const ALLOWED_DOMAINS = [
+const ALLOWED_DOMAINS = new Set([
   'dpul.princeton.edu',
   'ws.pangaea.de',
   'opencontext.org',
@@ -15,22 +15,15 @@ const ALLOWED_DOMAINS = [
   'api.dp.la',
   'gallica.bnf.fr',
   'www.iberoamericadigital.net',
-  'accounts.google.com',
-  'appleid.apple.com',
-  'login.microsoftonline.com',
   'obv-at-oenb.alma.exlibrisgroup.com',
   'datos.bne.es',
   'api.bnf.fr',
   'catalogue.bnf.fr',
-  'www.delpher.nl',
-  'data.nls.uk',
-  'www.nls.uk',
   'api.bl.uk',
   'data.bl.uk',
-  'chroniclingamerica.loc.gov',
   'www.loc.gov',
   'search.scielo.org',
-];
+]);
 
 export default async function handler(req) {
   const startMs = Date.now();
@@ -61,7 +54,7 @@ export default async function handler(req) {
     return new Response('Invalid target URL', { status: 400 });
   }
 
-  if (!ALLOWED_DOMAINS.includes(targetUrl.hostname)) {
+  if (!ALLOWED_DOMAINS.has(targetUrl.hostname)) {
     log.warn("proxy", "reject", { hostname: targetUrl.hostname });
     return new Response(`Domain ${targetUrl.hostname} not allowlisted`, { status: 403 });
   }
