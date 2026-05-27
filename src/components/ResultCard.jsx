@@ -150,7 +150,7 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
             <div className="flex flex-wrap gap-1.5 mb-2">
               {result.citedBy != null && result.citedBy > 0 && (
                 <span className="mono-font text-[9px] uppercase tracking-widest bg-amber-100 text-amber-800 px-1.5 py-0.5">
-                  {result.citedBy.toLocaleString()} cited
+                  {result.citedBy.toLocaleString()} {result.source === "IA" ? "downloaded" : "cited"}
                 </span>
               )}
               {result.language && (
