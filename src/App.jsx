@@ -278,6 +278,7 @@ function OpenCITE() {
                   onToggleLibrary={lib.toggle}
                   onLoadMoreAll={handleLoadMoreAll}
                   searchKey={searchCount}
+                  sortBy={filterState.sortBy}
                 />
               </>
             ) : (

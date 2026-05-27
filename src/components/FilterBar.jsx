@@ -178,9 +178,9 @@ export function FilterBar({ sectionStates, filterState, onChange }) {
 
         <button
           onClick={() => setExpanded(e => !e)}
-          className="ml-auto mono-font text-[9px] uppercase tracking-widest text-stone-500 hover:text-stone-900 transition"
+          className="ml-auto mono-font text-[9px] uppercase tracking-widest border border-stone-600 text-stone-800 bg-stone-100 px-2 py-1 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition"
         >
-          {expanded ? "↑ fewer filters" : "↓ more filters"}
+          {expanded ? "↑ fewer filters" : "↓ search filters"}
           {hasActiveFilters && !expanded && (
             <span className="ml-1 bg-amber-400 text-stone-900 px-1 py-0.5">●</span>
           )}

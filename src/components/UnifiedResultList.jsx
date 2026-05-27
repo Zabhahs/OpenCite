@@ -29,6 +29,7 @@ export function UnifiedResultList({
   onToggleLibrary,
   onLoadMoreAll,
   searchKey,
+  sortBy,
 }) {
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY);
 
@@ -45,13 +46,18 @@ export function UnifiedResultList({
         pool.push(r);
       }
     }
-    // Primary: _score desc. Secondary: citedBy desc (tie-break).
+    if (sortBy === "citations") {
+      return pool.sort((a, b) => (b.citedBy ?? -1) - (a.citedBy ?? -1));
+    } else if (sortBy === "year") {
+      return pool.sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10));
+    }
+    // "relevance" or "default" → _score desc, citedBy tie-break
     return pool.sort((a, b) => {
       const scoreDiff = (b._score ?? 0) - (a._score ?? 0);
       if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
       return (b.citedBy ?? 0) - (a.citedBy ?? 0);
     });
-  }, [filteredSections]);
+  }, [filteredSections, sortBy]);
 
   const visibleResults = allResults.slice(0, displayCount);
 
