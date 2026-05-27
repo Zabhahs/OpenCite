@@ -27,6 +27,13 @@ export const SMITHSONIAN_ADAPTER = {
       const c = row.content || {};
       const desc = c.descriptiveNonRepeating || {};
       const idx = c.indexedStructured || {};
+      // R6: object type, topic, and cultural provenance → subjects for Topics facet
+      const subjects = [
+        ...(Array.isArray(idx.type)       ? idx.type    : []),
+        ...(Array.isArray(idx.topic)      ? idx.topic   : []),
+        ...(Array.isArray(idx.culture)    ? idx.culture : []),
+        ...(Array.isArray(idx.set_name)   ? idx.set_name: []),
+      ].filter(Boolean);
       return {
         id: `si-${row.id || `${offset}-${i}`}`, source: "SMITHSONIAN",
         title: desc.title?.content || row.title || "Untitled",
@@ -37,6 +44,7 @@ export const SMITHSONIAN_ADAPTER = {
         url: desc.record_link || "",
         abstract: c.freetext?.notes?.[0]?.content || "",
         isOA: true, type: "primary-source",
+        subjects,
         previewImage: desc.online_media?.media?.[0]?.thumbnail || ""
       };
     });

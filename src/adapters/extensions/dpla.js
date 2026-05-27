@@ -3,6 +3,18 @@ import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
 import { proxiedFetch } from "../_shared/proxy.js";
 
+// R3: DPLA sourceResource.type → UnifiedResult type
+const DPLA_TYPE_MAP = {
+  "image":               "image",
+  "still image":         "image",
+  "text":                "primary-source",
+  "sound":               "misc",
+  "moving image":        "misc",
+  "physical object":     "primary-source",
+  "interactive resource":"misc",
+  "dataset":             "dataset",
+};
+
 export const DPLA_ADAPTER = {
   id: "DPLA", name: "DPLA",
   tagline: "Digital Public Library of America · 50M+ items",
@@ -32,13 +44,28 @@ export const DPLA_ADAPTER = {
       const creators = Array.isArray(src.creator) ? src.creator : (src.creator ? [src.creator] : []);
       const date = src.date?.displayDate || (Array.isArray(src.date) ? src.date[0]?.displayDate : "") || "";
       const desc = Array.isArray(src.description) ? src.description[0] : (src.description || "");
+
+      // R3: use native DPLA type from sourceResource
+      const rawType = Array.isArray(src.type) ? src.type[0] : (src.type || "");
+      const resolvedType = DPLA_TYPE_MAP[String(rawType).toLowerCase()] || "primary-source";
+
+      // R6: subjects from sourceResource.subject — can be strings or { "@id", "name" } objects
+      const rawSubjects = Array.isArray(src.subject) ? src.subject : [];
+      const subjects = rawSubjects
+        .map(s => (typeof s === "string" ? s : s?.name))
+        .filter(Boolean);
+
       return {
         id: `dpla-${d.id || `${offset}-${i}`}`, source: "DPLA", title,
         authors: creators, year: String(date).match(/\d{4}/)?.[0] || "",
         journal: "", publisher: d.provider?.name || "",
         volume: "", issue: "", pages: "", doi: "",
-        url: d.isShownAt || "", abstract: stripHtml(desc),
-        isOA: true, type: "primary-source", previewImage: d.object || ""
+        url: d.isShownAt || "",
+        abstract: stripHtml(desc),
+        isOA: true,
+        type: resolvedType,
+        subjects,
+        previewImage: d.object || ""
       };
     });
     return { results, hasMore: offset + results.length < (data.count || 0) };

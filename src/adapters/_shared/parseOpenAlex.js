@@ -25,8 +25,19 @@ export const parseOpenAlexWork = (w, idx) => {
     abstract: reconstructAbstract(w.abstract_inverted_index),
     isOA: !!w.open_access?.is_oa,
     type: w.type || "article",
-    // v.17 enrichment
-    keywords: (w.keywords || []).map(k => k.display_name || k).filter(Boolean),
+    // v.17 enrichment + R7: topics[] gives curated 4-level hierarchy (domain→field→subfield→topic)
+    keywords: (() => {
+      const s = new Set();
+      for (const k of (w.keywords || [])) {
+        const v = typeof k === "object" ? (k.display_name || "") : String(k);
+        if (v) s.add(v);
+      }
+      for (const t of (w.topics || [])) {
+        if (t.display_name)        s.add(t.display_name);
+        if (t.field?.display_name) s.add(t.field.display_name);
+      }
+      return [...s];
+    })(),
     citedBy: typeof w.cited_by_count === "number" ? w.cited_by_count : null,
     language: w.language || "",
   };

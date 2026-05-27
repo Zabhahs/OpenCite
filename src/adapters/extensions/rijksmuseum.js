@@ -28,7 +28,16 @@ export const RIJKSMUSEUM_ADAPTER = {
       journal: "", publisher: "Rijksmuseum",
       volume: "", issue: "", pages: "", doi: "",
       url: a.links?.web || `https://www.rijksmuseum.nl/en/collection/${a.objectNumber}`,
-      abstract: a.longTitle || "", isOA: true, type: "primary-source",
+      abstract: a.longTitle || "",
+      isOA: true,
+      // R3: imgonly=true in the search query guarantees visual art objects
+      type: "image",
+      // R6: objectTypes + materials populate the Topics facet (present in collection API response)
+      subjects: [
+        ...(Array.isArray(a.objectTypes)  ? a.objectTypes  : []),
+        ...(Array.isArray(a.materials)    ? a.materials    : []),
+        ...(Array.isArray(a.productionPlaces) ? a.productionPlaces : []),
+      ].filter(Boolean),
       previewImage: a.webImage?.url || a.headerImage?.url || ""
     }));
     return { results, hasMore: offset + results.length < (data.count || 0) };

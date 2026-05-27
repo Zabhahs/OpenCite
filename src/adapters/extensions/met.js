@@ -30,7 +30,11 @@ export const MET_ADAPTER = {
       volume: "", issue: "", pages: "", doi: "",
       url: it.objectURL || "",
       abstract: [it.medium, it.dimensions, it.creditLine].filter(Boolean).join(". "),
-      isOA: it.isPublicDomain === true, type: "primary-source",
+      isOA: it.isPublicDomain === true,
+      // R3: always visual artworks — hasImages:true filter is in the search query
+      type: "image",
+      // R6: classification/culture/period power the Topics facet filter
+      subjects: [it.classification, it.culture, it.period, it.artistNationality].filter(Boolean),
       previewImage: it.primaryImageSmall || it.primaryImage || ""
     }));
     return { results, hasMore: offset + slice.length < allIds.length };
