@@ -27,6 +27,8 @@ import {
   PANGAEA_ADAPTER,
   OPENNEURO_ADAPTER,
   ENA_ADAPTER,
+  // v.22B — Latin American replacements
+  SCIELO_ADAPTER,
   // v.18 — SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,
@@ -55,6 +57,7 @@ export const ADAPTERS = [
   // Extensions — sciences
   NCBI_ADAPTER,
   OPENCONTEXT_ADAPTER,
+  SCIELO_ADAPTER,
   // Extensions — Islamicate / heritage
   GALLICA_ADAPTER,
   THAQALAYN_ADAPTER,

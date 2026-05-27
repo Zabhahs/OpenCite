@@ -28,6 +28,9 @@ export { PANGAEA_ADAPTER }          from "./pangaea.js";
 export { OPENNEURO_ADAPTER }        from "./openNeuro.js";
 export { ENA_ADAPTER }              from "./ena.js";
 
+// v.22B — Latin American replacements for BDPI/MEXICANA
+export { SCIELO_ADAPTER }              from "./scielo.js";
+
 // v.18 SOW heritage adapters
 export { CHRONICLING_AMERICA_ADAPTER } from "./chroniclingAmerica.js";
 export { ONB_ADAPTER }              from "./onb.js";

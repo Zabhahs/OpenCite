@@ -28,6 +28,8 @@ const ALLOWED_DOMAINS = [
   'api.bl.uk',
   'data.bl.uk',
   'chroniclingamerica.loc.gov',
+  'www.loc.gov',
+  'search.scielo.org',
 ];
 
 export default async function handler(req) {

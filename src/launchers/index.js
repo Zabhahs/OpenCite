@@ -1,6 +1,7 @@
 import { createLauncher } from "./_factory.js";
 
 export const LAUNCHERS = [
+  createLauncher({ id: "DIALNET", name: "Dialnet", tagline: "Spanish-language academic journals · Latin American & Iberian coverage", region: ["latin-america", "europe"], archiveType: ["scholarly-index", "aggregator"], contentType: ["peer-reviewed", "textual"], buildUrl: (q) => `https://dialnet.unirioja.es/busqueda?t=${encodeURIComponent(q)}&bd=articulos` }),
   createLauncher({ id: "JSTOR", name: "JSTOR", tagline: "Use your own JSTOR account", region: ["global"], archiveType: ["scholarly-index", "aggregator"], contentType: ["peer-reviewed", "textual"], buildUrl: (q) => `https://www.jstor.org/action/doBasicSearch?Query=${encodeURIComponent(q)}` }),
   createLauncher({ id: "QDL", name: "Qatar Digital Library", tagline: "Arabic, Persian & Gulf manuscripts · IIIF imaging", region: ["mena"], archiveType: ["library", "manuscript-collection"], contentType: ["manuscript", "visual", "primary-source"], buildUrl: (q) => `https://www.qdl.qa/en/search/site/${encodeURIComponent(q)}` }),
   createLauncher({ id: "OPENITI", name: "OpenITI", tagline: "Machine-readable Islamicate texts (Arabic/Persian/Turkish/Urdu) · classical Sufi corpus", region: ["mena", "south-asia", "central-asia"], archiveType: ["research-repository"], contentType: ["textual", "manuscript", "structured-data"], buildUrl: () => `https://github.com/OpenITI` }),

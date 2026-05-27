@@ -17,6 +17,7 @@ import { HISTORY_MAX } from "./constants/defaults.js";
 
 // Components
 import { SearchInput } from "./components/SearchInput.jsx";
+import { FilterBar } from "./components/FilterBar.jsx";
 import { SourceSection } from "./components/SourceSection.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
@@ -46,7 +47,7 @@ function OpenCITE() {
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
   const hist = useHistory();
   const lib = useLibrary();
-  const [filterState] = useState({});
+  const [filterState, setFilterState] = useState({});
   const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
   const filteredSections = useFilters(sectionStates, filterState);
 
@@ -66,6 +67,7 @@ function OpenCITE() {
   const handleSearch = useCallback(() => {
     if (!query.trim()) return;
     hist.add(query);
+    setFilterState({});
     search(query);
     setSearchCount(c => {
       const next = c + 1;
@@ -247,6 +249,14 @@ function OpenCITE() {
           onSearch={handleSearch}
           inputRef={inputRef}
         />
+
+        {hasSearched && (
+          <FilterBar
+            sectionStates={sectionStates}
+            filterState={filterState}
+            onChange={setFilterState}
+          />
+        )}
 
         {hasSearched && (
           <div className="space-y-12">
