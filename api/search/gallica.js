@@ -83,6 +83,10 @@ export default async function handler(req) {
       const identifiers = getAll(rec, DC_NS, 'identifier');
       const ark = identifiers.find(id => id.includes('ark:') || id.includes('gallica.bnf.fr')) || identifiers[0] || "";
       const year = date.match(/\d{4}/)?.[0] || "";
+      // E5 — dc:type, dc:subject, dc:language from existing DC namespace
+      const dcType    = getText(rec, DC_NS, 'type');
+      const subjects  = getAll(rec, DC_NS, 'subject');
+      const language  = getText(rec, DC_NS, 'language');
       return {
         id: `gallica-${ark.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
         source: "GALLICA",
@@ -92,7 +96,9 @@ export default async function handler(req) {
         url: ark.startsWith('http') ? ark : (ark ? `https://gallica.bnf.fr/${ark}` : ""),
         abstract: description,
         isOA: true,
-        type: "primary-source",
+        type: dcType || "primary-source",
+        subjects,
+        language,
         previewImage: ark ? `${ark.startsWith('http') ? ark : 'https://gallica.bnf.fr/' + ark}.thumbnail` : ""
       };
     });

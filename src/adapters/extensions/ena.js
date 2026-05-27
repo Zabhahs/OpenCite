@@ -11,7 +11,7 @@ export const ENA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const fields = "study_accession,study_title,study_description,first_public,center_name,study_alias";
+    const fields = "study_accession,study_title,study_description,first_public,center_name,study_alias,tax_id,scientific_name,study_type";
     const enaQuery = `study_title="*${query}*" OR study_description="*${query}*"`;
     const url = `https://www.ebi.ac.uk/ena/portal/api/search?result=study&query=${encodeURIComponent(enaQuery)}&fields=${fields}&format=json&limit=${pageSize}&offset=${offset}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
@@ -29,7 +29,9 @@ export const ENA_ADAPTER = {
       journal: it.study_accession || "", publisher: "European Nucleotide Archive",
       volume: "", issue: "", pages: "", doi: "",
       url: it.study_accession ? `https://www.ebi.ac.uk/ena/browser/view/${it.study_accession}` : "",
-      abstract: stripHtml(it.study_description || ""), isOA: true, type: "genomic-data"
+      abstract: stripHtml(it.study_description || ""),
+      subjects: [it.scientific_name, it.study_type].filter(Boolean),
+      isOA: true, type: "genomic-data"
     }));
     return { results, hasMore: items.length === pageSize };
   }

@@ -8,6 +8,7 @@ import { useSettings } from "./hooks/useSettings.js";
 import { useHistory } from "./hooks/useHistory.js";
 import { useLibrary } from "./hooks/useLibrary.js";
 import { useSearch } from "./hooks/useSearch.js";
+import { useFilters } from "./hooks/useFilters.js";
 
 // Data
 import { ADAPTERS } from "./adapters/index.js";
@@ -45,7 +46,9 @@ function OpenCITE() {
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
   const hist = useHistory();
   const lib = useLibrary();
-  const { sectionStates, hasSearched, search, loadMore, reset } = useSearch(settings, isEnabled);
+  const [filterState] = useState({});
+  const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
+  const filteredSections = useFilters(sectionStates, filterState);
 
   // v.19 — install debug logger ring buffer once when admin signs in
   useEffect(() => {
@@ -247,11 +250,19 @@ function OpenCITE() {
 
         {hasSearched && (
           <div className="space-y-12">
+            {/* D2 — sparse results prompt */}
+            {isSparseResults && (
+              <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
+                <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
+                  Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
+                </p>
+              </div>
+            )}
             {ADAPTERS.filter(isEnabled).map(adapter => (
               <SourceSection
                 key={adapter.id}
                 adapter={adapter}
-                state={sectionStates[adapter.id] || {}}
+                state={filteredSections[adapter.id] || {}}
                 onCopy={copyText}
                 copied={copied}
                 isInLibrary={lib.isInLibrary}
@@ -259,6 +270,12 @@ function OpenCITE() {
                 onLoadMore={(id) => loadMore(id, query)}
               />
             ))}
+            {/* D3 — external launcher prompt on sparse results */}
+            {isSparseResults && (
+              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
+                No API results? These external archives may have what you need ↓
+              </p>
+            )}
             <LauncherBlock query={query} launchers={LAUNCHERS} />
           </div>
         )}

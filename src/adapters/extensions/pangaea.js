@@ -16,7 +16,7 @@ export const PANGAEA_ADAPTER = {
     const safeQuery = query.replace(/\//g, '\\/');
     const body = {
       query: { query_string: { query: safeQuery } }, size: pageSize, from: offset,
-      _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract"]
+      _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract", "keyword", "parameter"]
     };
     const r = await proxiedFetch(
       "https://ws.pangaea.de/es/pangaea/panmd/_search",
@@ -44,6 +44,10 @@ export const PANGAEA_ADAPTER = {
         volume: "", issue: "", pages: "",
         doi, url: url.startsWith("http") ? url : (doi ? `https://doi.org/${doi}` : ""),
         abstract: (s.abstract && !/\d[A-Z]{5,}/.test(s.abstract)) ? stripHtml(s.abstract) : "Data hosted by the PANGAEA repository.",
+        keywords: [
+          ...(Array.isArray(s.keyword) ? s.keyword : s.keyword ? [s.keyword] : []),
+          ...(Array.isArray(s.parameter) ? s.parameter : s.parameter ? [s.parameter] : []),
+        ].filter(Boolean),
         isOA: true, type: "genomic-data"
       };
     });

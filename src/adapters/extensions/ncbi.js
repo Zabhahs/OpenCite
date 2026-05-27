@@ -33,7 +33,8 @@ export const NCBI_ADAPTER = {
         journal: it.fulljournalname || it.source || "", publisher: "",
         volume: it.volume || "", issue: it.issue || "", pages: it.pages || "",
         doi, url: doi ? `https://doi.org/${doi}` : `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
-        abstract: "", isOA: false, type: "article"
+        abstract: "", isOA: false, type: "article",
+        keywords: (it.meshheadinglist || []).map(m => m.name).filter(Boolean)
       };
     }).filter(Boolean);
     return { results, hasMore: offset + results.length < total };

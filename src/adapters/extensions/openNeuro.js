@@ -12,7 +12,7 @@ export const OPENNEURO_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const gqlQuery = `query PublicDatasets { datasets(first: 100, orderBy: { created: descending }) { edges { node { id created latestSnapshot { tag description { Name Authors DatasetDOI Acknowledgements } summary { modalities tasks } } } } } }`;
+    const gqlQuery = `query PublicDatasets { datasets(first: 100, orderBy: { created: descending }) { edges { node { id created latestSnapshot { tag description { Name Authors DatasetDOI Acknowledgements } summary { modalities tasks species } } } } } }`;
     const onUrl = "https://openneuro.org/crn/graphql";
     let r;
     try {
@@ -39,6 +39,7 @@ export const OPENNEURO_ADAPTER = {
         title: desc.Name || ds.id, authors: desc.Authors || [],
         year: String(ds.created || "").match(/\d{4}/)?.[0] || "",
         journal: (summary.modalities || []).join(", "), publisher: "OpenNeuro",
+        keywords: (summary.species || []),
         volume: "", issue: "", pages: "", doi: desc.DatasetDOI || "",
         url: `https://openneuro.org/datasets/${ds.id}`,
         abstract: desc.Acknowledgements || `Tasks: ${(summary.tasks || []).join(", ")}`,

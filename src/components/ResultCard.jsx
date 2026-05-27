@@ -110,7 +110,16 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
             className="display-font text-lg md:text-xl font-bold text-stone-900 mb-1 leading-tight break-words"
             style={{ letterSpacing: "-0.01em" }}
           >
-            {result.title}
+            {(result.doi || result.url) ? (
+              <a
+                href={result.doi ? `https://doi.org/${result.doi}` : result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline hover:text-red-900 transition"
+              >
+                {result.title}
+              </a>
+            ) : result.title}
           </h4>
 
           {/* v.17 — Book title subheader for chapters NOT already inside a group wrapper */}
