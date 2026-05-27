@@ -17,7 +17,6 @@ export const MEXICANA_ADAPTER = {
     const r = await fetch(`/api/search/mexicana?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}${tokenParam}`);
     if (!r.ok) throw new Error(`Mexicana ${r.status}`);
     const data = await r.json();
-    if (data.error) throw new Error(`Mexicana: ${data.error}`);
     return {
       results: data.results || [],
       hasMore: data.hasMore || false,

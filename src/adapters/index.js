@@ -34,10 +34,8 @@ import {
   BDH_ADAPTER,
   BNF_API_ADAPTER,
   BRITISH_LIBRARY_ADAPTER,
-  DELPHER_ADAPTER,
   LC_DATASETS_ADAPTER,
   MEXICANA_ADAPTER,
-  NLS_ADAPTER,
 } from "./extensions/index.js";
 
 export const ADAPTERS = [
@@ -74,10 +72,8 @@ export const ADAPTERS = [
   BDH_ADAPTER,
   BNF_API_ADAPTER,
   BRITISH_LIBRARY_ADAPTER,
-  DELPHER_ADAPTER,
   LC_DATASETS_ADAPTER,
   MEXICANA_ADAPTER,
-  NLS_ADAPTER,
 ];
 
 export const isAdapterDefaultEnabled = (adapter) =>

@@ -18,7 +18,7 @@ const ALLOWED_DOMAINS = [
   'accounts.google.com',
   'appleid.apple.com',
   'login.microsoftonline.com',
-  'search.onb.ac.at',
+  'obv-at-oenb.alma.exlibrisgroup.com',
   'datos.bne.es',
   'api.bnf.fr',
   'catalogue.bnf.fr',

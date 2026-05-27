@@ -34,7 +34,7 @@ export { ONB_ADAPTER }              from "./onb.js";
 export { BDH_ADAPTER }              from "./bdh.js";
 export { BNF_API_ADAPTER }          from "./bnfApi.js";
 export { BRITISH_LIBRARY_ADAPTER }  from "./britishLibrary.js";
-export { DELPHER_ADAPTER }          from "./delpher.js";
+// DELPHER_ADAPTER — KB API requires legal access credentials; endpoint https://www.delpher.nl/nl/platform/api/search returns 404
+// NLS_ADAPTER — NLS Data Foundry has no public search API; https://data.nls.uk/api/search/ returns 404
 export { LC_DATASETS_ADAPTER }      from "./lcDatasets.js";
 export { MEXICANA_ADAPTER }         from "./mexicana.js";
-export { NLS_ADAPTER }              from "./nls.js";
