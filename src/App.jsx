@@ -19,6 +19,8 @@ import { HISTORY_MAX } from "./constants/defaults.js";
 import { SearchInput } from "./components/SearchInput.jsx";
 import { FilterBar } from "./components/FilterBar.jsx";
 import { SourceSection } from "./components/SourceSection.jsx";
+import { UnifiedResultList } from "./components/UnifiedResultList.jsx";
+import { SearchStatusBar } from "./components/SearchStatusBar.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
@@ -84,6 +86,16 @@ function OpenCITE() {
     hist.add(q);
     search(q);
   }, [search, hist]);
+
+  // Unified view: trigger loadMore for every adapter that still has remote results
+  const handleLoadMoreAll = useCallback(() => {
+    ADAPTERS.filter(isEnabled).forEach(a => {
+      const s = sectionStates[a.id];
+      if (s?.hasMore && !s?.loadingMore && !s?.loading) {
+        loadMore(a.id, query);
+      }
+    });
+  }, [sectionStates, loadMore, isEnabled, query]);
 
   const dismissModal = useCallback(() => {
     try { localStorage.setItem("opencite_auth_prompted", "1"); } catch {}
@@ -258,37 +270,117 @@ function OpenCITE() {
           />
         )}
 
-        {hasSearched && (
-          <div className="space-y-12">
-            {/* D2 — sparse results prompt */}
-            {isSparseResults && (
-              <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
-                <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
-                  Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
+        {hasSearched && (() => {
+          const isUnified   = (settings.viewMode || "unified") === "unified";
+          const enabledAdapters = ADAPTERS.filter(isEnabled);
+          const allDone     = enabledAdapters.length > 0 && enabledAdapters.every(a => sectionStates[a.id] && !sectionStates[a.id].loading);
+
+          // Average _score for a section (used to rank sections in source view)
+          const sectionAvgScore = (id) => {
+            const results = filteredSections[id]?.results || [];
+            if (!results.length) return 0;
+            return results.reduce((sum, r) => sum + (r._score ?? 0), 0) / results.length;
+          };
+
+          // Sort sections once all adapters have settled; preserve arrival order while loading
+          const sortedAdapters = allDone
+            ? [...enabledAdapters].sort((a, b) => {
+                const cntA = sectionStates[a.id]?.results?.length || 0;
+                const cntB = sectionStates[b.id]?.results?.length || 0;
+                // Sections with results before empty/errored
+                if (cntA > 0 && cntB === 0) return -1;
+                if (cntA === 0 && cntB > 0) return 1;
+                // Among sections with results: rank by avg relevance score
+                return sectionAvgScore(b.id) - sectionAvgScore(a.id);
+              })
+            : enabledAdapters;
+
+          // Split for source view: adapters with actual results / still loading / errored stay in
+          // the main list; adapters that genuinely returned 0 results collapse to a chip row
+          const withResults    = sortedAdapters.filter(a => {
+            const s = sectionStates[a.id];
+            return s && (s.loading || s.error || (s.results?.length || 0) > 0);
+          });
+          const withoutResults = allDone
+            ? sortedAdapters.filter(a => {
+                const s = sectionStates[a.id];
+                return s && !s.loading && !s.error && !(s.results?.length > 0);
+              })
+            : [];
+
+          return (
+            <div className="space-y-12">
+              {/* D2 — sparse results prompt */}
+              {isSparseResults && (
+                <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
+                  <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
+                    Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
+                  </p>
+                </div>
+              )}
+
+              {isUnified ? (
+                /* ── Unified view ── */
+                <>
+                  <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />
+                  <UnifiedResultList
+                    filteredSections={filteredSections}
+                    sectionStates={sectionStates}
+                    onCopy={copyText}
+                    copied={copied}
+                    isInLibrary={lib.isInLibrary}
+                    onToggleLibrary={lib.toggle}
+                    onLoadMoreAll={handleLoadMoreAll}
+                    searchKey={searchCount}
+                  />
+                </>
+              ) : (
+                /* ── Source view ── */
+                <>
+                  {withResults.map(adapter => (
+                    <SourceSection
+                      key={adapter.id}
+                      adapter={adapter}
+                      state={filteredSections[adapter.id] || {}}
+                      onCopy={copyText}
+                      copied={copied}
+                      isInLibrary={lib.isInLibrary}
+                      onToggleLibrary={lib.toggle}
+                      onLoadMore={(id) => loadMore(id, query)}
+                    />
+                  ))}
+
+                  {/* Zero-result sources — collapsed chip row at bottom */}
+                  {withoutResults.length > 0 && (
+                    <div className="border-t border-stone-200 pt-5">
+                      <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mb-2">
+                        No matches in
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {withoutResults.map(a => (
+                          <span
+                            key={a.id}
+                            className={`mono-font text-[9px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-0.5 opacity-30`}
+                          >
+                            {a.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* D3 — external launcher prompt on sparse results */}
+              {isSparseResults && (
+                <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
+                  No API results? These external archives may have what you need ↓
                 </p>
-              </div>
-            )}
-            {ADAPTERS.filter(isEnabled).map(adapter => (
-              <SourceSection
-                key={adapter.id}
-                adapter={adapter}
-                state={filteredSections[adapter.id] || {}}
-                onCopy={copyText}
-                copied={copied}
-                isInLibrary={lib.isInLibrary}
-                onToggleLibrary={lib.toggle}
-                onLoadMore={(id) => loadMore(id, query)}
-              />
-            ))}
-            {/* D3 — external launcher prompt on sparse results */}
-            {isSparseResults && (
-              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
-                No API results? These external archives may have what you need ↓
-              </p>
-            )}
-            <LauncherBlock query={query} launchers={LAUNCHERS} />
-          </div>
-        )}
+              )}
+              <LauncherBlock query={query} launchers={LAUNCHERS} />
+            </div>
+          );
+        })()}
 
         {!hasSearched && loaded && (
           <div className="py-12 text-center">

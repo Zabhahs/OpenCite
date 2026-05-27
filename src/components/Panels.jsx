@@ -252,6 +252,29 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
         </div>
 
         <div className="pt-4 border-t border-stone-300">
+          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Result layout</label>
+          <p className="text-xs text-stone-600 mb-3">
+            Unified ranks results by relevance across all sources — best results first.
+            Source view groups results per database for per-adapter auditing.
+          </p>
+          <div className="flex gap-2">
+            {[["unified", "Unified (default)"], ["source", "Source view"]].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => upd({ viewMode: val })}
+                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
+                  (s.viewMode || "unified") === val
+                    ? "bg-stone-900 text-amber-50 border-stone-900"
+                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>
           <SourcesPanel adapters={adapters} settings={s} isEnabled={isEnabled} onToggle={onToggle} />
         </div>

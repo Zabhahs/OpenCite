@@ -26,5 +26,8 @@ export const DEFAULT_SETTINGS = {
   dplaKey: "",
   rijksKey: "",
   curatedJournals: DEFAULT_CURATED_JOURNALS,
-  enabledSources: {}
+  enabledSources: {},
+  // "unified" = single ranked list across all adapters (default)
+  // "source"  = per-adapter sections (power-user / source view)
+  viewMode: "unified",
 };
