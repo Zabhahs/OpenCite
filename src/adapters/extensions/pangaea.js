@@ -13,8 +13,9 @@ export const PANGAEA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const safeQuery = query.replace(/\//g, '\\/');
     const body = {
-      query: { query_string: { query } }, size: pageSize, from: offset,
+      query: { query_string: { query: safeQuery } }, size: pageSize, from: offset,
       _source: ["sf-authortitle", "agg-author", "agg-pubYear", "URI", "abstract"]
     };
     const r = await proxiedFetch(

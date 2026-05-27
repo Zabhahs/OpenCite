@@ -48,22 +48,30 @@ export default async function handler(req) {
   const sparql = buildSparql(query, rows, start);
   const sparqlUrl = `${BL_SPARQL}?query=${encodeURIComponent(sparql)}&format=application%2Fsparql-results%2Bjson`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
   let data;
   try {
     const res = await fetch(sparqlUrl, {
+      signal: controller.signal,
       headers: {
         'Accept': 'application/sparql-results+json',
         'User-Agent': 'OpenCITE/1.0 (academic meta-search)',
       },
     });
+    clearTimeout(timeout);
     if (!res.ok) {
       log.err("BL", "upstream-fail", { status: res.status });
-      throw new Error(`BL SPARQL ${res.status}`);
+      return new Response(JSON.stringify({ error: `BL SPARQL ${res.status}`, results: [], total: 0 }), { status: 200, headers: corsHeaders });
     }
     data = await res.json();
     log("BL", "upstream-ok", { status: res.status });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, results: [], total: 0 }), { status: 502, headers: corsHeaders });
+    clearTimeout(timeout);
+    const isTimeout = err.name === 'AbortError';
+    log.err("BL", isTimeout ? "upstream-timeout" : "upstream-error", { err: err.name });
+    return new Response(JSON.stringify({ error: isTimeout ? "BL timed out (8s)" : err.message, results: [], total: 0 }), { status: 200, headers: corsHeaders });
   }
 
   const bindings = data?.results?.bindings || [];

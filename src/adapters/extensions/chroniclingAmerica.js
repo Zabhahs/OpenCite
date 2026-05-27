@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { proxiedFetch } from "../_shared/proxy.js";
 
 export const CHRONICLING_AMERICA_ADAPTER = {
   id: "CHRONICLING_AMERICA", name: "Chronicling America",
@@ -15,7 +16,7 @@ export const CHRONICLING_AMERICA_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://chroniclingamerica.loc.gov/search/pages/results/?proxtext=${encodeURIComponent(query)}&format=json&page=${page}&rows=${pageSize}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await proxiedFetch(url, { headers: { Accept: "application/json" } }, { adapterId: "CHRONICLING_AMERICA" });
     if (!r.ok) throw new Error(`Chronicling America ${r.status}`);
     const data = await r.json();
     const items = data.items || [];

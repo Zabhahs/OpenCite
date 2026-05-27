@@ -52,22 +52,30 @@ export default async function handler(req) {
     oaiUrl = `${OAI_BASE}?verb=ListRecords&metadataPrefix=oai_dc`;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
   let xml;
   try {
     const res = await fetch(oaiUrl, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'OpenCITE/1.0 (academic meta-search; contact: admin@opencite.app)',
         'Accept': 'text/xml, application/xml',
       },
     });
+    clearTimeout(timeout);
     if (!res.ok) {
       log.err("MEXICANA", "upstream-fail", { status: res.status });
-      throw new Error(`Mexicana OAI-PMH ${res.status}`);
+      return new Response(JSON.stringify({ error: `Mexicana OAI-PMH ${res.status}`, results: [], total: 0 }), { status: 200, headers: corsHeaders });
     }
     xml = await res.text();
     log("MEXICANA", "upstream-ok", { bytes: xml.length });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, results: [], total: 0 }), { status: 502, headers: corsHeaders });
+    clearTimeout(timeout);
+    const isTimeout = err.name === 'AbortError';
+    log.err("MEXICANA", isTimeout ? "upstream-timeout" : "upstream-error", { err: err.name });
+    return new Response(JSON.stringify({ error: isTimeout ? "Mexicana timed out (8s)" : err.message, results: [], total: 0 }), { status: 200, headers: corsHeaders });
   }
 
   if (xml.includes('<error')) {

@@ -4,7 +4,7 @@
  * Consumed by Layout.jsx (version + name) and SearchInput.jsx (placeholders).
  */
 
-export const APP_VERSION = "v.17";
+export const APP_VERSION = "v.20";
 
 export const APP_NAME = "OpenCITE";
 

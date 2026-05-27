@@ -17,8 +17,10 @@ export const DPLA_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
+    const doiMatch = query.match(/^10\.\d{4,}\/(.+)$/);
+    const safeQuery = doiMatch ? doiMatch[1] : query;
     const r = await proxiedFetch(
-      `https://api.dp.la/v2/items?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(settings.dplaKey)}`,
+      `https://api.dp.la/v2/items?q=${encodeURIComponent(safeQuery)}&page=${page}&page_size=${pageSize}&api_key=${encodeURIComponent(settings.dplaKey)}`,
       {},
       { adapterId: "DPLA" }
     );

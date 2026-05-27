@@ -13,7 +13,8 @@ export const NORTHWESTERN_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const body = { query: { query_string: { query, default_operator: "AND" } }, size: pageSize, from: offset };
+    const safeQuery = query.replace(/\//g, '\\/');
+    const body = { query: { query_string: { query: safeQuery, default_operator: "AND" } }, size: pageSize, from: offset };
     const nuUrl = "https://api.dc.library.northwestern.edu/api/v2/search";
     let r;
     try {

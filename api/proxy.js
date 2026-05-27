@@ -27,6 +27,7 @@ const ALLOWED_DOMAINS = [
   'www.nls.uk',
   'api.bl.uk',
   'data.bl.uk',
+  'chroniclingamerica.loc.gov',
 ];
 
 export default async function handler(req) {
