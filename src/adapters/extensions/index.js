@@ -17,7 +17,7 @@ export { SMITHSONIAN_ADAPTER }      from "./smithsonian.js";
 export { DPLA_ADAPTER }             from "./dpla.js";
 export { RIJKSMUSEUM_ADAPTER }      from "./rijksmuseum.js";
 export { INTERNET_ARCHIVE_ADAPTER } from "./internetArchive.js";
-export { BDPI_ADAPTER }             from "./bdpi.js";
+// BDPI_ADAPTER — /gdl/ExternalSearch.do JSONP endpoint removed; new /BDPI/Search.do is JS-only, no JSON API
 export { GALLICA_ADAPTER }          from "./gallica.js";
 export { THAQALAYN_ADAPTER }        from "./thaqalayn.js";
 export { NCBI_ADAPTER }             from "./ncbi.js";
