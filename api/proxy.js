@@ -7,6 +7,7 @@ export const config = {
 const ALLOWED_DOMAINS = new Set([
   'dpul.princeton.edu',
   'ws.pangaea.de',
+  'doi.pangaea.de',
   'opencontext.org',
   'api.dc.library.northwestern.edu',
   'openneuro.org',

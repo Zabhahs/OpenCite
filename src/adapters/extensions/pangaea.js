@@ -46,7 +46,7 @@ export const PANGAEA_ADAPTER = {
     const safeQuery = query.replace(/\//g, '\\/');
     const body = {
       query: { query_string: { query: safeQuery } }, size: pageSize, from: offset,
-      _source: ["agg-author", "agg-pubYear", "URI"]
+      _source: ["agg-author", "agg-pubYear", "URI", "agg-datasetname", "title"]
     };
     const r = await proxiedFetch(
       "https://ws.pangaea.de/es/pangaea/panmd/_search",
@@ -58,7 +58,7 @@ export const PANGAEA_ADAPTER = {
     const hits = data.hits?.hits || [];
     const total = data.hits?.total?.value ?? data.hits?.total ?? hits.length;
 
-    const results = await Promise.all(hits.map(async (h, i) => {
+    const rawResults = await Promise.all(hits.map(async (h, i) => {
       const s = h._source || {};
       const numericId = h._id || "";
       const uri = s.URI || "";
@@ -70,15 +70,19 @@ export const PANGAEA_ADAPTER = {
 
       const ris = numericId ? await fetchRIS(numericId) : null;
 
+      const doi = ris?.doi || fallbackDoi;
+      const title = ris?.title || s["agg-datasetname"] || s["title"] || "";
+      if (!doi || !title) return null;
+
       return {
         id: `pangaea-${numericId || `${offset}-${i}`}`,
         source: "PANGAEA",
-        title: ris?.title || "Environmental Research Data",
+        title,
         authors: ris?.authors?.length ? ris.authors : fallbackAuthors,
         year: ris?.year || (s["agg-pubYear"] ? String(s["agg-pubYear"]) : ""),
         journal: "", publisher: "PANGAEA",
         volume: "", issue: "", pages: "",
-        doi: ris?.doi || fallbackDoi,
+        doi,
         url: ris?.url || fallbackUrl,
         abstract: ris?.abstract || "Data hosted by the PANGAEA repository.",
         keywords: ris?.keywords || [],
@@ -86,6 +90,7 @@ export const PANGAEA_ADAPTER = {
       };
     }));
 
+    const results = rawResults.filter(Boolean);
     return { results, hasMore: offset + results.length < total };
   }
 };
