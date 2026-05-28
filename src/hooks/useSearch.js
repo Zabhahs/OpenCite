@@ -65,7 +65,7 @@ export function useSearch(settings, isEnabled) {
         });
 
         // C4 — BM25F relevance scoring with optional synonym expansion
-        const scoringTerms = expandTerms(terms, settings.synonyms);
+        const scoringTerms = await expandTerms(terms, settings.synonyms);
         const scored = scoreResults(deduped, scoringTerms);
 
         setSectionStates(prev => ({
@@ -103,7 +103,7 @@ export function useSearch(settings, isEnabled) {
       });
 
       // C4 — BM25F score load-more results
-      const scoringTerms = expandTerms(terms, settings.synonyms);
+      const scoringTerms = await expandTerms(terms, settings.synonyms);
       const scored = scoreResults(deduped, scoringTerms);
 
       setSectionStates(prev => {
