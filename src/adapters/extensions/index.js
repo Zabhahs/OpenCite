@@ -41,3 +41,4 @@ export { BRITISH_LIBRARY_ADAPTER }  from "./britishLibrary.js";
 // NLS_ADAPTER — NLS Data Foundry has no public search API; https://data.nls.uk/api/search/ returns 404
 export { LC_DATASETS_ADAPTER }      from "./lcDatasets.js";
 export { MEXICANA_ADAPTER }         from "./mexicana.js";
+export { WIKIDATA_ADAPTER }         from "./wikidata.js";

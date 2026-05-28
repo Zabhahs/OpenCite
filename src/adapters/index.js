@@ -37,6 +37,7 @@ import {
   BRITISH_LIBRARY_ADAPTER,
   LC_DATASETS_ADAPTER,
   MEXICANA_ADAPTER,
+  WIKIDATA_ADAPTER,
 } from "./extensions/index.js";
 
 export const ADAPTERS = [
@@ -75,6 +76,7 @@ export const ADAPTERS = [
   BRITISH_LIBRARY_ADAPTER,
   LC_DATASETS_ADAPTER,
   MEXICANA_ADAPTER,
+  WIKIDATA_ADAPTER,
 ];
 
 export const isAdapterDefaultEnabled = (adapter) =>
