@@ -8,6 +8,7 @@ import { useSettings } from "./hooks/useSettings.js";
 import { useHistory } from "./hooks/useHistory.js";
 import { useLibrary } from "./hooks/useLibrary.js";
 import { useSearch } from "./hooks/useSearch.js";
+import { useSemanticRerank } from "./hooks/useSemanticRerank.js";
 import { useFilters } from "./hooks/useFilters.js";
 
 // Data
@@ -51,7 +52,9 @@ function OpenCITE() {
   const lib = useLibrary();
   const [filterState, setFilterState] = useState({});
   const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
-  const filteredSections = useFilters(sectionStates, filterState);
+  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, settings.semanticSearch);
+  const effectiveStates = rerankedStates || sectionStates;
+  const filteredSections = useFilters(effectiveStates, filterState);
 
   // v.19 — install debug logger ring buffer once when admin signs in
   useEffect(() => {

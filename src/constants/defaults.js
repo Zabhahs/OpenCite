@@ -31,4 +31,5 @@ export const DEFAULT_SETTINGS = {
   // "source"  = per-adapter sections (power-user / source view)
   viewMode: "unified",
   synonyms: false,
+  semanticSearch: false,
 };
