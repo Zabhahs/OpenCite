@@ -47,7 +47,7 @@ function groupByParentWork(results) {
 // ---------------------------------------------------------------------------
 
 export function SourceSection({ adapter, state, onCopy, copied, isInLibrary, onToggleLibrary, onLoadMore }) {
-  const { loading, results, error, hasMore, loadingMore } = state;
+  const { loading, results, error, hasMore, loadingMore, lowConfidence } = state;
 
   const groups = !loading && results?.length > 0 ? groupByParentWork(results) : [];
 
@@ -68,6 +68,11 @@ export function SourceSection({ adapter, state, onCopy, copied, isInLibrary, onT
         {!loading && results && (
           <span className="mono-font text-xs text-stone-500">
             {results.length} result{results.length !== 1 ? "s" : ""}
+          </span>
+        )}
+        {!loading && lowConfidence && (
+          <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
+            loose match
           </span>
         )}
       </div>

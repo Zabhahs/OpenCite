@@ -22,11 +22,7 @@ export const OPENALEX_ADAPTER = {
     let auth = "";
     if (settings.openAlexKey) auth = `&api_key=${encodeURIComponent(settings.openAlexKey)}`;
     else if (settings.crossrefEmail) auth = `&mailto=${encodeURIComponent(settings.crossrefEmail)}`;
-    // Use phrase search for multi-word queries so the API requires the terms together
-    // rather than returning anything containing any individual word.
-    const words = query.trim().split(/\s+/);
-    const searchParam = words.length > 1 ? `"${query}"` : query;
-    const url = `https://api.openalex.org/works?search=${encodeURIComponent(searchParam)}&filter=is_oa:true&per_page=${pageSize}&page=${page}${auth}`;
+    const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&filter=is_oa:true&per_page=${pageSize}&page=${page}${auth}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("OpenAlex rejected the request. Verify your key in settings or remove it.");

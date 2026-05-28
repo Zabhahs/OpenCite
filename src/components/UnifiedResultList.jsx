@@ -94,6 +94,11 @@ export function UnifiedResultList({
                   >
                     {adapter.name}
                   </span>
+                  {r._lowConfidence && (
+                    <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
+                      loose match
+                    </span>
+                  )}
                 </div>
               )}
               <ResultCard

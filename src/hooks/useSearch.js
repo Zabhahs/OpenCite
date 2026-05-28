@@ -68,16 +68,19 @@ export function useSearch(settings, isEnabled) {
         const scoringTerms = await expandTerms(terms, settings.synonyms);
         const scored = scoreResults(deduped, scoringTerms);
 
-        // Drop results that contain none of the meaningful query terms (score = 0).
-        // These are false positives from stopword-only matches or unrelated API results.
+        // Drop zero-score results only when at least one result scored above 0.
+        // If everything scores 0 (topic absent from this database), show the API's
+        // best guesses rather than nothing — caller can display a low-confidence flag.
         const meaningful = meaningfulTerms(scoringTerms);
-        const filtered = meaningful.length
+        const hasRelevant = meaningful.length && scored.some(r => r._score > 0);
+        const lowConfidence = meaningful.length && !hasRelevant && scored.length > 0;
+        const filtered = hasRelevant
           ? scored.filter(r => r._score > 0)
-          : scored;
+          : scored.map(r => lowConfidence ? { ...r, _lowConfidence: true } : r);
 
         setSectionStates(prev => ({
           ...prev,
-          [adapter.id]: { loading: false, results: filtered, error: null, hasMore, loadingMore: false, offset: filtered.length }
+          [adapter.id]: { loading: false, results: filtered, lowConfidence, error: null, hasMore, loadingMore: false, offset: filtered.length }
         }));
       } catch (err) {
         setSectionStates(prev => ({
@@ -113,7 +116,8 @@ export function useSearch(settings, isEnabled) {
       const scoringTerms = await expandTerms(terms, settings.synonyms);
       const scored = scoreResults(deduped, scoringTerms);
       const meaningful = meaningfulTerms(scoringTerms);
-      const filtered = meaningful.length ? scored.filter(r => r._score > 0) : scored;
+      const hasRelevant = meaningful.length && scored.some(r => r._score > 0);
+      const filtered = hasRelevant ? scored.filter(r => r._score > 0) : scored;
 
       setSectionStates(prev => {
         const existing = prev[adapterId];
