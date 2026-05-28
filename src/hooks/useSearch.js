@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { ADAPTERS, runSearch } from "../adapters/index.js";
-import { scoreResult } from "../lib/scoring.js";
+import { scoreResults } from "../lib/scoring.js";
+import { expandTerms } from "../lib/synonyms.js";
 
 export function useSearch(settings, isEnabled) {
   const [sectionStates, setSectionStates] = useState({});
@@ -63,8 +64,9 @@ export function useSearch(settings, isEnabled) {
           return true;
         });
 
-        // C4 — attach relevance score
-        const scored = deduped.map(r => ({ ...r, _score: scoreResult(r, terms) }));
+        // C4 — BM25F relevance scoring with optional synonym expansion
+        const scoringTerms = expandTerms(terms, settings.synonyms);
+        const scored = scoreResults(deduped, scoringTerms);
 
         setSectionStates(prev => ({
           ...prev,
@@ -100,8 +102,9 @@ export function useSearch(settings, isEnabled) {
         return true;
       });
 
-      // C4 — score load-more results
-      const scored = deduped.map(r => ({ ...r, _score: scoreResult(r, terms) }));
+      // C4 — BM25F score load-more results
+      const scoringTerms = expandTerms(terms, settings.synonyms);
+      const scored = scoreResults(deduped, scoringTerms);
 
       setSectionStates(prev => {
         const existing = prev[adapterId];

@@ -30,4 +30,5 @@ export const DEFAULT_SETTINGS = {
   // "unified" = single ranked list across all adapters (default)
   // "source"  = per-adapter sections (power-user / source view)
   viewMode: "unified",
+  synonyms: false,
 };

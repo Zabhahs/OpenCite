@@ -275,6 +275,29 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
         </div>
 
         <div className="pt-4 border-t border-stone-300">
+          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Synonym expansion</label>
+          <p className="text-xs text-stone-600 mb-3">
+            When enabled, scoring also matches synonyms and spelling variants (e.g. "climate change" also scores "global warming").
+            Does not change what APIs return — only affects how results are ranked.
+          </p>
+          <div className="flex gap-2">
+            {[[true, "On"], [false, "Off (default)"]].map(([val, label]) => (
+              <button
+                key={String(val)}
+                onClick={() => upd({ synonyms: val })}
+                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
+                  (s.synonyms || false) === val
+                    ? "bg-stone-900 text-amber-50 border-stone-900"
+                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>
           <SourcesPanel adapters={adapters} settings={s} isEnabled={isEnabled} onToggle={onToggle} />
         </div>
