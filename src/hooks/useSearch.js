@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { ADAPTERS, runSearch } from "../adapters/index.js";
-import { scoreResults } from "../lib/scoring.js";
+import { scoreResults, meaningfulTerms } from "../lib/scoring.js";
 import { expandTerms } from "../lib/synonyms.js";
 
 export function useSearch(settings, isEnabled) {
@@ -68,9 +68,16 @@ export function useSearch(settings, isEnabled) {
         const scoringTerms = await expandTerms(terms, settings.synonyms);
         const scored = scoreResults(deduped, scoringTerms);
 
+        // Drop results that contain none of the meaningful query terms (score = 0).
+        // These are false positives from stopword-only matches or unrelated API results.
+        const meaningful = meaningfulTerms(scoringTerms);
+        const filtered = meaningful.length
+          ? scored.filter(r => r._score > 0)
+          : scored;
+
         setSectionStates(prev => ({
           ...prev,
-          [adapter.id]: { loading: false, results: scored, error: null, hasMore, loadingMore: false, offset: scored.length }
+          [adapter.id]: { loading: false, results: filtered, error: null, hasMore, loadingMore: false, offset: filtered.length }
         }));
       } catch (err) {
         setSectionStates(prev => ({
@@ -105,10 +112,12 @@ export function useSearch(settings, isEnabled) {
       // C4 — BM25F score load-more results
       const scoringTerms = await expandTerms(terms, settings.synonyms);
       const scored = scoreResults(deduped, scoringTerms);
+      const meaningful = meaningfulTerms(scoringTerms);
+      const filtered = meaningful.length ? scored.filter(r => r._score > 0) : scored;
 
       setSectionStates(prev => {
         const existing = prev[adapterId];
-        const combined = [...(existing.results || []), ...scored];
+        const combined = [...(existing.results || []), ...filtered];
         return { ...prev, [adapterId]: { ...existing, results: combined, hasMore, loadingMore: false, offset: combined.length } };
       });
     } catch (err) {

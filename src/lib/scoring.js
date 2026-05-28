@@ -6,8 +6,26 @@ const B = 0.75;
 
 const FIELD_WEIGHTS = { title: 3.0, abstract: 1.0, keywords: 2.0 };
 
+// Common English stopwords that carry no topical signal.
+const STOPWORDS = new Set([
+  "a","an","the","and","or","but","in","on","at","to","for","of","with",
+  "by","from","as","is","are","was","were","be","been","being","have","has",
+  "had","do","does","did","will","would","could","should","may","might",
+  "shall","can","not","no","nor","so","yet","both","either","neither",
+  "than","then","that","this","these","those","it","its","it's","i","we",
+  "you","he","she","they","them","their","there","here","when","where",
+  "which","who","whom","what","how","all","each","every","some","any",
+  "few","more","most","other","into","through","during","before","after",
+  "above","below","between","out","off","over","under","again","further",
+  "once","about","up","down","such","s","t","re","ve","ll","d","m",
+]);
+
+export function meaningfulTerms(terms) {
+  return terms.map(t => t.toLowerCase()).filter(t => t.length > 1 && !STOPWORDS.has(t));
+}
+
 function tokenize(text) {
-  return (text || "").toLowerCase().split(/\s+/).filter(Boolean);
+  return (text || "").toLowerCase().split(/\W+/).filter(Boolean);
 }
 
 function fieldText(result, field) {
@@ -19,7 +37,7 @@ function termFreq(term, tokens) {
   const t = term.toLowerCase();
   let count = 0;
   for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i].includes(t)) count++;
+    if (tokens[i] === t) count++;
   }
   return count;
 }
@@ -40,6 +58,11 @@ function idf(term, docsFieldTokens) {
 export function scoreResults(results, terms) {
   if (!results.length || !terms.length) return results.map(r => ({ ...r, _score: 0 }));
 
+  // Strip stopwords so "of", "the", etc. don't inflate scores on every document.
+  const meaningful = meaningfulTerms(terms);
+  // Fall back to all terms if every term is a stopword (e.g. query "the a an").
+  const scoringTerms = meaningful.length ? meaningful : terms.map(t => t.toLowerCase());
+
   const fields = Object.keys(FIELD_WEIGHTS);
 
   const docsTokens = results.map(r => {
@@ -56,13 +79,13 @@ export function scoreResults(results, terms) {
   }
 
   const idfs = {};
-  for (const t of terms) idfs[t] = idf(t, docsTokens);
+  for (const t of scoringTerms) idfs[t] = idf(t, docsTokens);
 
   return results.map((r, idx) => {
     let score = 0;
     const docTokens = docsTokens[idx];
 
-    for (const t of terms) {
+    for (const t of scoringTerms) {
       let weightedTf = 0;
       for (const f of fields) {
         const tokens = docTokens[f];
@@ -75,7 +98,9 @@ export function scoreResults(results, terms) {
       score += idfs[t] * (weightedTf * (K1 + 1)) / (weightedTf + K1);
     }
 
-    const citedByBonus = Math.min((r.citedBy || 0) / 500, 2);
+    // Citation bonus is a small tiebreaker among relevant results, not a dominating signal.
+    // Capped at +0.3 so a highly-cited irrelevant paper can't outrank a relevant one.
+    const citedByBonus = score > 0 ? Math.min((r.citedBy || 0) / 5000, 0.3) : 0;
     return { ...r, _score: score + citedByBonus };
   });
 }
