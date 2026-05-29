@@ -46,7 +46,7 @@ Both bonuses gate on `score > 0` (only enrich already-relevant docs) and only fi
 
 ### v.27 RRF wiring — Phase B/C participate in both arms (`semantic.js`)
 - **Phase B (phrase/proximity)** already flows into RRF: the bonuses live in `_score`, and the lexical rank sorts by `_score`. No change needed.
-- **Phase C (MeSH keywords)** now also feeds the **semantic** arm — `computeSemanticRanks` appends `keywords`/`subjects` to the embedded text (after title+abstract, within the 512-char window). So enriched metadata influences both lexical and semantic ranks before fusion.
+- **Phase C (MeSH keywords)** now also feeds the **semantic** arm — `computeSemanticRanks` builds the embedded text as title → abstract → keywords/subjects. Keywords get a **reserved 140-char tail budget** (`KW_BUDGET`) and the abstract fills the remaining room within the 512-char window (`EMBED_MAX`); without the reservation a long abstract truncated keywords out of the window entirely, making the signal inert for the biomedical records MeSH targets. So enriched metadata genuinely influences both lexical and semantic ranks before fusion.
 - **Synonyms** already feed `scoreResults` (lexical) via `expandTerms`; semantic embeds the raw query by design (embeddings capture meaning inherently).
 
 ### v.27 deprecation — Semantic Scholar deregistered
@@ -61,7 +61,7 @@ Removed from the `ADAPTERS` registry and from the settings key UI. The adapter f
 | `src/adapters/core/curatedJournals.js` | `&select=${OA_SELECT}` payload trim |
 | `src/hooks/useFilters.js` | **Global low-confidence gate** — suppress loose matches when any genuine hit exists |
 | `src/components/UnifiedResultList.jsx` | "More available" prompt derived from post-gate visible results |
-| `src/lib/semantic.js` | Embed keywords/subjects so Phase C metadata feeds the semantic RRF arm |
+| `src/lib/semantic.js` | Embed keywords/subjects (reserved `KW_BUDGET` tail) so Phase C metadata feeds the semantic RRF arm |
 | `src/adapters/index.js` | Semantic Scholar deregistered |
 | `src/components/Panels.jsx` | Removed S2 API-key input |
 | `src/constants/app.js` | `APP_VERSION` → `"v.27"` |
