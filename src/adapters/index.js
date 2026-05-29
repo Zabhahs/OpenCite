@@ -10,7 +10,8 @@ import { CROSSREF_ADAPTER } from "./core/crossref.js";
 import { CURATED_JOURNALS_ADAPTER } from "./core/curatedJournals.js";
 
 // Extension adapters
-import { SEMANTIC_SCHOLAR_ADAPTER } from "./extensions/semanticScholar.js";
+// SEMANTIC_SCHOLAR_ADAPTER — deprecated/deregistered v0.27 (kept in extensions/ but
+// no longer registered; gated behind an approval-only key with poor cost/benefit).
 import {
   EUROPEANA_ADAPTER,
   MET_ADAPTER,
@@ -46,8 +47,6 @@ export const ADAPTERS = [
   OPENALEX_ADAPTER,
   CROSSREF_ADAPTER,
   CURATED_JOURNALS_ADAPTER,
-  // Extensions — scholarly
-  SEMANTIC_SCHOLAR_ADAPTER,
   // Extensions — cultural & primary sources
   EUROPEANA_ADAPTER,
   MET_ADAPTER,

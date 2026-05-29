@@ -39,7 +39,14 @@ export async function computeSemanticRanks(query, results) {
   const texts = results.map(r => {
     const t = r.title || "";
     const a = r.abstract || "";
-    return (t + (a ? ". " + a : "")).slice(0, 512);
+    // Include keywords/subjects so the same content signals BM25F weights
+    // (incl. v0.27 MeSH descriptors) also feed the semantic arm of RRF.
+    // Appended last so the 512-char window keeps title+abstract priority.
+    const kw = [...(r.keywords || []), ...(r.subjects || [])].join(", ");
+    let text = t;
+    if (a)  text += ". " + a;
+    if (kw) text += ". " + kw;
+    return text.slice(0, 512);
   });
 
   const embeddings = await embed([query, ...texts]);

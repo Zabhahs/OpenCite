@@ -63,8 +63,14 @@ export function UnifiedResultList({
 
   // Can we reveal more from the already-loaded pool?
   const hasMoreLocal  = displayCount < allResults.length;
-  // Can we fetch more results from any remote adapter?
-  const hasMoreRemote = Object.values(sectionStates).some(s => s.hasMore && !s.loading && !s.loadingMore);
+  // Can we fetch more results from any remote adapter that is actually
+  // contributing visible results? An adapter whose hits were all gated out as
+  // loose matches shouldn't keep the "more available" prompt alive — fetching
+  // more from it just yields more junk that gets filtered, so the button would
+  // appear to do nothing. Read from filteredSections (post-gate visible pool).
+  const hasMoreRemote = Object.values(filteredSections).some(
+    s => s.hasMore && !s.loading && !s.loadingMore && (s.results?.length || 0) > 0
+  );
   const anyLoadingMore = Object.values(sectionStates).some(s => s.loadingMore);
   const isInitialLoading = Object.values(sectionStates).some(s => s.loading);
 

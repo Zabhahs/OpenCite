@@ -190,7 +190,6 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
           ["europeanaKey", "Europeana API key", "required for Europeana", "Free + instant. Register at api.europeana.eu."],
           ["openAlexKey", "OpenAlex API key", "optional", "Works without a key (rate-limited). Free 30-second signup at openalex.org/settings/api."],
           ["crossrefEmail", "Email for Crossref polite pool", "optional, faster + nicer", "Crossref lets you opt into a faster lane with just your email — no signup."],
-          ["s2Key", "Semantic Scholar API key", "optional", "Free but approval can take days. Request at semanticscholar.org/product/api."],
         ].map(([field, label, note, help]) => (
           <div key={field}>
             <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-1">

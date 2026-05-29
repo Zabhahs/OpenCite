@@ -12,11 +12,24 @@ export function useFilters(sectionStates, filterState = {}) {
   const { type, language, yearMin, yearMax, sortBy = "default", keyword, oaOnly } = filterState;
 
   return useMemo(() => {
+    // Global low-confidence gate. Loose-match fallbacks are an adapter's "best
+    // guesses" emitted when it found nothing genuinely relevant (every result
+    // scored 0). Those guesses should only surface when NOTHING anywhere is a
+    // genuine match — otherwise a niche/heritage query like "Memons of Kutch"
+    // gets polluted by every all-field heritage adapter's tangential junk.
+    // If even one adapter produced a genuine hit (a result not flagged
+    // _lowConfidence), drop every adapter's loose matches across the board.
+    const anyGenuine = Object.values(sectionStates).some(
+      s => (s.results || []).some(r => !r._lowConfidence)
+    );
+
     const out = {};
     for (const [id, section] of Object.entries(sectionStates)) {
       if (!section.results) { out[id] = section; continue; }
 
       let results = section.results;
+
+      if (anyGenuine) results = results.filter(r => !r._lowConfidence);
 
       if (type)     results = results.filter(r => (r._type || r.type) === type);
       if (language) results = results.filter(r => normalizeLanguage(r.language)?.code === language);

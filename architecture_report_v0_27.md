@@ -37,6 +37,21 @@ Both bonuses gate on `score > 0` (only enrich already-relevant docs) and only fi
 1. **MeSH enrichment** — `parseOpenAlexWork` now folds `w.mesh[].descriptor_name` (NLM controlled-vocabulary subject terms) into `keywords`, improving biomedical recall via the keywords field (BM25F weight 2.0).
 2. **`select=` payload trimming** — both OpenAlex-backed adapters now send `&select=<OA_SELECT>`, requesting only the top-level fields the parser reads. `OA_SELECT` is exported from `parseOpenAlex.js` (SSOT, kept in sync with field accesses). The deprecated `host_venue` is intentionally excluded — selecting it 400s the request (parser keeps it only as a defensive fallback if present).
 
+### v.27 relevance fix — global low-confidence gate (fixes "Memons of Kutch" pollution)
+**Symptom:** niche/heritage queries surfaced tangential junk tagged "loose match" (e.g. a coastal-Junagadh water paper, unrelated Library of Congress newspapers) at positions #7–#9, and "Show 10 more" appeared to do nothing.
+
+**Root cause:** the low-confidence fallback in `useSearch.js` is *per-adapter*. When all of an adapter's results score 0, it keeps them tagged `_lowConfidence` instead of dropping them ("best guesses > nothing"). With ~25 adapters, every all-field heritage adapter that can't match a niche query independently dumps its guesses. The fallback decision was *local* but should be *global*.
+
+**Fix (`useFilters.js`):** compute `anyGenuine` across **all** sections (any result not flagged `_lowConfidence`). If a genuine match exists anywhere, drop every adapter's loose matches; only when *nothing anywhere* matched do guesses still show (original intent preserved, now globally scoped). `UnifiedResultList.jsx` now derives the "more available" prompt from `filteredSections` (post-gate visible results), so adapters whose hits were all gated out no longer keep a dead "Show more" button alive.
+
+### v.27 RRF wiring — Phase B/C participate in both arms (`semantic.js`)
+- **Phase B (phrase/proximity)** already flows into RRF: the bonuses live in `_score`, and the lexical rank sorts by `_score`. No change needed.
+- **Phase C (MeSH keywords)** now also feeds the **semantic** arm — `computeSemanticRanks` appends `keywords`/`subjects` to the embedded text (after title+abstract, within the 512-char window). So enriched metadata influences both lexical and semantic ranks before fusion.
+- **Synonyms** already feed `scoreResults` (lexical) via `expandTerms`; semantic embeds the raw query by design (embeddings capture meaning inherently).
+
+### v.27 deprecation — Semantic Scholar deregistered
+Removed from the `ADAPTERS` registry and from the settings key UI. The adapter file is retained but inert. Rationale: approval-gated API key (can take days), poor cost/benefit vs. OpenAlex/Crossref coverage.
+
 ### Modified files (v.27)
 | Path | Change |
 |---|---|
@@ -44,6 +59,11 @@ Both bonuses gate on `score > 0` (only enrich already-relevant docs) and only fi
 | `src/adapters/_shared/parseOpenAlex.js` | MeSH descriptors → keywords; exported `OA_SELECT` field list |
 | `src/adapters/core/openalex.js` | `&select=${OA_SELECT}` payload trim |
 | `src/adapters/core/curatedJournals.js` | `&select=${OA_SELECT}` payload trim |
+| `src/hooks/useFilters.js` | **Global low-confidence gate** — suppress loose matches when any genuine hit exists |
+| `src/components/UnifiedResultList.jsx` | "More available" prompt derived from post-gate visible results |
+| `src/lib/semantic.js` | Embed keywords/subjects so Phase C metadata feeds the semantic RRF arm |
+| `src/adapters/index.js` | Semantic Scholar deregistered |
+| `src/components/Panels.jsx` | Removed S2 API-key input |
 | `src/constants/app.js` | `APP_VERSION` → `"v.27"` |
 
 ---
@@ -155,7 +175,6 @@ Query
 | OpenNeuro | ✅ working | content: Authors excluded from match haystack |
 | ENA | ✅ working | content: already `study_title/description` |
 | British Library | ⚠️ graceful timeout | content: SPARQL title filter (already scoped) |
-| Semantic Scholar | ✅ working | relevance endpoint (title/abstract weighted) |
 | Wikidata | ✅ working | CirrusSearch on scholarly items (label≈title) |
 | Europeana | ✅ working | all-field (heritage — creator legit) |
 | MET | ✅ working | all-field + `artistOrCulture` (museum — creator legit) |
@@ -175,6 +194,7 @@ Query
 | SciELO | ⚠️ needs prod test | all-field (field scoping deferred) |
 | Thaqalayn | ✅ working | full-text hadith (no authors) |
 | Open Context | ✅ working | all-field (no author field) |
+| Semantic Scholar | ❌ deregistered v0.27 | approval-only key, poor cost/benefit — file kept, removed from registry + settings UI |
 | NLS / DELPHER / BDPI | ❌ deregistered | — |
 
 ---
@@ -235,7 +255,7 @@ authorSearch:   boolean                // default false — when true, adapters 
 | v0.24 | Unified ranked view (default). Source view toggle. Zero-result chip row. SearchStatusBar. |
 | v0.25 | BM25F scorer. Synonym expansion (30 clusters + Moby Thesaurus). Client-side semantic search (all-MiniLM-L6-v2). RRF fusion. Zero adapter changes. |
 | v0.26 | **Field-scoped retrieval** — fixed author-name pollution at the source. Core scholarly adapters (OpenAlex, Curated, DOAJ, Crossref) + NCBI/IA/OpenNeuro scope to content; heritage/museum sources keep creator-inclusive search by design. Author-search toggle. |
-| v0.27 | **Phase B** — phrase & proximity-aware scoring; fixed latent multi-word BM25F bug (terms now split into words). **Phase C** — MeSH descriptors enrich OpenAlex keywords; `select=` payload trimming on OpenAlex/Curated adapters. |
+| v0.27 | **Phase B** — phrase & proximity-aware scoring; fixed latent multi-word BM25F bug (terms now split into words). **Phase C** — MeSH descriptors enrich OpenAlex keywords; `select=` payload trimming on OpenAlex/Curated adapters. **Relevance fix** — global low-confidence gate (suppress loose-match pollution when any genuine hit exists). **RRF** — keywords now feed the semantic arm. **Deprecation** — Semantic Scholar deregistered. |
 
 ---
 ## Roadmap
