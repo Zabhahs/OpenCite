@@ -57,6 +57,93 @@ const FIELDS = [
   "licenseurl", "avg_rating", "num_reviews",
 ];
 
+// Full-text "search inside" endpoint — matches OCR'd page text, not just metadata.
+const FTS_ENDPOINT = "https://be-api.us.archive.org/ia-pub-fts-api/";
+
+// FTS highlight snippets wrap the match in {{{ }}} and carry raw OCR whitespace.
+function cleanSnippet(text) {
+  return String(text || "")
+    .replace(/\{\{\{|\}\}\}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Map an advancedsearch.php metadata doc to a UnifiedResult.
+function mapMetadataDoc(d, offset, i) {
+  const creator = toArray(d.creator);
+  const desc = Array.isArray(d.description) ? d.description[0] : (d.description || "");
+  const subjects = toArray(d.subject);
+  const collections = toArray(d.collection);
+  const downloads = typeof d.downloads === "number" ? d.downloads : parseInt(d.downloads, 10) || 0;
+  const yearMatch = String(d.year || d.date || "").match(/\d{4}/);
+  const type = inferTypeFromCollections(collections) || "textual";
+
+  return {
+    id: `ia-${d.identifier || `${offset}-${i}`}`, source: "IA",
+    title: Array.isArray(d.title) ? d.title[0] : (d.title || "Untitled"),
+    authors: creator,
+    year: yearMatch ? yearMatch[0] : "",
+    journal: "",
+    publisher: toArray(d.publisher)[0] || "Internet Archive",
+    volume: d.volume || "",
+    issue: "",
+    pages: "",
+    doi: "",
+    isbn: toArray(d.isbn)[0] || "",
+    url: d.identifier ? `https://archive.org/details/${d.identifier}` : "",
+    abstract: stripHtml(desc),
+    isOA: true,
+    type,
+    language: toArray(d.language)[0] || "",
+    keywords: subjects,
+    subjects,
+    citedBy: downloads > 0 ? downloads : null,
+    previewImage: d.identifier ? `https://archive.org/services/img/${d.identifier}` : "",
+    _identifier: d.identifier || "",
+  };
+}
+
+// Map a full-text-search hit (OCR page match) to a UnifiedResult.
+function mapFtsHit(h, query, offset, i) {
+  const f = h.fields || {};
+  const identifier = toArray(f.identifier)[0] || "";
+  const creator = toArray(f.meta_creator);
+  const subjects = toArray(f.meta_subjectSorter);
+  const collections = toArray(f.meta_collection);
+  const downloads = parseInt(toArray(f.meta_downloads)[0], 10) || 0;
+  const yearMatch = String(toArray(f.meta_year)[0] || toArray(f.meta_date)[0] || "").match(/\d{4}/);
+  const type = inferTypeFromCollections(collections) || "textual";
+  const snippet = cleanSnippet(toArray(h.highlight && h.highlight.text)[0]);
+  const page = toArray(toArray(f.page_num)[0])[0];
+
+  return {
+    id: `ia-${identifier || `fts-${offset}-${i}`}`, source: "IA",
+    title: toArray(f.meta_title)[0] || "Untitled",
+    authors: creator,
+    year: yearMatch ? yearMatch[0] : "",
+    journal: "",
+    publisher: toArray(f.meta_publisher)[0] || "Internet Archive",
+    volume: "",
+    issue: "",
+    pages: page != null ? String(page) : "",
+    doi: "",
+    isbn: "",
+    // Deep-link opens the in-book search so the matched pages are visible.
+    url: identifier
+      ? `https://archive.org/details/${identifier}?q=${encodeURIComponent(query)}`
+      : "",
+    abstract: snippet ? `…${snippet}…` : "",
+    isOA: true,
+    type,
+    language: toArray(f.meta_languageSorter)[0] || "",
+    keywords: subjects,
+    subjects,
+    citedBy: downloads > 0 ? downloads : null,
+    previewImage: identifier ? `https://archive.org/services/img/${identifier}` : "",
+    _identifier: identifier,
+  };
+}
+
 export const INTERNET_ARCHIVE_ADAPTER = {
   id: "IA", name: "Internet Archive",
   tagline: "42M+ texts · scholarly, historical, ephemeral",
@@ -75,47 +162,61 @@ export const INTERNET_ARCHIVE_ADAPTER = {
     const scoped = settings.authorSearch
       ? clean
       : `(title:(${clean}) OR description:(${clean}) OR subject:(${clean}))`;
-    const q = `${scoped} AND mediatype:texts`;
+    const metaQ = `${scoped} AND mediatype:texts`;
     const flParams = FIELDS.map(f => `fl[]=${f}`).join("&");
-    const params = `q=${encodeURIComponent(q)}&${flParams}&sort=downloads+desc&rows=${pageSize}&page=${page}&output=json`;
+    const metaParams = `q=${encodeURIComponent(metaQ)}&${flParams}&sort=downloads+desc&rows=${pageSize}&page=${page}&output=json`;
+    const metaUrl = `https://archive.org/advancedsearch.php?${metaParams}`;
 
-    const r = await fetch(`https://archive.org/advancedsearch.php?${params}`);
-    if (!r.ok) throw new Error(`Internet Archive ${r.status}`);
-    const data = await r.json();
-    const docs = data.response?.docs || [];
+    // Metadata search alone misses books whose match lives only in the OCR'd page text
+    // (e.g. a phrase mentioned inside a chapter but absent from title/description/subject).
+    // The FTS endpoint covers that "search inside" case. Author search stays metadata-only,
+    // since FTS matches body text rather than the creator field.
+    const ftsUrl = `${FTS_ENDPOINT}?q=${encodeURIComponent(clean)}&size=${pageSize}&from=${offset}`;
+    const runFts = !settings.authorSearch && clean.length > 0;
 
-    const results = docs.map((d, i) => {
-      const creator = toArray(d.creator);
-      const desc = Array.isArray(d.description) ? d.description[0] : (d.description || "");
-      const subjects = toArray(d.subject);
-      const collections = toArray(d.collection);
-      const downloads = typeof d.downloads === "number" ? d.downloads : parseInt(d.downloads, 10) || 0;
-      const yearMatch = String(d.year || d.date || "").match(/\d{4}/);
-      const type = inferTypeFromCollections(collections) || "textual";
-
-      return {
-        id: `ia-${d.identifier || `${offset}-${i}`}`, source: "IA",
-        title: Array.isArray(d.title) ? d.title[0] : (d.title || "Untitled"),
-        authors: creator,
-        year: yearMatch ? yearMatch[0] : "",
-        journal: "",
-        publisher: toArray(d.publisher)[0] || "Internet Archive",
-        volume: d.volume || "",
-        issue: "",
-        pages: "",
-        doi: "",
-        isbn: toArray(d.isbn)[0] || "",
-        url: d.identifier ? `https://archive.org/details/${d.identifier}` : "",
-        abstract: stripHtml(desc),
-        isOA: true,
-        type,
-        language: toArray(d.language)[0] || "",
-        keywords: subjects,
-        subjects,
-        citedBy: downloads > 0 ? downloads : null,
-        previewImage: d.identifier ? `https://archive.org/services/img/${d.identifier}` : "",
-      };
+    const metaPromise = fetch(metaUrl).then(async (r) => {
+      if (!r.ok) throw new Error(`Internet Archive ${r.status}`);
+      return r.json();
     });
-    return { results, hasMore: offset + results.length < (data.response?.numFound || 0) };
+    const ftsPromise = runFts
+      ? fetch(ftsUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      : Promise.resolve(null);
+
+    const [metaData, ftsData] = await Promise.all([metaPromise, ftsPromise]);
+
+    const metaDocs = metaData.response?.docs || [];
+    const metaResults = metaDocs.map((d, i) => mapMetadataDoc(d, offset, i));
+
+    const ftsHits = ftsData?.hits?.hits || [];
+    const ftsResults = ftsHits.map((h, i) => mapFtsHit(h, query, offset, i));
+
+    // Merge: metadata records first (richer descriptions), then FTS hits not already seen.
+    const byIdentifier = new Map();
+    const results = [];
+    for (const r of metaResults) {
+      if (r._identifier) byIdentifier.set(r._identifier, r);
+      results.push(r);
+    }
+    for (const r of ftsResults) {
+      if (r._identifier && byIdentifier.has(r._identifier)) {
+        // Same item surfaced by both — enrich the metadata record with the matched
+        // page snippet if it lacks an abstract of its own.
+        const existing = byIdentifier.get(r._identifier);
+        if (!existing.abstract && r.abstract) existing.abstract = r.abstract;
+        continue;
+      }
+      if (r._identifier) byIdentifier.set(r._identifier, r);
+      results.push(r);
+    }
+    for (const r of results) delete r._identifier;
+
+    const metaTotal = metaData.response?.numFound || 0;
+    const ftsTotalRaw = ftsData?.hits?.total;
+    const ftsTotal = typeof ftsTotalRaw === "object" ? (ftsTotalRaw?.value || 0) : (ftsTotalRaw || 0);
+    const hasMore =
+      offset + metaResults.length < metaTotal ||
+      offset + ftsResults.length < ftsTotal;
+
+    return { results, hasMore };
   }
 };

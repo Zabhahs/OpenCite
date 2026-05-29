@@ -12,7 +12,10 @@ export default async function handler(req) {
 
   log("GALLICA", "start", { q: query, start });
 
-  const targetUrl = `https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=${encodeURIComponent('dc.any all "' + query + '"')}&startRecord=${start}&maximumRecords=${rows}&recordSchema=dc`;
+  // The `dc.any all` index is rejected by Gallica's SRU (returns an SRW diagnostic, 0 records).
+  // `gallica all` is the catch-all index that matches OCR'd full text *and* metadata — the
+  // "search inside" behaviour, mirroring the Internet Archive full-text adapter.
+  const targetUrl = `https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=${encodeURIComponent('gallica all "' + query + '"')}&startRecord=${start}&maximumRecords=${rows}&recordSchema=dc`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
