@@ -35,18 +35,25 @@ function dot(a, b) {
   return s;
 }
 
+const EMBED_MAX = 512;  // chars fed to the embedder (model truncates ~256 tokens)
+const KW_BUDGET = 140;  // reserved tail for keywords/subjects
+
 export async function computeSemanticRanks(query, results) {
   const texts = results.map(r => {
-    const t = r.title || "";
-    const a = r.abstract || "";
-    // Include keywords/subjects so the same content signals BM25F weights
-    // (incl. v0.27 MeSH descriptors) also feed the semantic arm of RRF.
-    // Appended last so the 512-char window keeps title+abstract priority.
-    const kw = [...(r.keywords || []), ...(r.subjects || [])].join(", ");
+    const t = (r.title || "").trim();
+    const a = (r.abstract || "").trim();
+    // Include keywords/subjects (incl. v0.27 MeSH descriptors) so the same
+    // content that BM25F weights also feeds the semantic arm of RRF. Reserve a
+    // fixed tail budget for them — otherwise a long abstract truncates them out
+    // of the window entirely and they never reach the embedding. Order: title,
+    // abstract (fills the remaining room), keywords (guaranteed slice).
+    const kw = [...(r.keywords || []), ...(r.subjects || [])].join(", ").trim();
+    const kwPart = kw ? ". " + kw.slice(0, KW_BUDGET) : "";
+    const abstractBudget = Math.max(0, EMBED_MAX - t.length - kwPart.length - 2);
     let text = t;
-    if (a)  text += ". " + a;
-    if (kw) text += ". " + kw;
-    return text.slice(0, 512);
+    if (a) text += ". " + a.slice(0, abstractBudget);
+    text += kwPart;
+    return text.slice(0, EMBED_MAX);
   });
 
   const embeddings = await embed([query, ...texts]);
