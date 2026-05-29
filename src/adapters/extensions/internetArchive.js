@@ -69,7 +69,13 @@ export const INTERNET_ARCHIVE_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
 
-    const q = query + " AND mediatype:texts";
+    // Phase D — field-scoped retrieval. The bare query spans creator/text too; scoping to
+    // title/description/subject keeps author-name matches out. authorSearch reverts to all-field.
+    const clean = query.replace(/[:"()[\]{}^~*?\\]/g, " ").replace(/\s+/g, " ").trim();
+    const scoped = settings.authorSearch
+      ? clean
+      : `(title:(${clean}) OR description:(${clean}) OR subject:(${clean}))`;
+    const q = `${scoped} AND mediatype:texts`;
     const flParams = FIELDS.map(f => `fl[]=${f}`).join("&");
     const params = `q=${encodeURIComponent(q)}&${flParams}&sort=downloads+desc&rows=${pageSize}&page=${page}&output=json`;
 

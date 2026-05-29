@@ -16,7 +16,15 @@ export const DOAJ_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
-    const url = `https://doaj.org/api/v3/search/articles/${encodeURIComponent(query)}?pageSize=${pageSize}&page=${page}`;
+    // Phase A — field-scoped retrieval via Elasticsearch query string. Default search hits
+    // bibjson.author too; scoping to title/abstract/keywords keeps author matches out.
+    // Strip Lucene reserved chars from the user term so we control the query structure,
+    // then let DOAJ AND the words within each field (its default when no operator given).
+    const clean = query.replace(/[+\-!(){}\[\]^"~*?:\\/]/g, " ").replace(/\s+/g, " ").trim();
+    const queryStr = settings.authorSearch
+      ? clean
+      : `bibjson.title:(${clean}) OR bibjson.abstract:(${clean}) OR bibjson.keywords:(${clean})`;
+    const url = `https://doaj.org/api/v3/search/articles/${encodeURIComponent(queryStr)}?pageSize=${pageSize}&page=${page}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`DOAJ ${r.status}`);
     const data = await r.json();

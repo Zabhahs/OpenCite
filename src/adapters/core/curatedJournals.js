@@ -23,7 +23,12 @@ export const CURATED_JOURNALS_ADAPTER = {
     let auth = "";
     if (settings.openAlexKey) auth = `&api_key=${encodeURIComponent(settings.openAlexKey)}`;
     else if (settings.crossrefEmail) auth = `&mailto=${encodeURIComponent(settings.crossrefEmail)}`;
-    const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&filter=primary_location.source.issn:${issnFilter}&per_page=${pageSize}&page=${page}${auth}`;
+    // Phase A — field-scoped retrieval, mirroring the OpenAlex core adapter so curated-journal
+    // results rank on title/abstract content rather than author/affiliation matches.
+    const field = settings.authorSearch ? "default.search" : "title_and_abstract.search";
+    const safeQuery = query.replace(/,/g, " ").trim();
+    const filter = `primary_location.source.issn:${issnFilter},${field}:${encodeURIComponent(safeQuery)}`;
+    const url = `https://api.openalex.org/works?filter=${filter}&sort=relevance_score:desc&per_page=${pageSize}&page=${page}${auth}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("OpenAlex rejected the request. Verify your key in settings or remove it.");

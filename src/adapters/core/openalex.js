@@ -22,7 +22,18 @@ export const OPENALEX_ADAPTER = {
     let auth = "";
     if (settings.openAlexKey) auth = `&api_key=${encodeURIComponent(settings.openAlexKey)}`;
     else if (settings.crossrefEmail) auth = `&mailto=${encodeURIComponent(settings.crossrefEmail)}`;
-    const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&filter=is_oa:true&per_page=${pageSize}&page=${page}${auth}`;
+    // Phase A — field-scoped retrieval. Default scopes to title+abstract so author/affiliation
+    // matches never enter the candidate set (the "memon returns author papers" problem).
+    // title_and_abstract.search applies Kstem stemming + stopword removal server-side.
+    // authorSearch toggle reverts to default.search (all fields, incl. authorships).
+    const field = settings.authorSearch ? "default.search" : "title_and_abstract.search";
+    // Commas separate filters in OpenAlex; strip them from the query value so a comma in the
+    // query can't be misread as a filter delimiter after URL-decoding.
+    const safeQuery = query.replace(/,/g, " ").trim();
+    const filter = `is_oa:true,${field}:${encodeURIComponent(safeQuery)}`;
+    // Relevance ordering is implicit with the legacy ?search= param but must be requested
+    // explicitly when the query lives in a .search filter, else results sort by id.
+    const url = `https://api.openalex.org/works?filter=${filter}&sort=relevance_score:desc&per_page=${pageSize}&page=${page}${auth}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("OpenAlex rejected the request. Verify your key in settings or remove it.");

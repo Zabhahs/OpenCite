@@ -32,4 +32,8 @@ export const DEFAULT_SETTINGS = {
   viewMode: "unified",
   synonyms: false,
   semanticSearch: false,
+  // When false (default): adapters query content fields only (title/abstract/keywords),
+  // so a query like "memon" no longer returns papers merely authored by someone named Memon.
+  // When true: adapters revert to author-inclusive / all-field search.
+  authorSearch: false,
 };

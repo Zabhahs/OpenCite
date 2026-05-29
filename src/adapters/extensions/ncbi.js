@@ -11,7 +11,12 @@ export const NCBI_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const r1 = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
+    // Phase D — field-scoped retrieval. PubMed's bare term spans all fields incl. [Author].
+    // Tagging each word with [Title/Abstract] keeps author-name matches out of the candidate set;
+    // the authorSearch toggle flips the tag to [Author].
+    const tag = settings.authorSearch ? "Author" : "Title/Abstract";
+    const term = query.trim().split(/\s+/).map(w => `${w}[${tag}]`).join(" AND ");
+    const r1 = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
     if (!r1.ok) throw new Error(`NCBI esearch ${r1.status}`);
     const searchData = await r1.json();
     const ids = searchData.esearchresult?.idlist || [];

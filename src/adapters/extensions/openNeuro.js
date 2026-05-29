@@ -25,10 +25,14 @@ export const OPENNEURO_ADAPTER = {
     if (data.errors) throw new Error(`OpenNeuro GraphQL: ${data.errors[0]?.message || "unknown error"}`);
     const allDatasets = (data.data?.datasets?.edges || []).map(e => e.node);
     const q = query.toLowerCase();
+    // Phase D — content-scoped matching. Authors are excluded from the haystack by default so a
+    // name query doesn't surface datasets merely authored by that person; toggle re-includes them.
     const matched = allDatasets.filter(ds => {
       const desc = ds.latestSnapshot?.description || {};
       const summary = ds.latestSnapshot?.summary || {};
-      return [desc.Name || "", (desc.Authors || []).join(" "), desc.Acknowledgements || "", (summary.tasks || []).join(" "), (summary.modalities || []).join(" ")].join(" ").toLowerCase().includes(q);
+      const fields = [desc.Name || "", desc.Acknowledgements || "", (summary.tasks || []).join(" "), (summary.modalities || []).join(" ")];
+      if (settings.authorSearch) fields.push((desc.Authors || []).join(" "));
+      return fields.join(" ").toLowerCase().includes(q);
     });
     const slice = matched.slice(offset, offset + pageSize);
     const results = slice.map((ds, i) => {
