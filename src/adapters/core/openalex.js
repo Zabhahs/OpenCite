@@ -1,6 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
-import { parseOpenAlexWork } from "../_shared/parseOpenAlex.js";
+import { parseOpenAlexWork, OA_SELECT } from "../_shared/parseOpenAlex.js";
 
 export const OPENALEX_ADAPTER = {
   id: "OPENALEX",
@@ -33,7 +33,10 @@ export const OPENALEX_ADAPTER = {
     const filter = `is_oa:true,${field}:${encodeURIComponent(safeQuery)}`;
     // Relevance ordering is implicit with the legacy ?search= param but must be requested
     // explicitly when the query lives in a .search filter, else results sort by id.
-    const url = `https://api.openalex.org/works?filter=${filter}&sort=relevance_score:desc&per_page=${pageSize}&page=${page}${auth}`;
+    // v.27 Phase C — select= trims the payload to fields parseOpenAlexWork actually reads.
+    // Top-level fields only (OpenAlex select can't address nested subfields). host_venue is
+    // deprecated/removed — including it would 400 the request, so it's intentionally absent.
+    const url = `https://api.openalex.org/works?filter=${filter}&sort=relevance_score:desc&per_page=${pageSize}&page=${page}&select=${OA_SELECT}${auth}`;
     const r = await fetch(url, { headers: { Accept: "application/json" } });
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("OpenAlex rejected the request. Verify your key in settings or remove it.");

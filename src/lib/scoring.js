@@ -6,6 +6,14 @@ const B = 0.75;
 
 const FIELD_WEIGHTS = { title: 3.0, abstract: 1.0, keywords: 2.0 };
 
+// v.26 Phase B — phrase & proximity boosts.
+// PHRASE_BOOST: per-field multiplier when a multi-word query phrase appears verbatim.
+// PROX_BOOST:   per-field max bonus when distinct query words sit close together.
+// PROX_WINDOW:  token gap (between two query words) beyond which proximity scores nothing.
+const PHRASE_BOOST = 2.0;
+const PROX_BOOST = 1.0;
+const PROX_WINDOW = 6;
+
 // Common English stopwords that carry no topical signal.
 const STOPWORDS = new Set([
   "a","an","the","and","or","but","in","on","at","to","for","of","with",
@@ -55,13 +63,77 @@ function idf(term, docsFieldTokens) {
   return Math.log(1 + (N - df + 0.5) / (df + 0.5));
 }
 
+// Split raw query terms into single scoring words.
+// A user term like "machine learning" arrives as one array element; BM25F
+// operates on single tokens, so we tokenize each term into its component words.
+// Stopwords are stripped; we fall back to all words if every word is a stopword.
+function scoringWords(terms) {
+  const words = [];
+  for (const t of terms) for (const w of tokenize(t)) words.push(w);
+  const meaningful = meaningfulTerms(words);
+  const chosen = meaningful.length ? meaningful : words.map(w => w.toLowerCase());
+  return [...new Set(chosen)];
+}
+
+// Multi-word phrases from the raw query terms, for verbatim phrase matching.
+// Single-word terms produce no phrase (nothing to keep contiguous).
+function queryPhrases(terms) {
+  return terms
+    .map(t => tokenize(t))
+    .filter(ws => ws.length > 1)
+    .map(ws => ws.join(" "));
+}
+
+// Phrase bonus: fires once per field when the query phrase appears verbatim
+// (as a contiguous token run) in that field. Scaled by field weight.
+function phraseBonus(phrases, docTokens, fields) {
+  if (!phrases.length) return 0;
+  let bonus = 0;
+  for (const f of fields) {
+    const hay = " " + docTokens[f].join(" ") + " ";
+    for (const p of phrases) {
+      if (hay.includes(" " + p + " ")) bonus += FIELD_WEIGHTS[f] * PHRASE_BOOST;
+    }
+  }
+  return bonus;
+}
+
+// Proximity bonus: rewards documents where distinct query words sit close
+// together in the same field, even when not a verbatim phrase. Uses the
+// smallest gap between any two distinct query words; closer = larger bonus,
+// decaying linearly to zero at PROX_WINDOW.
+function proximityBonus(words, docTokens, fields) {
+  if (words.length < 2) return 0;
+  const wordSet = new Set(words);
+  let bonus = 0;
+  for (const f of fields) {
+    const tokens = docTokens[f];
+    // Collect positions of each query word present in this field.
+    const positions = [];
+    for (let i = 0; i < tokens.length; i++) {
+      if (wordSet.has(tokens[i])) positions.push([i, tokens[i]]);
+    }
+    if (positions.length < 2) continue;
+    // Find the smallest gap between two *distinct* query words.
+    let minGap = Infinity;
+    for (let i = 1; i < positions.length; i++) {
+      const [pi, wi] = positions[i];
+      const [pj, wj] = positions[i - 1];
+      if (wi !== wj) minGap = Math.min(minGap, pi - pj);
+    }
+    if (minGap === Infinity || minGap > PROX_WINDOW) continue;
+    bonus += FIELD_WEIGHTS[f] * PROX_BOOST * (1 - (minGap - 1) / PROX_WINDOW);
+  }
+  return bonus;
+}
+
 export function scoreResults(results, terms) {
   if (!results.length || !terms.length) return results.map(r => ({ ...r, _score: 0 }));
 
-  // Strip stopwords so "of", "the", etc. don't inflate scores on every document.
-  const meaningful = meaningfulTerms(terms);
-  // Fall back to all terms if every term is a stopword (e.g. query "the a an").
-  const scoringTerms = meaningful.length ? meaningful : terms.map(t => t.toLowerCase());
+  // Word-level scoring terms (multi-word terms split into words, stopwords stripped).
+  const scoringTerms = scoringWords(terms);
+  // Verbatim phrases (multi-word terms) for the phrase boost.
+  const phrases = queryPhrases(terms);
 
   const fields = Object.keys(FIELD_WEIGHTS);
 
@@ -96,6 +168,13 @@ export function scoreResults(results, terms) {
         weightedTf += FIELD_WEIGHTS[f] * (tf / norm);
       }
       score += idfs[t] * (weightedTf * (K1 + 1)) / (weightedTf + K1);
+    }
+
+    // Phrase & proximity boosts only meaningfully fire on multi-word queries.
+    // They reward documents that match the query as a unit, not just bag-of-words.
+    if (score > 0) {
+      score += phraseBonus(phrases, docTokens, fields);
+      score += proximityBonus(scoringTerms, docTokens, fields);
     }
 
     // Citation bonus is a small tiebreaker among relevant results, not a dominating signal.

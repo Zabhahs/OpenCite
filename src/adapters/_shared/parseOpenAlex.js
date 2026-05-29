@@ -1,6 +1,19 @@
 import { reconstructAbstract } from "../../lib/helpers.js";
 
 /**
+ * OA_SELECT — top-level OpenAlex fields parseOpenAlexWork reads, for the `select=`
+ * query param. SSOT: keep in sync with the field accesses below so the API payload
+ * carries exactly what we parse and nothing more.
+ * NOTE: OpenAlex select addresses only top-level fields (not nested subfields), and
+ * the deprecated `host_venue` is intentionally omitted — selecting it returns a 400.
+ */
+export const OA_SELECT = [
+  "id", "title", "display_name", "authorships", "publication_year",
+  "primary_location", "biblio", "doi", "open_access", "abstract_inverted_index",
+  "type", "keywords", "topics", "mesh", "cited_by_count", "language",
+].join(",");
+
+/**
  * parseOpenAlexWork — shared by OPENALEX_ADAPTER and CURATED_JOURNALS_ADAPTER.
  * Normalises a raw OpenAlex work object into a UnifiedResult.
  */
@@ -35,6 +48,11 @@ export const parseOpenAlexWork = (w, idx) => {
       for (const t of (w.topics || [])) {
         if (t.display_name)        s.add(t.display_name);
         if (t.field?.display_name) s.add(t.field.display_name);
+      }
+      // v.27 Phase C — MeSH descriptors enrich biomedical keyword coverage
+      // (controlled-vocabulary subject terms assigned by NLM indexers).
+      for (const m of (w.mesh || [])) {
+        if (m.descriptor_name) s.add(m.descriptor_name);
       }
       return [...s];
     })(),

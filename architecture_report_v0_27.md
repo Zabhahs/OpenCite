@@ -1,7 +1,7 @@
 # OpenCITE — Architecture Report
 > **Canonical reference for the next Claude instance picking up this project.**
 > Read this before touching any code. Contains full sprint history, schema, file map, roadmap, and execution checklists.
-> Last updated: v0.26 — field-scoped retrieval (content-only search), author-search toggle
+> Last updated: v0.27 — phrase & proximity-aware scoring (Phase B), richer OpenAlex metadata intake (Phase C)
 ---
 ## Project overview
 OpenCITE is a free meta-search engine for open-access scholarly databases. Searches multiple academic APIs in parallel, returns results with MLA 9 and APA 7 citations ready to paste. Deployed on Vercel at `citation.today` / `opencite.space`.
@@ -21,6 +21,30 @@ Phase 3A deliverables:
 - Billing context (`src/contexts/BillingContext.jsx`) already stubbed — wire it up
 - Gate search result counts and adapter access by plan tier
 - Settings panel billing section (current plan, upgrade CTA, manage subscription link)
+
+---
+## What changed in v.27 — Phrase/proximity scoring + richer metadata
+
+### v.27 Phase B — phrase & proximity-aware scoring (`src/lib/scoring.js`)
+Two problems fixed/added:
+1. **Latent multi-word BM25F bug (fixed).** A query like `machine learning` arrives from `useSearch` as a *single* array element `["machine learning"]`. The old scorer called `termFreq("machine learning", tokens)` against single-word tokens — it never matched, BM25F scored 0, and the result fell to the zero-score low-confidence fallback. `scoreResults` now splits every term into component words (`scoringWords`), strips stopwords, dedups, and runs BM25F word-by-word.
+2. **Phrase bonus** — `phraseBonus`: when a multi-word query appears as a *contiguous token run* in a field, add `FIELD_WEIGHTS[f] × PHRASE_BOOST` (2.0). Rewards verbatim matches over scattered words.
+3. **Proximity bonus** — `proximityBonus`: when ≥2 *distinct* query words appear within `PROX_WINDOW` (6) tokens of each other in a field, add `FIELD_WEIGHTS[f] × PROX_BOOST × (1 − (minGap−1)/PROX_WINDOW)`. Closer = larger; decays to 0 at the window edge.
+
+Both bonuses gate on `score > 0` (only enrich already-relevant docs) and only fire on multi-word queries (single-word → no phrase, proximity needs ≥2 words). Constants `PHRASE_BOOST=2.0`, `PROX_BOOST=1.0`, `PROX_WINDOW=6` at the top of scoring.js.
+
+### v.27 Phase C — richer OpenAlex metadata intake (`parseOpenAlex.js`, `openalex.js`, `curatedJournals.js`)
+1. **MeSH enrichment** — `parseOpenAlexWork` now folds `w.mesh[].descriptor_name` (NLM controlled-vocabulary subject terms) into `keywords`, improving biomedical recall via the keywords field (BM25F weight 2.0).
+2. **`select=` payload trimming** — both OpenAlex-backed adapters now send `&select=<OA_SELECT>`, requesting only the top-level fields the parser reads. `OA_SELECT` is exported from `parseOpenAlex.js` (SSOT, kept in sync with field accesses). The deprecated `host_venue` is intentionally excluded — selecting it 400s the request (parser keeps it only as a defensive fallback if present).
+
+### Modified files (v.27)
+| Path | Change |
+|---|---|
+| `src/lib/scoring.js` | Word-level BM25F (fixes multi-word bug) + `phraseBonus` + `proximityBonus`; boost constants |
+| `src/adapters/_shared/parseOpenAlex.js` | MeSH descriptors → keywords; exported `OA_SELECT` field list |
+| `src/adapters/core/openalex.js` | `&select=${OA_SELECT}` payload trim |
+| `src/adapters/core/curatedJournals.js` | `&select=${OA_SELECT}` payload trim |
+| `src/constants/app.js` | `APP_VERSION` → `"v.27"` |
 
 ---
 ## What changed in v.26 — Search relevance overhaul (retrieval layer)
@@ -72,7 +96,7 @@ New setting `settings.authorSearch` (default `false`). When **off** (default), s
 | `src/components/Panels.jsx` | Added "Author search" toggle in SettingsPanel |
 
 ---
-## Retrieval + scoring architecture (v0.26)
+## Retrieval + scoring architecture (v0.27)
 
 ```
 Query
@@ -102,8 +126,8 @@ Query
                                                                   UI re-sorts
 ```
 
-### BM25F (unchanged from v0.25)
-`score(D,Q) = Σ IDF(qi) × tf_weighted × (k1+1) / (tf_weighted + k1)`, `tf_weighted = Σ wf × tf/(1−b+b×|field|/avg|field|)`. Field weights: title 3.0, keywords 2.0, abstract 1.0. `k1=1.2`, `b=0.75`. CitedBy additive bonus `min(citedBy/500, 2)`. Content fields only.
+### BM25F + phrase/proximity (v0.27)
+`score(D,Q) = Σ IDF(qi) × tf_weighted × (k1+1) / (tf_weighted + k1)`, `tf_weighted = Σ wf × tf/(1−b+b×|field|/avg|field|)`. Field weights: title 3.0, keywords 2.0, abstract 1.0. `k1=1.2`, `b=0.75`. Content fields only. **Multi-word query terms are split into component words** (v0.27 — fixes the latent zero-match bug). **Phase B bonuses** added on top when `score > 0`: a verbatim-phrase bonus (contiguous token run → `wf × 2.0`) and a proximity bonus (distinct query words within 6 tokens → `wf × 1.0 ×` linear-decay). CitedBy additive bonus capped at +0.3.
 
 ### SSOT boundaries
 | Concern | SSOT file |
@@ -211,6 +235,7 @@ authorSearch:   boolean                // default false — when true, adapters 
 | v0.24 | Unified ranked view (default). Source view toggle. Zero-result chip row. SearchStatusBar. |
 | v0.25 | BM25F scorer. Synonym expansion (30 clusters + Moby Thesaurus). Client-side semantic search (all-MiniLM-L6-v2). RRF fusion. Zero adapter changes. |
 | v0.26 | **Field-scoped retrieval** — fixed author-name pollution at the source. Core scholarly adapters (OpenAlex, Curated, DOAJ, Crossref) + NCBI/IA/OpenNeuro scope to content; heritage/museum sources keep creator-inclusive search by design. Author-search toggle. |
+| v0.27 | **Phase B** — phrase & proximity-aware scoring; fixed latent multi-word BM25F bug (terms now split into words). **Phase C** — MeSH descriptors enrich OpenAlex keywords; `select=` payload trimming on OpenAlex/Curated adapters. |
 
 ---
 ## Roadmap
@@ -227,7 +252,8 @@ authorSearch:   boolean                // default false — when true, adapters 
 ### Search quality tuning queue
 - **BM25F parameter tuning** — k1, b, field weights from user feedback
 - **RRF weight tuning** — lexical/semantic blend ratio
-- **Phase B (planned, not yet built)** — phrase & proximity-aware scoring: exact-phrase bonus in BM25F, push phrase intent to adapters (OpenAlex boolean, DOAJ quotes)
+- **Phase B (✅ shipped v0.27)** — phrase & proximity-aware scoring in `scoring.js`. *Still open:* push phrase intent down to adapter retrieval (OpenAlex boolean, DOAJ quotes) so verbatim phrases narrow the candidate set, not just the ranking.
+- **Phase C (✅ shipped v0.27)** — MeSH keyword enrichment + `select=` payload trim. *Still open:* abstract/keyword enrichment for non-OpenAlex adapters.
 - **Cross-adapter semantic rerank on loadMore**
 
 ---
