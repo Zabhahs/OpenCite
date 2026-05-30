@@ -17,7 +17,7 @@ As of v0.30 the project also exposes a **sellable, AI-open, origin-blind** REST 
 ---
 ## What changed in v0.30
 
-v0.30 is the monetization sprint (planned in `sprint_log_v0_30.md`). **Workstreams WS0, WS1, WS2 shipped** on 2026-05-30 (commit `340525a`); WS3 (credit billing), WS4 (MCP server), WS5 (result cache) are **in progress / pending external infra**. The thesis: don't sell the open-access data — sell the verifiable, deduped, ranked, origin-hidden call across many sources.
+v0.30 is the monetization sprint (planned in `sprint_log_v0_30.md`). **Workstreams WS0, WS1, WS2 shipped** on 2026-05-30 (commit `340525a`) and **WS4 (MCP server) built** the same day; WS3 (credit billing) and WS5 (result cache) are **pending external infra** (Stripe + KV keys). The thesis: don't sell the open-access data — sell the verifiable, deduped, ranked, origin-hidden call across many sources.
 
 ### WS0 — Origin-blind `/api/search` contract
 
@@ -132,8 +132,14 @@ GET /api/search
 ---
 ## Roadmap — remaining v0.30 workstreams
 
-### WS4 — MCP server (in progress, no infra needed)
-New `mcp/` package (`@modelcontextprotocol/sdk`). Tool `search_scholarly_sources({query, limit?, format?})` calls `/api/search` over HTTP — does **not** import the pipeline (clean boundary; auto-inherits origin-blind + future billing). Tool schema generated from `apiContract.js` (DRY-4). Auth passthrough: customer key → `x-api-key`, TLS only, never logged. Also ship OpenAPI + OpenAI/Anthropic function schema from the same contract. Can point at the free tier pre-billing.
+### WS4 — MCP server ✅ (built 2026-05-30, no infra needed)
+New standalone `mcp/` package (`@modelcontextprotocol/sdk`). Tool `search_scholarly_sources({query, limit?, format?})` calls `/api/search` over HTTPS — does **not** import the pipeline (clean HTTP boundary; auto-inherits origin-blind + future billing). Layout:
+- **`src/contract.js`** — bridges to the `apiContract.js` SSOT; defines the agent-facing param set, renames `q` → `query`, maps tool args back to REST query params.
+- **`src/schema.js`** — generates the MCP tool input schema, OpenAI + Anthropic function definitions, and an OpenAPI 3.1 spec, all from the one contract (DRY-4). `npm run print-schemas` prints all three.
+- **`src/client.js`** — HTTPS fetch of `/api/search`; **TLS enforced** (non-https base rejected except localhost), `OPENCITE_API_KEY` forwarded as `x-api-key` and **never logged** (errors built without headers).
+- **`src/server.js` + `bin/opencite-mcp.js`** — stdio MCP server; diagnostics to stderr only (stdout is the protocol channel).
+
+Verified: 18/18 smoke assertions (schema gen + live `citation.today` call returning origin-blind cards). Full "usage attributed to key" acceptance lands with WS3 billing; today the open free tier forwards but ignores the key.
 
 ### WS3 — Credit billing (blocked on Stripe + KV provisioning)
 Per-customer API keys → credit ledger (`User.total_credits`) → plan source-gating + rate limit → Stripe top-up via verified webhook. New SSOTs to build: `kv.js`, `crypto.js` (DRY-1 extract from settings.js), `plans.js`, `apiAuth.js`, `billing.js`, `ratelimit.js`, `keys.js`, `stripe/webhook.js`. Schema: `ApiKey` (+ optional `ApiUsage`). **Two-phase coverage-prorated charge:** pre-authorize `plan.creditCost` (402 if insufficient) → settle to `creditCost × coverageMultiplier(band)` after fan-out, refunding the difference. `coverageMultiplier` already lives in `coverage.js`. **Free tier = generous monthly top-up loss-leader** (recurring grant; the `@default(10)` seed is cold-start only).

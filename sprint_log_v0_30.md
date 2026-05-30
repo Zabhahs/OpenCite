@@ -4,7 +4,7 @@
 > **origin-blind AI API + adapter unlock (Waves 1–2) + Stripe credit billing + MCP distribution** sprint.
 > Read `architecture_report_v0_29.md` first for project context, then this.
 >
-> **Created:** 2026-05-29 · **Target start:** 2026-05-30 · **Status:** WS0+WS1+WS2 SHIPPED to prod 2026-05-30 (commit `340525a`). WS3/WS4/WS5 pending — see §12 Actuals.
+> **Created:** 2026-05-29 · **Target start:** 2026-05-30 · **Status:** WS0+WS1+WS2 SHIPPED to prod 2026-05-30 (commit `340525a`); WS4 (MCP) built 2026-05-30 — see §13. WS3/WS5 deferred (need Stripe + KV keys).
 > **Mode:** C (plan → approval → execute → checklist). No padding; precise execution.
 
 ---
@@ -387,8 +387,24 @@ Extend the existing `SettingsPanel` in `src/components/Panels.jsx` with an **"AP
 
 ### Not done (deferred)
 - **WS3 (billing)** + **WS5 (cache)** — blocked on Stripe (keys/price IDs/webhook secret) + Upstash/Vercel KV provisioning. `coverageMultiplier` + contract constants already in place for drop-in.
-- **WS4 (MCP)** — starting next; no infra needed (calls the live free-tier REST endpoint).
 - Free-tier model decided: **generous monthly top-up loss-leader** (not the one-time 10-credit seed) — implement in WS3.
+
+---
+
+## 13. Actuals — WS4 MCP server (landed 2026-05-30)
+
+**New `mcp/` package** — separate `@modelcontextprotocol/sdk` server; calls `/api/search` over HTTPS and **does not import the pipeline** (clean HTTP boundary → auto-inherits origin-blind contract + future billing).
+
+- ✅ Tool **`search_scholarly_sources({query, limit?, format?})`** → origin-blind cards. Input schema **generated from `apiContract.js`** (DRY-4): `q` is renamed `query` for agent ergonomics, all enums/limits/descriptions pulled from the SSOT, nothing re-described.
+- ✅ **Auth passthrough** — `OPENCITE_API_KEY` env (MCP client config) forwarded as `x-api-key`. **TLS only** (non-https base rejected except localhost, R15); key **never logged** (error messages built without headers; ready/diagnostic lines go to stderr, never stdout).
+- ✅ **OpenAPI 3.1 + OpenAI/Anthropic function schemas** all generated from the same contract (`mcp/src/schema.js`; `npm run print-schemas` emits `{ mcpTool, functionSchemas:{openai,anthropic}, openApi }`).
+- ✅ Points at the **free-tier** live endpoint pre-billing (`https://citation.today` default, `OPENCITE_API_BASE_URL` override).
+
+**Files:** `mcp/package.json`, `mcp/bin/opencite-mcp.js`, `mcp/src/{contract,schema,client,server}.js`, `mcp/README.md`.
+
+**Verification** (sanctioned throwaway Node smoke test of the pure import + live-fetch paths; SDK wiring in `server.js` verified by inspection — SDK not installed locally): 18/18 PASS — schema gen (`query` present, raw `q` absent, `limit` max 100, format enum, openai/anthropic/openapi shapes) + live call to `citation.today` returned 5 origin-blind cards (`coverage:"high"`, no `source` key, `oc_` ids, MLA citations present).
+
+**Boundary note:** the only thing left for full WS4 "acceptance" (usage attributed to the key) depends on WS3 billing — until then the key is forwarded but the open free tier ignores it.
 
 ---
 

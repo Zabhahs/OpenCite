@@ -1,0 +1,25 @@
+{
+  "name": "@opencite/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for OpenCITE — one verifiable, deduped, ranked, citation-ready call across many open-access scholarly sources. Origin-blind: provenance is returned, the serving upstream is not.",
+  "license": "MIT",
+  "bin": {
+    "opencite-mcp": "bin/opencite-mcp.js"
+  },
+  "exports": {
+    ".": "./src/server.js",
+    "./schema": "./src/schema.js"
+  },
+  "scripts": {
+    "start": "node bin/opencite-mcp.js",
+    "print-schemas": "node src/schema.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
