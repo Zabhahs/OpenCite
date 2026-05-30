@@ -248,18 +248,41 @@ export default async function handler(req, res) {
     }
   }
 
+  // Secondary dedup: same paper registered under multiple DOIs (e.g. JSTOR + publisher).
+  // Uses a title+year+first-author-surname fingerprint as the key; keeps highest-scored copy.
+  const titleFingerprint = (r) => {
+    const t = (r.title || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return null;
+    const surname = (r.authors?.[0] || "").split(" ").pop().toLowerCase();
+    return `${t}|${r.year || ""}|${surname}`;
+  };
+  const byTitle = new Map();
+  const deduped2 = [];
+  for (const r of deduped) {
+    const key = titleFingerprint(r);
+    if (!key) { deduped2.push(r); continue; }
+    const existing = byTitle.get(key);
+    if (!existing) {
+      byTitle.set(key, r);
+      deduped2.push(r);
+    } else if ((r._score || 0) > (existing._score || 0)) {
+      byTitle.set(key, r);
+      deduped2[deduped2.indexOf(existing)] = r;
+    }
+  }
+
   // Global low-confidence gate (v0.27 useFilters parity): if any genuine match
   // exists anywhere, drop every zero-score loose match; only when nothing
   // anywhere matched do we surface best guesses, flagged lowConfidence.
   const meaningful = meaningfulTerms(terms);
-  const anyGenuine = meaningful.length && deduped.some((r) => r._score > 0);
+  const anyGenuine = meaningful.length && deduped2.some((r) => r._score > 0);
   let finalResults;
   if (!meaningful.length) {
-    finalResults = deduped;
+    finalResults = deduped2;
   } else if (anyGenuine) {
-    finalResults = deduped.filter((r) => r._score > 0);
+    finalResults = deduped2.filter((r) => r._score > 0);
   } else {
-    finalResults = deduped.map((r) => ({ ...r, _lowConfidence: true }));
+    finalResults = deduped2.map((r) => ({ ...r, _lowConfidence: true }));
   }
 
   finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
