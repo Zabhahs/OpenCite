@@ -38,6 +38,8 @@ export const NCBI_ADAPTER = {
     // Three-step: esearch → esummary (metadata) + efetch (abstract XML, fetched in parallel).
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 37000000, // ~37M PubMed records, ncbi.nlm.nih.gov/pubmed
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

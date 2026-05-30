@@ -13,6 +13,8 @@ export const NORTHWESTERN_ADAPTER = {
   capability: {
     protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 100000, // ~100K items (conservative); dc.library.northwestern.edu
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

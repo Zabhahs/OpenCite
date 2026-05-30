@@ -13,6 +13,8 @@ export const SCIELO_ADAPTER = {
   capability: {
     protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 1000000, // ~1M articles; search.scielo.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

@@ -19,6 +19,8 @@ export const LA_REFERENCIA_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "none", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 3000000, // ~3M records; lareferencia.info
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

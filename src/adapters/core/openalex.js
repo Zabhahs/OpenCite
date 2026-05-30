@@ -18,6 +18,8 @@ export const OPENALEX_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
     rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    serverSafe: true,
+    corpusSize: 250000000, // ~250M works, openalex.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

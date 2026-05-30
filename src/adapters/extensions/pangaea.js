@@ -44,6 +44,8 @@ export const PANGAEA_ADAPTER = {
     // Server-proxied raw Elasticsearch _search + per-hit RIS detail fetch. abstract/keywords from RIS (often absent).
     protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
     rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+    serverSafe: true,
+    corpusSize: 400000, // ~400K datasets; pangaea.de
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

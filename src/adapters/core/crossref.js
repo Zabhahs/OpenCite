@@ -15,6 +15,8 @@ export const CROSSREF_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "polite",
     rankFields: { abstract: "sparse", subjects: "sparse", citedBy: true },
+    serverSafe: true,
+    corpusSize: 155000000, // ~155M works, crossref.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

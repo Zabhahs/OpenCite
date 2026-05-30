@@ -16,6 +16,8 @@ export const CHRONICLING_AMERICA_ADAPTER = {
     // Server-proxied loc.gov fo=json over OCR'd newspaper full text. LoC caps deep paging at 100k.
     protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 100000, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 20000000, // ~20M newspaper pages (conservative); loc.gov/collections/chronicling-america
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

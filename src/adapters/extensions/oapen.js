@@ -17,6 +17,8 @@ export const OAPEN_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: false, maxWindow: null, auth: "none",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 30000, // ~30K OA books; library.oapen.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

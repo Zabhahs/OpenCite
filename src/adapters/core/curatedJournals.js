@@ -15,6 +15,8 @@ export const CURATED_JOURNALS_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
     rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    serverSafe: true,
+    corpusSize: 10000, // ~10K; subset of OpenAlex filtered to a user ISSN list (conservative)
   },
   search: async (query, settings, opts = {}) => {
     const journals = settings.curatedJournals || [];

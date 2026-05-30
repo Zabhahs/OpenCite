@@ -14,6 +14,8 @@ export const PRINCETON_DPUL_ADAPTER = {
     // Server-proxied Blacklight catalog.json. No subjects/keywords mapped today.
     protocol: "blacklight", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "none", citedBy: false },
+    serverSafe: true,
+    corpusSize: 50000, // ~50K items (conservative); dpul.princeton.edu
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

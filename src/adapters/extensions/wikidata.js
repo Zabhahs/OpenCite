@@ -36,6 +36,8 @@ export const WIKIDATA_ADAPTER = {
     // MediaWiki CirrusSearch + wbgetentities batches. abstract = one-line entity description (label).
     protocol: "mediawiki", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 30000000, // ~30M scholarly items (conservative; full corpus ~115M items), wikidata.org
   },
 
   search: async (query, _settings, opts = {}) => {

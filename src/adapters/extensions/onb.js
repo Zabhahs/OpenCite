@@ -14,6 +14,8 @@ export const ONB_ADAPTER = {
   capability: {
     protocol: "sru", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 2000000, // ~2M records (conservative); Austrian National Library / ANNO catalogue
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

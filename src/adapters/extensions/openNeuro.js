@@ -13,6 +13,8 @@ export const OPENNEURO_ADAPTER = {
     // GraphQL: fetches only the latest 100 datasets, then filters/paginates client-side. No real total.
     protocol: "graphql", fulltext: false, pagination: "none", totalCount: false, maxWindow: 100, auth: "none",
     rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+    serverSafe: true,
+    corpusSize: 1000, // ~1K public BIDS datasets (conservative); openneuro.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

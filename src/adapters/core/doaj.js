@@ -15,6 +15,8 @@ export const DOAJ_ADAPTER = {
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 10000000, // ~10M articles, doaj.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

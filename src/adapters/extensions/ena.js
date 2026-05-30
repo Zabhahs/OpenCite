@@ -13,6 +13,8 @@ export const ENA_ADAPTER = {
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: false, maxWindow: 100000, auth: "none",
     // subjects = scientific_name + study_type (non-topical taxonomy/category labels).
     rankFields: { abstract: "full", subjects: "sparse", citedBy: false },
+    serverSafe: true,
+    corpusSize: 500000, // ~500K searchable studies (conservative); ebi.ac.uk/ena
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

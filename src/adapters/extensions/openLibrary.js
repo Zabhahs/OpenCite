@@ -24,6 +24,8 @@ export const OPEN_LIBRARY_ADAPTER = {
     // field; subjects carry the topical signal (BM25F ×2 + semantic keyword tail).
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "none", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 40000000, // ~40M editions; openlibrary.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

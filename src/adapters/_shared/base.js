@@ -90,6 +90,13 @@ export class AbstractAdapter {
  * @property {?number} maxWindow    — deep-paging cap (offset+rows ceiling), or null if unbounded/unknown
  * @property {("none"|"key"|"polite")} auth
  * @property {AdapterRankFields} rankFields
+ * @property {boolean} [serverSafe] — true when the adapter runs cleanly inside the
+ *           public /api/search Node function (keyless + direct fetch or runtime-aware
+ *           proxiedFetch, no DOMParser). Drives the derived server-safe adapter set;
+ *           defaults to false (unset = not server-safe).
+ * @property {number} [corpusSize] — order-of-magnitude searchable record count for the
+ *           upstream; the corpus weight coverage.js uses for corpus-weighted attrition.
+ *           Conservative when unknown (under-state, never inflate).
  *
  * @typedef {Object} AdapterRankFields
  * @property {("full"|"sparse"|"none")} abstract — "full": dedicated description field;

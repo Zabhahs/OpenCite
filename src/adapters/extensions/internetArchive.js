@@ -156,6 +156,8 @@ export const INTERNET_ARCHIVE_ADAPTER = {
     protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 10000, auth: "none",
     // citedBy carries download counts, not citations — Sprint 2 gates whether to honor it.
     rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    serverSafe: true,
+    corpusSize: 40000000, // ~40M texts (conservative); archive.org
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

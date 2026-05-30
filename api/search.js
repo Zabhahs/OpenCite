@@ -29,19 +29,23 @@
 // Auth: open by default. If env OPENCITE_API_KEY is set, requests must send a
 // matching key via the x-api-key header or ?key= query param.
 
-import { ADAPTERS, runSearch, isAdapterDefaultEnabled } from "../src/adapters/index.js";
+import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
-import { buildMLA, buildAPA, segmentsToPlain, exportAs } from "../src/lib/citations.js";
+import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
+import { toPublicResult } from "./_shared/publicResult.js";
+import { computeCoverage } from "./_shared/coverage.js";
+import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS } from "./_shared/apiContract.js";
 
-// Adapters that are safe to invoke server-side (direct fetch, JSON, no proxy/DOMParser).
-const SERVER_SAFE_IDS = new Set(["OPENALEX", "CROSSREF", "DOAJ", "CURATED"]);
+// DRY-2: the server-safe set is DERIVED from the registry — `capability.serverSafe`
+// lives next to each adapter's transport code, not hardcoded here.
+const SERVER_SAFE_IDS = new Set(
+  ADAPTERS.filter((a) => a.capability?.serverSafe).map((a) => a.id)
+);
 
-const DEFAULT_LIMIT = 25;
-const MAX_LIMIT = 100;
 const ADAPTER_TIMEOUT_MS = 12000;
-const VALID_CITE = new Set(["bibtex", "ris", "csl-json"]);
+const VALID_CITE = new Set(CITE_FORMATS);
 
 const isTruthy = (v) => v === "1" || v === "true" || v === "yes";
 
@@ -63,56 +67,8 @@ const withTimeout = (promise, ms, label) =>
     ),
   ]);
 
-// Public, trimmed view of a normalized record: UnifiedResult fields + _score + citations.
-const toPublicResult = (r, citeFormats) => {
-  const citations = {
-    mla: segmentsToPlain(buildMLA(r)),
-    apa: segmentsToPlain(buildAPA(r)),
-  };
-  for (const fmt of citeFormats) {
-    citations[fmt] = fmt === "csl-json" ? JSON.parse(exportAs(r, fmt)) : exportAs(r, fmt);
-  }
-  return {
-    id: r.id,
-    source: r.source,
-    title: r.title,
-    authors: r.authors,
-    year: r.year,
-    journal: r.journal,
-    publisher: r.publisher,
-    volume: r.volume,
-    issue: r.issue,
-    pages: r.pages,
-    doi: r.doi,
-    url: r.url,
-    abstract: r.abstract,
-    isOA: !!r.isOA,
-    type: r.type,
-    editors: r.editors,
-    keywords: r.keywords,
-    subjects: r.subjects,
-    language: r.language,
-    citedBy: r.citedBy ?? null,
-    score: Number((r._score ?? 0).toFixed(4)),
-    lowConfidence: !!r._lowConfidence,
-    citations,
-  };
-};
-
-const USAGE = {
-  endpoint: "/api/search",
-  method: "GET",
-  params: {
-    q: "required — query string; separate multiple keywords with ;",
-    limit: `optional — 1..${MAX_LIMIT} (default ${DEFAULT_LIMIT})`,
-    sources: "optional — comma-separated subset of OPENALEX,CROSSREF,DOAJ,CURATED",
-    authors: "optional — 1/true for author-inclusive search",
-    mailto: "optional — email for the polite pool",
-    cite: "optional — extra formats: bibtex,ris,csl-json",
-    format: "optional — json (default) | mla | apa | bibtex | ris | csl-json",
-  },
-  example: "/api/search?q=machine%20learning&limit=10&cite=bibtex",
-};
+// `toPublicResult` (origin-blind card) now lives in _shared/publicResult.js and the
+// self-doc `usage` payload is generated from _shared/apiContract.js (DRY-4).
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -138,7 +94,7 @@ export default async function handler(req, res) {
 
   const q = firstParam(req.query?.q).trim();
   if (!q) {
-    return sendJson(res, 200, { ok: true, usage: USAGE });
+    return sendJson(res, 200, { ok: true, usage: buildUsage() });
   }
 
   const startMs = Date.now();
@@ -156,7 +112,9 @@ export default async function handler(req, res) {
 
   const format = (firstParam(req.query?.format).trim().toLowerCase()) || "json";
 
-  // Source selection — restricted to the server-safe allowlist.
+  // Source selection — restricted to the derived server-safe set. Origin-blind: we
+  // never echo the internal source catalog, so an unrecognized selection just yields a
+  // generic 400 (no upstream names leaked).
   const requested = firstParam(req.query?.sources)
     .split(",")
     .map((s) => s.trim().toUpperCase())
@@ -167,8 +125,7 @@ export default async function handler(req, res) {
 
   if (!selectedIds.length) {
     return sendJson(res, 400, {
-      error: "No valid sources selected.",
-      allowed: [...SERVER_SAFE_IDS],
+      error: "No valid sources selected. Omit the 'sources' parameter to search the full available library.",
     });
   }
 
@@ -187,7 +144,11 @@ export default async function handler(req, res) {
   const terms = q.split(";").map((s) => s.trim()).filter(Boolean);
   const isMulti = terms.length > 1;
 
-  const sourcesMeta = {};
+  // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
+  // signal (an empty result set is NOT a failure — it means "no match", full coverage).
+  // We keep the adapter objects (not ids/messages) so coverage.js can weight by corpusSize
+  // and no upstream name ever reaches the response (origin-blind).
+  const failedAdapters = [];
 
   // Run every adapter independently; one failure never sinks the request.
   const perAdapter = await Promise.all(
@@ -208,10 +169,9 @@ export default async function handler(req, res) {
             adapter.id
           ));
         }
-        sourcesMeta[adapter.id] = { count: results.length, error: null };
         return results;
-      } catch (err) {
-        sourcesMeta[adapter.id] = { count: 0, error: err.message || "Search failed" };
+      } catch {
+        failedAdapters.push(adapter);
         return [];
       }
     })
@@ -231,8 +191,18 @@ export default async function handler(req, res) {
 
   // Global low-confidence gate (v0.27 useFilters parity): if any genuine match exists
   // anywhere, drop every zero-score loose match; only when nothing matched do we surface
-  // best guesses, flagged lowConfidence.
-  const { results: finalResults } = applyConfidenceGate(deduped, meaningfulTerms(terms));
+  // best guesses, flagged lowConfidence. (R10 fix: use the gate's own lowConfidence — the
+  // old inline `meaningful`/`anyGenuine` refs were undefined and 500'd every JSON response.)
+  const { results: finalResults, lowConfidence } = applyConfidenceGate(
+    deduped,
+    meaningfulTerms(terms)
+  );
+
+  // Corpus-weighted, bucketed coverage band (origin-blind health signal — replaces the
+  // old per-source `degraded`/`sources` meta). Denominator = the eligible set for THIS
+  // request, so coverage is honest relative to what was searched. Only the band leaves
+  // the server; the raw %/failed-count/upstream names never do (coverage.js SSOT).
+  const { band: coverage } = computeCoverage(adapters, failedAdapters);
 
   finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
   const limited = finalResults.slice(0, limit);
@@ -260,11 +230,11 @@ export default async function handler(req, res) {
   return sendJson(res, 200, {
     query: q,
     terms,
-    lowConfidence: meaningful.length > 0 && !anyGenuine,
+    coverage,
+    lowConfidence,
     count: publicResults.length,
     totalCandidates: deduped.length,
     tookMs: Date.now() - startMs,
-    sources: sourcesMeta,
     results: publicResults,
   });
 }

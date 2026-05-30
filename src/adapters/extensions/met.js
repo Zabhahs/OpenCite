@@ -11,6 +11,8 @@ export const MET_ADAPTER = {
     // Two-step: search returns objectIDs, then per-object detail fetch + client-side relevance filter.
     protocol: "rest-json", fulltext: false, pagination: "none", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+    serverSafe: true,
+    corpusSize: 500000, // ~500K objects, metmuseum.org/art/collection
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

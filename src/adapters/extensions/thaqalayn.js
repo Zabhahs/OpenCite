@@ -12,6 +12,8 @@ export const THAQALAYN_ADAPTER = {
     // Single query endpoint returns the full match set; pagination is a client-side slice.
     protocol: "rest-json", fulltext: true, pagination: "none", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "full", subjects: "none", citedBy: false },
+    serverSafe: true,
+    corpusSize: 50000, // ~50K hadiths; Shi'i corpus conservative estimate, thaqalayn.net
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

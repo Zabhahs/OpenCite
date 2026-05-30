@@ -14,6 +14,8 @@ export const LC_DATASETS_ADAPTER = {
     // loc.gov fo=json. LoC caps deep paging at 100k (429/CAPTCHA risk near the ceiling).
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 100000, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 5000000, // ~5M digitized items (conservative); loc.gov
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

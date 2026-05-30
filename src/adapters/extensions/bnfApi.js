@@ -15,6 +15,8 @@ export const BNF_API_ADAPTER = {
     // SRU/UNIMARC catalog. No abstract field in UNIMARC; subjects from 600/606/607.
     protocol: "sru", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "none", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 15000000, // ~15M catalogue records (conservative); catalogue.bnf.fr
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
