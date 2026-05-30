@@ -30,7 +30,8 @@
 // matching key via the x-api-key header or ?key= query param.
 
 import { ADAPTERS, runSearch, isAdapterDefaultEnabled } from "../src/adapters/index.js";
-import { scoreResults, meaningfulTerms } from "../src/lib/scoring.js";
+import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
+import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
 import { buildMLA, buildAPA, segmentsToPlain, exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 
@@ -199,14 +200,7 @@ export default async function handler(req, res) {
             ADAPTER_TIMEOUT_MS,
             adapter.id
           );
-          const merged = batches.flatMap((b) => b.results || []);
-          const seen = new Set();
-          results = merged.filter((r) => {
-            if (!r.doi) return true;
-            if (seen.has(r.doi)) return false;
-            seen.add(r.doi);
-            return true;
-          });
+          results = dedupFirstWins(batches.flatMap((b) => b.results || []), doiKey, new Set());
         } else {
           ({ results } = await withTimeout(
             runSearch(adapter, terms[0], settings, { offset: 0 }),
@@ -223,67 +217,22 @@ export default async function handler(req, res) {
     })
   );
 
-  // Cross-adapter DOI dedup — keep the highest-scored copy of each DOI.
-  // (Scoring runs once over the full candidate set so IDF is consistent.)
+  // Score once over the full candidate set so IDF is consistent, then dedup keeping
+  // the highest-scored copy of each work (see below).
   const allRaw = perAdapter.flat();
   // v.29 Sprint 2 — pooled heterogeneous set: resolve each result's capability by source
   // so the scorer can gate the citation tiebreak and apply the thin-source prior per-source.
   const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
   const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
 
-  const byDoi = new Map();
-  const deduped = [];
-  for (const r of scored) {
-    if (!r.doi) {
-      deduped.push(r);
-      continue;
-    }
-    const existing = byDoi.get(r.doi);
-    if (!existing) {
-      byDoi.set(r.doi, r);
-      deduped.push(r);
-    } else if ((r._score || 0) > (existing._score || 0)) {
-      byDoi.set(r.doi, r);
-      deduped[deduped.indexOf(existing)] = r;
-    }
-  }
+  // Pooled dedup keeping the highest-scored copy: DOI first, then the same-paper title
+  // fingerprint (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
+  const deduped = dedupHighestScore(dedupHighestScore(scored, doiKey), titleFingerprint);
 
-  // Secondary dedup: same paper registered under multiple DOIs (e.g. JSTOR + publisher).
-  // Uses a title+year+first-author-surname fingerprint as the key; keeps highest-scored copy.
-  const titleFingerprint = (r) => {
-    const t = (r.title || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
-    if (!t) return null;
-    const surname = (r.authors?.[0] || "").split(" ").pop().toLowerCase();
-    return `${t}|${r.year || ""}|${surname}`;
-  };
-  const byTitle = new Map();
-  const deduped2 = [];
-  for (const r of deduped) {
-    const key = titleFingerprint(r);
-    if (!key) { deduped2.push(r); continue; }
-    const existing = byTitle.get(key);
-    if (!existing) {
-      byTitle.set(key, r);
-      deduped2.push(r);
-    } else if ((r._score || 0) > (existing._score || 0)) {
-      byTitle.set(key, r);
-      deduped2[deduped2.indexOf(existing)] = r;
-    }
-  }
-
-  // Global low-confidence gate (v0.27 useFilters parity): if any genuine match
-  // exists anywhere, drop every zero-score loose match; only when nothing
-  // anywhere matched do we surface best guesses, flagged lowConfidence.
-  const meaningful = meaningfulTerms(terms);
-  const anyGenuine = meaningful.length && deduped2.some((r) => r._score > 0);
-  let finalResults;
-  if (!meaningful.length) {
-    finalResults = deduped2;
-  } else if (anyGenuine) {
-    finalResults = deduped2.filter((r) => r._score > 0);
-  } else {
-    finalResults = deduped2.map((r) => ({ ...r, _lowConfidence: true }));
-  }
+  // Global low-confidence gate (v0.27 useFilters parity): if any genuine match exists
+  // anywhere, drop every zero-score loose match; only when nothing matched do we surface
+  // best guesses, flagged lowConfidence.
+  const { results: finalResults } = applyConfidenceGate(deduped, meaningfulTerms(terms));
 
   finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
   const limited = finalResults.slice(0, limit);

@@ -1,25 +1,29 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { ADAPTERS, runSearch } from "../adapters/index.js";
-import { scoreResults, meaningfulTerms } from "../lib/scoring.js";
+import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../lib/scoring.js";
+import { doiKey, titleFingerprint, dedupFirstWins } from "../lib/dedup.js";
 import { expandTerms } from "../lib/synonyms.js";
 
 export function useSearch(settings, isEnabled) {
   const [sectionStates, setSectionStates] = useState({});
   const [hasSearched, setHasSearched] = useState(false);
 
-  // C1 — cross-adapter DOI dedup; reset each new search
+  // C1 — cross-adapter DOI dedup + title fingerprint dedup; reset each new search
   const seenDOIs = useRef(new Set());
+  const seenTitles = useRef(new Set());
 
   const reset = useCallback(() => {
     setHasSearched(false);
     setSectionStates({});
     seenDOIs.current.clear();
+    seenTitles.current.clear();
   }, []);
 
   const search = useCallback(async (query) => {
     if (!query.trim()) return;
     setHasSearched(true);
     seenDOIs.current.clear();
+    seenTitles.current.clear();
 
     // C3 — multi-keyword parsing
     const terms = query.split(";").map(s => s.trim()).filter(Boolean);
@@ -38,47 +42,29 @@ export function useSearch(settings, isEnabled) {
         let results, hasMore;
 
         if (isMulti) {
-          // C3 — run all terms in parallel per adapter, then merge
+          // C3 — run all terms in parallel per adapter, then merge + dedup within the batch
           const batches = await Promise.all(
             terms.map(t => runSearch(adapter, t, settings, { offset: 0 }))
           );
-          const merged = batches.flatMap(b => b.results || []);
-          // C1 — dedup within merged batch by DOI
-          const seen = new Set();
-          results = merged.filter(r => {
-            if (!r.doi) return true;
-            if (seen.has(r.doi)) return false;
-            seen.add(r.doi);
-            return true;
-          });
+          results = dedupFirstWins(batches.flatMap(b => b.results || []), doiKey, new Set());
           hasMore = false; // load more not supported for multi-keyword
         } else {
           ({ results, hasMore } = await runSearch(adapter, terms[0], settings, { offset: 0 }));
         }
 
-        // C1 — cross-adapter DOI dedup
-        const deduped = results.filter(r => {
-          if (!r.doi) return true;
-          if (seenDOIs.current.has(r.doi)) return false;
-          seenDOIs.current.add(r.doi);
-          return true;
-        });
+        // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
+        // (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
+        const deduped = dedupFirstWins(
+          dedupFirstWins(results, doiKey, seenDOIs.current),
+          titleFingerprint, seenTitles.current
+        );
 
         // C4 — BM25F relevance scoring with optional synonym expansion.
         // v.29 Sprint 2 — pass the adapter's capability so the scorer can gate the citation
         // tiebreak and apply the thin-source prior (batch is homogeneous → constant capability).
         const scoringTerms = await expandTerms(terms, settings.synonyms);
         const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-
-        // Drop zero-score results only when at least one result scored above 0.
-        // If everything scores 0 (topic absent from this database), show the API's
-        // best guesses rather than nothing — caller can display a low-confidence flag.
-        const meaningful = meaningfulTerms(scoringTerms);
-        const hasRelevant = meaningful.length && scored.some(r => r._score > 0);
-        const lowConfidence = meaningful.length && !hasRelevant && scored.length > 0;
-        const filtered = hasRelevant
-          ? scored.filter(r => r._score > 0)
-          : scored.map(r => lowConfidence ? { ...r, _lowConfidence: true } : r);
+        const { results: filtered, lowConfidence } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms));
 
         setSectionStates(prev => ({
           ...prev,
@@ -106,20 +92,17 @@ export function useSearch(settings, isEnabled) {
     try {
       const { results: newResults, hasMore } = await runSearch(adapter, terms[0], settings, { offset: current.offset });
 
-      // C1 — dedup load-more results against already-seen DOIs
-      const deduped = newResults.filter(r => {
-        if (!r.doi) return true;
-        if (seenDOIs.current.has(r.doi)) return false;
-        seenDOIs.current.add(r.doi);
-        return true;
-      });
+      // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
+      const deduped = dedupFirstWins(
+        dedupFirstWins(newResults, doiKey, seenDOIs.current),
+        titleFingerprint, seenTitles.current
+      );
 
-      // C4 — BM25F score load-more results (capability-aware, per Sprint 2)
+      // C4 — BM25F score load-more results (capability-aware, per Sprint 2), then gate so
+      // loose matches stay flagged _lowConfidence and don't slip past the unified-view filter.
       const scoringTerms = await expandTerms(terms, settings.synonyms);
       const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-      const meaningful = meaningfulTerms(scoringTerms);
-      const hasRelevant = meaningful.length && scored.some(r => r._score > 0);
-      const filtered = hasRelevant ? scored.filter(r => r._score > 0) : scored;
+      const { results: filtered } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms));
 
       setSectionStates(prev => {
         const existing = prev[adapterId];

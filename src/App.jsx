@@ -90,15 +90,18 @@ function OpenCITE() {
     search(q);
   }, [search, hist]);
 
-  // Unified view: trigger loadMore for every adapter that still has remote results
+  // Unified view: trigger loadMore only for adapters that are actually contributing
+  // visible results. Firing for adapters whose results were all gated as low-confidence
+  // fetches more junk that immediately gets filtered, making the button appear broken.
   const handleLoadMoreAll = useCallback(() => {
     ADAPTERS.filter(isEnabled).forEach(a => {
       const s = sectionStates[a.id];
-      if (s?.hasMore && !s?.loadingMore && !s?.loading) {
+      const fs = filteredSections[a.id];
+      if (s?.hasMore && !s?.loadingMore && !s?.loading && (fs?.results?.length || 0) > 0) {
         loadMore(a.id, query);
       }
     });
-  }, [sectionStates, loadMore, isEnabled, query]);
+  }, [sectionStates, filteredSections, loadMore, isEnabled, query]);
 
   const dismissModal = useCallback(() => {
     try { localStorage.setItem("opencite_auth_prompted", "1"); } catch {}

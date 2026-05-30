@@ -43,6 +43,24 @@ export function meaningfulTerms(terms) {
   return terms.map(t => t.toLowerCase()).filter(t => t.length > 1 && !STOPWORDS.has(t));
 }
 
+// Low-confidence gate — SSOT for "loose matches surface only when nothing genuine matched".
+// A meaningful query that scored at least one result > 0 is "genuine": drop every zero-score
+// loose match. When the whole batch scored zero (topic absent from this source), surface its
+// best guesses flagged _lowConfidence rather than nothing. A stopword-only query (no meaningful
+// terms) passes through untouched. Used per-adapter (streaming) and pooled (API) alike.
+// @param {string[]} meaningful  output of meaningfulTerms() for the query
+// @returns {{ results: Object[], lowConfidence: boolean }}
+export function applyConfidenceGate(scored, meaningful) {
+  if (!meaningful.length) return { results: scored, lowConfidence: false };
+  if (scored.some(r => (r._score || 0) > 0)) {
+    return { results: scored.filter(r => (r._score || 0) > 0), lowConfidence: false };
+  }
+  return {
+    results: scored.map(r => ({ ...r, _lowConfidence: true })),
+    lowConfidence: scored.length > 0,
+  };
+}
+
 function tokenize(text) {
   return (text || "").toLowerCase().split(/\W+/).filter(Boolean);
 }
