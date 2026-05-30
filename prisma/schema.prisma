@@ -48,6 +48,9 @@ model User {
   search_history       search_history[]
   library_items        library_items[]
 
+  // Phase 3 — API billing (WS3)
+  api_keys             ApiKey[]
+
   @@map("users")
 }
 
@@ -121,4 +124,38 @@ model library_items {
 
   @@unique([user_id, library_key], name: "user_id_library_key")
   @@map("library_items")
+}
+
+// ─── Phase 3 — API billing (WS3) ─────────────────────────────────────────────
+// Server-authoritative billing state lives in first-class columns (NOT the
+// encrypted settings blob) so it's queryable: filter by plan, sum credits,
+// join keys. Credits themselves stay on User.total_credits.
+
+model ApiKey {
+  id           String    @id @default(uuid())
+  key_hash     String    @unique            // sha256(pepper + key); plaintext NEVER stored
+  key_prefix   String                       // first ~12 chars, for display only
+  user_id      String
+  plan         String    @default("free")   // PLANS id (plans.js): "free" | "paid"
+  revoked      Boolean   @default(false)
+  created_at   DateTime  @default(now())
+  last_used_at DateTime?
+
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("api_keys")
+}
+
+// Optional per-day usage rollup for analytics (billing truth is the credit ledger,
+// not this table). One row per (key, day).
+model ApiUsage {
+  id      String @id @default(uuid())
+  key_id  String
+  day     String // YYYY-MM-DD (UTC)
+  count   Int    @default(0)
+
+  @@unique([key_id, day], name: "key_id_day")
+  @@index([key_id])
+  @@map("api_usage")
 }

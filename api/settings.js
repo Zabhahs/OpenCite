@@ -9,38 +9,11 @@
 // GET  /api/settings  → decrypt and return settings object
 // POST /api/settings  → encrypt and upsert settings object
 
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession } from "./_shared/auth.js";
-
-// ── Encryption ────────────────────────────────────────────────────────────────
-// AES-256-GCM: authenticated encryption — ciphertext is tamper-proof.
-// Blob layout: [12 bytes IV][16 bytes GCM auth tag][N bytes ciphertext] → base64
-
-function getKey() {
-  const hex = process.env.SETTINGS_ENCRYPTION_KEY;
-  if (!hex || hex.length !== 64) throw new Error("SETTINGS_ENCRYPTION_KEY missing or invalid — must be 32-byte hex string");
-  return Buffer.from(hex, "hex");
-}
-
-function encrypt(obj) {
-  const key = getKey();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(JSON.stringify(obj), "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return Buffer.concat([iv, tag, encrypted]).toString("base64");
-}
-
-function decrypt(blob) {
-  const key = getKey();
-  const buf = Buffer.from(blob, "base64");
-  const decipher = createDecipheriv("aes-256-gcm", key, buf.subarray(0, 12));
-  decipher.setAuthTag(buf.subarray(12, 28));
-  return JSON.parse(
-    Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString("utf8")
-  );
-}
+// AES-256-GCM encrypt/decrypt now live in the crypto SSOT (DRY-1). Blob layout is
+// unchanged ([12 IV][16 tag][ct] base64), so existing settings rows still decrypt.
+import { encrypt, decrypt } from "./_shared/crypto.js";
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
