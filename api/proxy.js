@@ -24,6 +24,9 @@ const ALLOWED_DOMAINS = new Set([
   'data.bl.uk',
   'www.loc.gov',
   'search.scielo.org',
+  'www.lareferencia.info',
+  'library.oapen.org',
+  'openlibrary.org',
 ]);
 
 export default async function handler(req) {

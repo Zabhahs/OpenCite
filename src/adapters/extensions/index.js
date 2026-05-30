@@ -31,6 +31,24 @@ export { ENA_ADAPTER }              from "./ena.js";
 // v.22B — Latin American replacements for BDPI/MEXICANA
 export { SCIELO_ADAPTER }              from "./scielo.js";
 
+// v.29 — humanities worldwide-coverage adapters (verified contracts)
+export { LA_REFERENCIA_ADAPTER }       from "./laReferencia.js";
+export { OAPEN_ADAPTER }               from "./oapen.js";
+export { OPENEDITION_ADAPTER }         from "./openEdition.js";
+export { OPEN_LIBRARY_ADAPTER }        from "./openLibrary.js";
+
+// v.29 — South Asia & subcontinent humanities adapters
+export { CORE_ADAPTER }  from "./coreAc.js";
+export { NDLI_ADAPTER }  from "./ndli.js";
+export { BASE_ADAPTER }  from "./base.js";
+
+// PHILPAPERS_ADAPTER — excluded (Wave A premise disproved on live verification):
+// no public keyword-search JSON endpoint (only a key-gated taxonomy feed at
+// /philpapers/raw/categories.json?apiId=&apiKey=); the bibliographic search API is
+// contact-gated + ToS-restricted ("severely restrict redistribution"); the only open
+// self-serve interface is OAI-PMH (oai.pl) — harvest-only, the Mexicana anti-pattern.
+// Philosophy-coverage gap remains open; revisit via an OA-licensed alternative.
+
 // v.18 SOW heritage adapters
 export { CHRONICLING_AMERICA_ADAPTER } from "./chroniclingAmerica.js";
 export { ONB_ADAPTER }              from "./onb.js";

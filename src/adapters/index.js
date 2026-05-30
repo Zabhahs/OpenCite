@@ -30,6 +30,15 @@ import {
   ENA_ADAPTER,
   // v.22B — Latin American replacements
   SCIELO_ADAPTER,
+  // v.29 — humanities worldwide-coverage adapters
+  LA_REFERENCIA_ADAPTER,
+  OAPEN_ADAPTER,
+  OPENEDITION_ADAPTER,
+  OPEN_LIBRARY_ADAPTER,
+  // v.29 — South Asia & subcontinent humanities adapters
+  CORE_ADAPTER,
+  NDLI_ADAPTER,
+  BASE_ADAPTER,
   // v.18 — SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,
@@ -58,6 +67,15 @@ export const ADAPTERS = [
   NCBI_ADAPTER,
   OPENCONTEXT_ADAPTER,
   SCIELO_ADAPTER,
+  // Extensions — v.29 humanities worldwide-coverage
+  LA_REFERENCIA_ADAPTER,
+  OAPEN_ADAPTER,
+  OPENEDITION_ADAPTER,
+  OPEN_LIBRARY_ADAPTER,
+  // Extensions — v.29 South Asia & subcontinent humanities
+  CORE_ADAPTER,
+  NDLI_ADAPTER,
+  BASE_ADAPTER,
   // Extensions — Islamicate / heritage
   GALLICA_ADAPTER,
   THAQALAYN_ADAPTER,

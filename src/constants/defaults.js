@@ -25,6 +25,9 @@ export const DEFAULT_SETTINGS = {
   smithsonianKey: "",
   dplaKey: "",
   rijksKey: "",
+  // v.29 — South Asia adapters
+  coreKey: "",   // CORE.ac.uk — free at core.ac.uk/services/api
+  ndliKey: "",   // NDLI — free at ndl.iitkgp.ac.in
   curatedJournals: DEFAULT_CURATED_JOURNALS,
   enabledSources: {},
   // "unified" = single ranked list across all adapters (default)

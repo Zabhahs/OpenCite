@@ -210,6 +210,8 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
               ["smithsonianKey", "Smithsonian API key", "Free, instant. Sign up at api.data.gov/signup."],
               ["dplaKey", "DPLA API key", "Free, request via email at pro.dp.la."],
               ["rijksKey", "Rijksmuseum API key", "Free, instant. Register a Rijksstudio account at rijksmuseum.nl."],
+              ["coreKey", "CORE API key", "Free + instant at core.ac.uk/services/api. Unlocks 300M+ OA records including 300+ Indian repositories."],
+              ["ndliKey", "NDLI API key", "Free at ndl.iitkgp.ac.in — register, then copy key from My Account. India's national digital library (90M+ items)."],
             ].map(([field, label, help]) => (
               <div key={field}>
                 <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-1">{label}</label>
