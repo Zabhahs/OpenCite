@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ResultCard } from "./ResultCard.jsx";
 import { ADAPTERS } from "../adapters/index.js";
+import { groupByParentWork } from "../lib/groupResults.js";
 
 const INITIAL_DISPLAY = 20;
 const LOAD_STEP = 10;
@@ -11,7 +12,8 @@ const ADAPTER_MAP = Object.fromEntries(ADAPTERS.map(a => [a.id, a]));
 // ---------------------------------------------------------------------------
 // UnifiedResultList — ranks all results from all adapters by _score and
 // presents them as a single paginated list. Source attribution is shown
-// as a colored chip above each card.
+// as a colored chip above each card. Book chapters sharing the same container
+// title are clustered together under a parent-work header (same as source view).
 //
 // Props:
 //   filteredSections  — output of useFilters (already filtered/sorted per user prefs)
@@ -59,10 +61,14 @@ export function UnifiedResultList({
     });
   }, [filteredSections, sortBy]);
 
-  const visibleResults = allResults.slice(0, displayCount);
+  // Cluster book chapters under their parent work; non-chapters are solo groups
+  const allGroups = useMemo(() => groupByParentWork(allResults), [allResults]);
 
-  // Can we reveal more from the already-loaded pool?
-  const hasMoreLocal  = displayCount < allResults.length;
+  // Paginate by group count so a cluster is never split across pages
+  const visibleGroups = allGroups.slice(0, displayCount);
+  const visibleItemCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0);
+
+  const hasMoreLocal  = displayCount < allGroups.length;
   // Can we fetch more results from any remote adapter that is actually
   // contributing visible results? An adapter whose hits were all gated out as
   // loose matches shouldn't keep the "more available" prompt alive — fetching
@@ -78,43 +84,119 @@ export function UnifiedResultList({
     const next = displayCount + LOAD_STEP;
     setDisplayCount(next);
     // When local pool is exhausted, trigger a remote fetch
-    if (next >= allResults.length && hasMoreRemote) {
+    if (next >= allGroups.length && hasMoreRemote) {
       onLoadMoreAll();
     }
   };
 
   if (allResults.length === 0 && !isInitialLoading) return null;
 
+  // Global index counter for №01, №02… across all groups
+  let globalIndex = 0;
+
   return (
     <div>
       <div className="space-y-6">
-        {visibleResults.map((r, i) => {
-          const adapter = ADAPTER_MAP[r.source];
-          return (
-            <div key={r.id}>
-              {/* Source attribution chip — replaces the per-section header from source view */}
-              {adapter && (
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span
-                    className={`mono-font text-[9px] uppercase tracking-widest ${adapter.color.bg} ${adapter.color.text} px-2 py-0.5`}
-                  >
-                    {adapter.name}
-                  </span>
-                  {r._lowConfidence && (
-                    <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
-                      loose match
+        {visibleGroups.map((group, gi) => {
+          // Standalone result — source chip + single card
+          if (!group.parentTitle) {
+            const r = group.items[0];
+            const idx = globalIndex++;
+            const adapter = ADAPTER_MAP[r.source];
+            return (
+              <div key={r.id}>
+                {adapter && (
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className={`mono-font text-[9px] uppercase tracking-widest ${adapter.color.bg} ${adapter.color.text} px-2 py-0.5`}
+                    >
+                      {adapter.name}
                     </span>
+                    {r._lowConfidence && (
+                      <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
+                        loose match
+                      </span>
+                    )}
+                  </div>
+                )}
+                <ResultCard
+                  result={r}
+                  index={idx}
+                  onCopy={onCopy}
+                  copied={copied}
+                  isInLibrary={isInLibrary ? isInLibrary(r) : false}
+                  onToggleLibrary={onToggleLibrary}
+                />
+              </div>
+            );
+          }
+
+          // Grouped book chapters — parent header + per-chapter source chips + indented cards
+          return (
+            <div key={`group-${gi}-${group.parentTitle}`} className="border border-stone-400 bg-stone-50/20">
+              {/* Parent work header */}
+              <div className="px-4 pt-4 pb-3 border-b border-stone-300">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-300 text-stone-700 px-2 py-0.5">
+                    {group.items.length} chapter{group.items.length !== 1 ? "s" : ""}
+                  </span>
+                  {group.year && (
+                    <span className="mono-font text-[10px] text-stone-500">{group.year}</span>
                   )}
                 </div>
-              )}
-              <ResultCard
-                result={r}
-                index={i}
-                onCopy={onCopy}
-                copied={copied}
-                isInLibrary={isInLibrary ? isInLibrary(r) : false}
-                onToggleLibrary={onToggleLibrary}
-              />
+                <h3
+                  className="display-font text-lg font-bold text-stone-900 leading-tight"
+                  style={{ letterSpacing: "-0.01em" }}
+                >
+                  {group.parentTitle}
+                </h3>
+                {group.editors?.length > 0 && (
+                  <p className="display-font italic text-sm text-stone-600 mt-1">
+                    Edited by {group.editors.slice(0, 3).join(", ")}
+                    {group.editors.length > 3 ? ", et al." : ""}
+                  </p>
+                )}
+                {group.publisher && (
+                  <p className="mono-font text-[10px] uppercase tracking-wider text-stone-500 mt-1">
+                    {group.publisher}
+                  </p>
+                )}
+              </div>
+
+              {/* Chapter cards — source chip per card (may differ across chapters) */}
+              <div className="pl-3 pr-1 py-3 space-y-4">
+                {group.items.map((r) => {
+                  const idx = globalIndex++;
+                  const adapter = ADAPTER_MAP[r.source];
+                  return (
+                    <div key={r.id}>
+                      {adapter && (
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span
+                            className={`mono-font text-[9px] uppercase tracking-widest ${adapter.color.bg} ${adapter.color.text} px-2 py-0.5`}
+                          >
+                            {adapter.name}
+                          </span>
+                          {r._lowConfidence && (
+                            <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
+                              loose match
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <ResultCard
+                        result={r}
+                        index={idx}
+                        onCopy={onCopy}
+                        copied={copied}
+                        isInLibrary={isInLibrary ? isInLibrary(r) : false}
+                        onToggleLibrary={onToggleLibrary}
+                        isChapterInGroup
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
@@ -130,7 +212,7 @@ export function UnifiedResultList({
             ↓ Show {LOAD_STEP} more
           </button>
           <span className="mono-font text-[9px] text-stone-400">
-            {visibleResults.length} of {allResults.length} loaded
+            {visibleItemCount} of {allResults.length} loaded
             {hasMoreRemote ? " · more available from sources" : ""}
           </span>
         </div>
