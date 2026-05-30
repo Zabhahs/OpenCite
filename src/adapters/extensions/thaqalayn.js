@@ -8,6 +8,11 @@ export const THAQALAYN_ADAPTER = {
   category: ADAPTER_CATEGORY.EXTENSION,
   region: ["mena", "south-asia"], archiveType: ["research-repository"], contentType: ["textual"],
   color: { bg: "bg-emerald-800", text: "text-emerald-50" }, needsKey: false,
+  capability: {
+    // Single query endpoint returns the full match set; pagination is a client-side slice.
+    protocol: "rest-json", fulltext: true, pagination: "none", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "full", subjects: "none", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

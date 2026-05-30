@@ -24,6 +24,10 @@ export const DPLA_ADAPTER = {
   color: { bg: "bg-indigo-900", text: "text-indigo-50" },
   needsKey: true, keyName: "dplaKey", keyLabel: "DPLA API key",
   keyHelp: "Free 32-char key. Email pro.dp.la to request — typically same-day.",
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "key",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     if (!settings.dplaKey) throw new Error("DPLA needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;

@@ -11,6 +11,11 @@ export const BNF_API_ADAPTER = {
   archiveType: ["national-archive", "library"],
   contentType: ["textual", "manuscript", "primary-source"],
   color: { bg: "bg-rose-800", text: "text-rose-50" }, needsKey: false,
+  capability: {
+    // SRU/UNIMARC catalog. No abstract field in UNIMARC; subjects from 600/606/607.
+    protocol: "sru", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "none", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

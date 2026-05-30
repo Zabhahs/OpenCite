@@ -72,3 +72,29 @@ export class AbstractAdapter {
  * @property {string}   [language]    — v.17: ISO 639 language code
  * @property {number}   [citedBy]     — v.17: citation count (relevance signal)
  */
+
+/**
+ * AdapterCapability — machine-readable descriptor of how an adapter talks to its
+ * upstream API and what rank-relevant fields it emits. SSOT read by the ranker,
+ * registry, and UI instead of hard-coded per-adapter logic.
+ *
+ * rankFields values are CODE-VERIFIED against what each adapter actually emits
+ * today (not what the API could return) — they describe current reality so the
+ * scorer can reason about field-poor sources without per-file special-casing.
+ *
+ * @typedef {Object} AdapterCapability
+ * @property {("rest-json"|"sru"|"sparql"|"oai-pmh"|"graphql"|"elasticsearch"|"blacklight"|"mediawiki")} protocol
+ * @property {boolean} fulltext     — searches content body (OCR/full text), not just metadata
+ * @property {("page"|"offset"|"cursor"|"token"|"none")} pagination
+ * @property {boolean} totalCount   — upstream returns a real total-result count
+ * @property {?number} maxWindow    — deep-paging cap (offset+rows ceiling), or null if unbounded/unknown
+ * @property {("none"|"key"|"polite")} auth
+ * @property {AdapterRankFields} rankFields
+ *
+ * @typedef {Object} AdapterRankFields
+ * @property {("full"|"sparse"|"none")} abstract — "full": dedicated description field;
+ *           "sparse": constructed/label text or short one-liner; "none": never emitted
+ * @property {("full"|"sparse"|"none")} subjects — keyword/subject signal richness
+ *           (merged with keywords under one BM25F weight); "sparse" = non-topical labels
+ * @property {boolean} citedBy — emits a numeric citedBy value (note: IA emits download counts)
+ */

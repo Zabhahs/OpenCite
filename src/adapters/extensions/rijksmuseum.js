@@ -9,6 +9,11 @@ export const RIJKSMUSEUM_ADAPTER = {
   color: { bg: "bg-orange-900", text: "text-orange-50" },
   needsKey: true, keyName: "rijksKey", keyLabel: "Rijksmuseum API key",
   keyHelp: "Free, instant. Register a Rijksstudio account at rijksmuseum.nl — find key in advanced settings.",
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "key",
+    // abstract = longTitle (extended title, non-descriptive); subjects = objectTypes/materials (non-topical).
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     if (!settings.rijksKey) throw new Error("Rijksmuseum needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;

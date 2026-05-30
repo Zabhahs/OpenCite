@@ -10,6 +10,10 @@ export const SMITHSONIAN_ADAPTER = {
   color: { bg: "bg-blue-900", text: "text-blue-50" },
   needsKey: true, keyName: "smithsonianKey", keyLabel: "Smithsonian API key",
   keyHelp: "Free key from api.data.gov/signup — instant. Used for Smithsonian Open Access.",
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "key",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     if (!settings.smithsonianKey) throw new Error("Smithsonian needs an api.data.gov key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;

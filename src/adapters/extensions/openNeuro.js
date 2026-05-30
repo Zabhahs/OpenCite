@@ -9,6 +9,11 @@ export const OPENNEURO_ADAPTER = {
   region: ["global"], archiveType: ["research-repository"],
   contentType: ["structured-data", "primary-source"],
   color: { bg: "bg-violet-900", text: "text-violet-50" }, needsKey: false,
+  capability: {
+    // GraphQL: fetches only the latest 100 datasets, then filters/paginates client-side. No real total.
+    protocol: "graphql", fulltext: false, pagination: "none", totalCount: false, maxWindow: 100, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

@@ -32,6 +32,12 @@ export const WIKIDATA_ADAPTER = {
   color: { bg: "bg-sky-900", text: "text-sky-50" },
   needsKey: false,
 
+  capability: {
+    // MediaWiki CirrusSearch + wbgetentities batches. abstract = one-line entity description (label).
+    protocol: "mediawiki", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
+
   search: async (query, _settings, opts = {}) => {
     const offset = opts.offset || 0;
     const rows   = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

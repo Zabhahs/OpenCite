@@ -9,6 +9,11 @@ export const BRITISH_LIBRARY_ADAPTER = {
   archiveType: ["national-archive", "library"],
   contentType: ["textual", "manuscript", "primary-source"],
   color: { bg: "bg-red-950", text: "text-red-50" }, needsKey: false,
+  capability: {
+    // Server-proxied SPARQL (title-substring CONTAINS match). No COUNT — total = page length only.
+    protocol: "sparql", fulltext: false, pagination: "offset", totalCount: false, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

@@ -10,6 +10,10 @@ export const SCIELO_ADAPTER = {
   archiveType: ["scholarly-index", "research-repository"],
   contentType: ["peer-reviewed", "textual"],
   color: { bg: "bg-green-800", text: "text-green-50" }, needsKey: false,
+  capability: {
+    protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

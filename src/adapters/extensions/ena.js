@@ -8,6 +8,12 @@ export const ENA_ADAPTER = {
   category: ADAPTER_CATEGORY.EXTENSION,
   region: ["global"], archiveType: ["genomic-database"], contentType: ["genomic-data"],
   color: { bg: "bg-cyan-800", text: "text-cyan-50" }, needsKey: false,
+  capability: {
+    // No count requested today (hasMore is a page-full heuristic); upstream caps deep paging at 100k.
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: false, maxWindow: 100000, auth: "none",
+    // subjects = scientific_name + study_type (non-topical taxonomy/category labels).
+    rankFields: { abstract: "full", subjects: "sparse", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

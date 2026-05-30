@@ -226,7 +226,10 @@ export default async function handler(req, res) {
   // Cross-adapter DOI dedup — keep the highest-scored copy of each DOI.
   // (Scoring runs once over the full candidate set so IDF is consistent.)
   const allRaw = perAdapter.flat();
-  const scored = scoreResults(allRaw, terms);
+  // v.29 Sprint 2 — pooled heterogeneous set: resolve each result's capability by source
+  // so the scorer can gate the citation tiebreak and apply the thin-source prior per-source.
+  const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
+  const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
 
   const byDoi = new Map();
   const deduped = [];

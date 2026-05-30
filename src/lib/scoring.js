@@ -14,6 +14,17 @@ const PHRASE_BOOST = 2.0;
 const PROX_BOOST = 1.0;
 const PROX_WINDOW = 6;
 
+// v.29 Sprint 2 — capability-aware rank fairness.
+// CITED_BY_CAP: max citation tiebreak (unchanged scale); now gated to sources whose
+//   capability.rankFields.citedBy === true (avoids treating non-citation counts — e.g.
+//   Internet Archive downloads — as citations unless the descriptor opts in).
+// THIN_SOURCE_PRIOR: small bounded prior for "thin" sources (title is their only reliable
+//   topical field — no real abstract or subject signal). Applied only on a *complete* title
+//   match so a strong title-only hit isn't structurally buried beneath abstract-rich but
+//   loosely-relevant articles. Bounded like the citation tiebreak — nudges, never dominates.
+const CITED_BY_CAP = 0.3;
+const THIN_SOURCE_PRIOR = 0.4;
+
 // Common English stopwords that carry no topical signal.
 const STOPWORDS = new Set([
   "a","an","the","and","or","but","in","on","at","to","for","of","with",
@@ -127,7 +138,39 @@ function proximityBonus(words, docTokens, fields) {
   return bonus;
 }
 
-export function scoreResults(results, terms) {
+// A "thin" source can't contribute topical abstract or subject content — its only
+// reliable signal is the title. Such sources are structurally penalised in a pooled
+// BM25F ranking, since they lack the very fields abstract-rich sources accumulate score in.
+function isThinSource(capability) {
+  const rf = capability && capability.rankFields;
+  if (!rf) return false;
+  const weakAbstract = rf.abstract === "none" || rf.abstract === "sparse";
+  const weakSubjects = rf.subjects === "none" || rf.subjects === "sparse";
+  return weakAbstract && weakSubjects;
+}
+
+// Complete title match: every meaningful query word appears in the title field, or a
+// multi-word query phrase appears verbatim there. The gate for the thin-source prior.
+function strongTitleMatch(words, phrases, titleTokens) {
+  if (!titleTokens.length) return false;
+  if (phrases.length) {
+    const hay = " " + titleTokens.join(" ") + " ";
+    if (phrases.some(p => hay.includes(" " + p + " "))) return true;
+  }
+  if (!words.length) return false;
+  const set = new Set(titleTokens);
+  return words.every(w => set.has(w));
+}
+
+/**
+ * scoreResults — BM25F batch scorer.
+ * @param {Object[]} results
+ * @param {string[]} terms
+ * @param {(result: Object) => (import("../adapters/_shared/base.js").AdapterCapability|undefined)} [getCapability]
+ *   Resolves the capability descriptor for a result (homogeneous batch → constant;
+ *   pooled set → lookup by source). Drives citedBy gating + thin-source prior.
+ */
+export function scoreResults(results, terms, getCapability = () => undefined) {
   if (!results.length || !terms.length) return results.map(r => ({ ...r, _score: 0 }));
 
   // Word-level scoring terms (multi-word terms split into words, stopwords stripped).
@@ -177,9 +220,23 @@ export function scoreResults(results, terms) {
       score += proximityBonus(scoringTerms, docTokens, fields);
     }
 
-    // Citation bonus is a small tiebreaker among relevant results, not a dominating signal.
-    // Capped at +0.3 so a highly-cited irrelevant paper can't outrank a relevant one.
-    const citedByBonus = score > 0 ? Math.min((r.citedBy || 0) / 5000, 0.3) : 0;
-    return { ...r, _score: score + citedByBonus };
+    // Capability-aware tiebreaks — only among already-relevant results (score > 0), so
+    // the "drop zero-score" gating downstream is untouched and bonuses can't resurrect
+    // loose matches.
+    if (score > 0) {
+      const cap = getCapability(r);
+      const rf = cap && cap.rankFields;
+      // Citation bonus: small tiebreaker, gated to citedBy-capable sources. Capped so a
+      // highly-cited irrelevant paper can't outrank a relevant one.
+      if (rf && rf.citedBy === true) {
+        score += Math.min((r.citedBy || 0) / 5000, CITED_BY_CAP);
+      }
+      // Thin-source prior: lift a complete title match from a source that can't emit
+      // abstract/subject signal, so it isn't buried purely on document-length grounds.
+      if (isThinSource(cap) && strongTitleMatch(scoringTerms, phrases, docTokens.title)) {
+        score += THIN_SOURCE_PRIOR;
+      }
+    }
+    return { ...r, _score: score };
   });
 }

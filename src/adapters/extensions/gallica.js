@@ -9,6 +9,11 @@ export const GALLICA_ADAPTER = {
   archiveType: ["national-archive", "library", "manuscript-collection"],
   contentType: ["manuscript", "textual", "visual", "primary-source"],
   color: { bg: "bg-rose-900", text: "text-rose-50" }, needsKey: false,
+  capability: {
+    // Server-proxied SRU via /api/search/gallica. "gallica all" index = OCR full-text + metadata.
+    protocol: "sru", fulltext: true, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

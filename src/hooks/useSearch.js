@@ -64,9 +64,11 @@ export function useSearch(settings, isEnabled) {
           return true;
         });
 
-        // C4 — BM25F relevance scoring with optional synonym expansion
+        // C4 — BM25F relevance scoring with optional synonym expansion.
+        // v.29 Sprint 2 — pass the adapter's capability so the scorer can gate the citation
+        // tiebreak and apply the thin-source prior (batch is homogeneous → constant capability).
         const scoringTerms = await expandTerms(terms, settings.synonyms);
-        const scored = scoreResults(deduped, scoringTerms);
+        const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
 
         // Drop zero-score results only when at least one result scored above 0.
         // If everything scores 0 (topic absent from this database), show the API's
@@ -112,9 +114,9 @@ export function useSearch(settings, isEnabled) {
         return true;
       });
 
-      // C4 — BM25F score load-more results
+      // C4 — BM25F score load-more results (capability-aware, per Sprint 2)
       const scoringTerms = await expandTerms(terms, settings.synonyms);
-      const scored = scoreResults(deduped, scoringTerms);
+      const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
       const meaningful = meaningfulTerms(scoringTerms);
       const hasRelevant = meaningful.length && scored.some(r => r._score > 0);
       const filtered = hasRelevant ? scored.filter(r => r._score > 0) : scored;

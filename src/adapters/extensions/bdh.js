@@ -9,6 +9,11 @@ export const BDH_ADAPTER = {
   archiveType: ["national-archive", "library"],
   contentType: ["textual", "manuscript", "visual", "primary-source"],
   color: { bg: "bg-yellow-900", text: "text-yellow-50" }, needsKey: false,
+  capability: {
+    // Server-proxied datos.bne.es REST via /api/search/bdh.
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

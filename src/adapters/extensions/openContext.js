@@ -8,6 +8,11 @@ export const OPENCONTEXT_ADAPTER = {
   region: ["global"], archiveType: ["archaeological-database"],
   contentType: ["archaeological-data", "primary-source"],
   color: { bg: "bg-stone-600", text: "text-stone-50" }, needsKey: false,
+  capability: {
+    // Server-proxied via /api/search/opencontext. abstract = Context/Type labels only; no subjects emitted.
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "none", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

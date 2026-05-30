@@ -10,6 +10,10 @@ export const NORTHWESTERN_ADAPTER = {
   region: ["west-africa", "sahel", "global"],
   archiveType: ["library", "manuscript-collection"], contentType: ["manuscript", "primary-source", "visual"],
   color: { bg: "bg-purple-900", text: "text-purple-50" }, needsKey: false,
+  capability: {
+    protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
@@ -35,6 +39,9 @@ export const NORTHWESTERN_ADAPTER = {
       volume: "", issue: "", pages: "", doi: "",
       url: d.canonical_link || `https://dc.library.northwestern.edu/items/${d.id}`,
       abstract: stripHtml(Array.isArray(d.description) ? d.description[0] : (d.description || "")),
+      // Sprint 3 — topical signal: DC subject + genre facets (label objects) plus free keywords.
+      subjects: [...(d.subject || []), ...(d.genre || [])].map(s => s?.label || s).filter(Boolean),
+      keywords: (d.keywords || []).filter(Boolean),
       isOA: true, type: "manuscript",
       previewImage: d.thumbnail || (d.representative_file_set?.url ? `${d.representative_file_set.url}/full/300,/0/default.jpg` : "")
     }));

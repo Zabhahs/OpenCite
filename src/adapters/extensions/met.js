@@ -7,6 +7,11 @@ export const MET_ADAPTER = {
   category: ADAPTER_CATEGORY.EXTENSION,
   region: ["global", "north-america"], archiveType: ["museum"], contentType: ["visual", "primary-source"],
   color: { bg: "bg-red-800", text: "text-red-50" }, needsKey: false,
+  capability: {
+    // Two-step: search returns objectIDs, then per-object detail fetch + client-side relevance filter.
+    protocol: "rest-json", fulltext: false, pagination: "none", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

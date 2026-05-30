@@ -9,6 +9,12 @@ export const MEXICANA_ADAPTER = {
   archiveType: ["aggregator", "national-archive", "library"],
   contentType: ["textual", "visual", "primary-source", "manuscript"],
   color: { bg: "bg-green-900", text: "text-green-50" }, needsKey: false,
+  capability: {
+    // Server-proxied OAI-PMH ListRecords; "search" is a client-side filter over the harvested batch.
+    // No keyword search and no real total — total reflects only the current batch's matches.
+    protocol: "oai-pmh", fulltext: false, pagination: "token", totalCount: false, maxWindow: null, auth: "none",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

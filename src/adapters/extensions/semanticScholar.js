@@ -35,6 +35,11 @@ export const SEMANTIC_SCHOLAR_ADAPTER = {
   keyName: "s2Key",
   keyLabel: "Semantic Scholar API key",
   keyHelp: "Free but requires approval (can take days). Request at semanticscholar.org/product/api.",
+  // Deregistered v0.27 (not in ADAPTERS) — descriptor kept for completeness/future re-enable.
+  capability: {
+    protocol: "graphql", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 1000, auth: "key",
+    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+  },
   search: async (query, settings, opts = {}) => {
     if (!settings.s2Key) throw new Error("Semantic Scholar requires an API key. Add yours in settings (⚙) — it's free but takes a few days for approval.");
     const offset = opts.offset || 0;

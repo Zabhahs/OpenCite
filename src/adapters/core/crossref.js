@@ -12,6 +12,10 @@ export const CROSSREF_ADAPTER = {
   contentType: ["peer-reviewed", "textual"],
   color: { bg: "bg-red-900", text: "text-red-50" },
   needsKey: false,
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "polite",
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: true },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
@@ -64,6 +68,8 @@ export const CROSSREF_ADAPTER = {
         editors,
         subjects: Array.isArray(it.subject) ? it.subject : [],
         language: it.language || "",
+        // Sprint 3 — citation count feeds the capability-gated citedBy tiebreak.
+        citedBy: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : null,
       };
     });
     return { results, hasMore: offset + results.length < (data.message?.["total-results"] || 0) };

@@ -11,6 +11,10 @@ export const ONB_ADAPTER = {
   archiveType: ["national-archive", "library", "newspaper-archive"],
   contentType: ["textual", "manuscript", "primary-source"],
   color: { bg: "bg-red-900", text: "text-red-50" }, needsKey: false,
+  capability: {
+    protocol: "sru", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

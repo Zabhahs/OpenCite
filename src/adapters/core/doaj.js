@@ -12,6 +12,10 @@ export const DOAJ_ADAPTER = {
   contentType: ["peer-reviewed", "textual"],
   color: { bg: "bg-amber-900", text: "text-amber-50" },
   needsKey: false,
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

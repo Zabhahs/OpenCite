@@ -12,6 +12,10 @@ export const CURATED_JOURNALS_ADAPTER = {
   contentType: ["peer-reviewed", "textual"],
   color: { bg: "bg-amber-700", text: "text-amber-50" },
   needsKey: false,
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
+    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+  },
   search: async (query, settings, opts = {}) => {
     const journals = settings.curatedJournals || [];
     const issns = journals.map(j => j.issn).filter(Boolean);

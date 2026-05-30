@@ -20,6 +20,10 @@ export const EUROPEANA_ADAPTER = {
   color: { bg: "bg-emerald-900", text: "text-emerald-50" },
   needsKey: true, keyName: "europeanaKey", keyLabel: "Europeana API key",
   keyHelp: "Free, instant. Register at api.europeana.eu — paste the key here.",
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "key",
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     if (!settings.europeanaKey) throw new Error("Europeana needs a free API key. Open settings (⚙) to add yours.");
     const offset = opts.offset || 0;

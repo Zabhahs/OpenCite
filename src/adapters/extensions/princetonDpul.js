@@ -10,6 +10,11 @@ export const PRINCETON_DPUL_ADAPTER = {
   region: ["mena", "south-asia", "global"],
   archiveType: ["manuscript-collection", "library"], contentType: ["manuscript", "textual", "primary-source"],
   color: { bg: "bg-orange-800", text: "text-orange-50" }, needsKey: false,
+  capability: {
+    // Server-proxied Blacklight catalog.json. No subjects/keywords mapped today.
+    protocol: "blacklight", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "none", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

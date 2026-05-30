@@ -15,6 +15,10 @@ export const OPENALEX_ADAPTER = {
   keyName: "openAlexKey",
   keyLabel: "OpenAlex API key (optional)",
   keyHelp: "Optional. Works without a key via the polite pool (rate-limited). For higher quotas, get a free key at openalex.org/settings/api — 30-second signup.",
+  capability: {
+    protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
+    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

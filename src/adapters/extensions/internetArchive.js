@@ -151,6 +151,12 @@ export const INTERNET_ARCHIVE_ADAPTER = {
   region: ["global"], archiveType: ["aggregator", "library", "audiovisual-archive"],
   contentType: ["textual", "audio", "primary-source", "ephemera"],
   color: { bg: "bg-stone-700", text: "text-stone-50" }, needsKey: false,
+  capability: {
+    // Dual-endpoint: advancedsearch metadata + full-text "search inside" (OCR page text).
+    protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 10000, auth: "none",
+    // citedBy carries download counts, not citations — Sprint 2 gates whether to honor it.
+    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

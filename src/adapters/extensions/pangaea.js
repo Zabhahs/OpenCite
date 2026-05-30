@@ -40,6 +40,11 @@ export const PANGAEA_ADAPTER = {
   region: ["global"], archiveType: ["genomic-database", "archaeological-database", "research-repository"],
   contentType: ["genomic-data", "structured-data", "primary-source"],
   color: { bg: "bg-teal-900", text: "text-teal-50" }, needsKey: false,
+  capability: {
+    // Server-proxied raw Elasticsearch _search + per-hit RIS detail fetch. abstract/keywords from RIS (often absent).
+    protocol: "elasticsearch", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;

@@ -12,6 +12,11 @@ export const CHRONICLING_AMERICA_ADAPTER = {
   archiveType: ["national-archive", "library"],
   contentType: ["textual", "primary-source", "ephemera"],
   color: { bg: "bg-blue-800", text: "text-blue-50" }, needsKey: false,
+  capability: {
+    // Server-proxied loc.gov fo=json over OCR'd newspaper full text. LoC caps deep paging at 100k.
+    protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 100000, auth: "none",
+    rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+  },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
