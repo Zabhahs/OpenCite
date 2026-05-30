@@ -18,8 +18,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
 import { coverageMultiplier } from "./coverage.js";
-import { claimOnce } from "./kv.js";
-import { log } from "./log.js";
 
 const dec = (n) => new Prisma.Decimal(n);
 
@@ -61,23 +59,38 @@ export async function settle(userId, preAuthAmount, band, { freeBelowBand } = {}
   return finalCharge;
 }
 
-// Idempotent credit grant (Stripe top-up). `eventId` dedupes replays (R11): the
-// first grant for an event wins; later replays are no-ops. Idempotency is enforced
-// via KV set-if-absent — if KV is unavailable we still grant (fail-open) but log it.
-export async function grantCredits(userId, credits, eventId) {
+// Credit grant (Stripe top-up / monthly allowance). Pure atomic increment —
+// idempotency is the CALLER's job (the webhook claims the Stripe event id in the
+// processed_events table first; the monthly grant guards on credits_period). This
+// keeps the ledger primitive simple and the dedupe durable in Postgres.
+export async function grantCredits(userId, credits) {
   if (!userId || !(credits > 0)) return { granted: false };
-  if (eventId) {
-    const fresh = await claimOnce(`oc:stripe:evt:${eventId}`, 60 * 60 * 24 * 30);
-    // fresh === false → event already processed → skip (idempotent replay).
-    // fresh === null  → KV unavailable → proceed but flag (rare double-grant risk).
-    if (fresh === false) return { granted: false, duplicate: true };
-    if (fresh === null) log.warn("billing", "grant-no-idempotency", { eventId });
-  }
   await prisma.user.update({
     where: { id: userId },
     data: { total_credits: { increment: dec(credits) } },
   });
   return { granted: true };
+}
+
+// Monthly allowance top-up. Idempotent per calendar month via User.credits_period:
+// tops the balance UP TO `grant` (doesn't stack monthly allowance, but never reduces
+// a larger purchased balance) and stamps the period so a re-run this month no-ops.
+export async function applyMonthlyGrant(userId, grant, period) {
+  if (!userId || !(grant > 0)) return { granted: false };
+  // Guarded update: only when this period hasn't been granted yet.
+  const res = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.findUnique({
+      where: { id: userId },
+      select: { total_credits: true, credits_period: true },
+    });
+    if (!u || u.credits_period === period) return { granted: false };
+    const floor = dec(grant);
+    const data = { credits_period: period };
+    if (u.total_credits.lessThan(floor)) data.total_credits = floor; // top up to allowance
+    await tx.user.update({ where: { id: userId }, data });
+    return { granted: true };
+  });
+  return res;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────

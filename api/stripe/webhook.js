@@ -2,17 +2,23 @@
 // Route: /api/stripe/webhook
 // Runtime: Node.js (raw body required for signature verification)
 //
-// Verifies the Stripe signature against the RAW request body, then grants credits
-// on a completed checkout. Idempotent on the Stripe event id (R11) via
-// billing.grantCredits → KV claimOnce, so retried/duplicated webhooks grant once.
+// Verifies the Stripe signature against the RAW body, then acts on:
+//   - checkout.session.completed  → grant credits (PAYG pack) and/or set the user's
+//                                    subscription plan; persist stripe ids.
+//   - customer.subscription.deleted/updated → downgrade to free when canceled.
+// Idempotent on the Stripe event id (R11) via a durable Postgres unique insert
+// (processed_events) — bulletproof even if KV/cache is down.
 //
 // Dormant until WS3 ships: requires STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET and
 // the `stripe` package. The SDK is dynamically imported so its absence can't break
 // other routes at build time; an unconfigured webhook returns 503.
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../_shared/prisma.js";
-import { grantCredits } from "../_shared/billing.js";
+import { getPack, getPlan } from "../_shared/plans.js";
 import { log } from "../_shared/log.js";
+
+const dec = (n) => new Prisma.Decimal(n);
 
 // Vercel must NOT parse the body — Stripe needs the exact raw bytes.
 export const config = { api: { bodyParser: false } };
@@ -26,8 +32,6 @@ function readRawBody(req) {
   });
 }
 
-// Resolve a checkout/session object to our User: client_reference_id is the
-// authoritative link (set at checkout creation = User.id); customer id is fallback.
 async function resolveUserId(obj) {
   if (obj.client_reference_id) return obj.client_reference_id;
   if (obj.customer) {
@@ -62,38 +66,64 @@ export default async function handler(req, res) {
   try {
     event = stripe.webhooks.constructEvent(raw, sig, webhookSecret);
   } catch (err) {
-    // Never echo the body or signature — just a generic 400.
     log.warn("stripe", "bad-signature", { msg: err.message });
     return res.status(400).json({ error: "Invalid signature" });
   }
 
+  // Resolve the affected user up front (read-only).
+  const obj = event.data.object;
+  const userId =
+    event.type === "checkout.session.completed"
+      ? await resolveUserId(obj)
+      : event.type === "customer.subscription.deleted"
+      ? (await prisma.user.findUnique({ where: { stripe_customer_id: String(obj.customer) }, select: { id: true } }))?.id
+      : null;
+
   try {
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const userId = await resolveUserId(session);
-      // Credits purchased — passed through checkout metadata at creation time.
-      const credits = Number(session.metadata?.credits);
+    // Claim + side effects in ONE transaction: the unique PK on processed_events
+    // dedupes (P2002 = already handled), and any failure rolls back the claim so a
+    // Stripe retry re-applies it. Concurrent duplicates collide on the PK — one wins.
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.processedEvent.create({ data: { event_id: event.id, type: event.type } });
 
-      // Persist the Stripe customer id on first purchase (idempotent set).
-      if (userId && session.customer) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { stripe_customer_id: String(session.customer) },
-        }).catch(() => {});
+      if (event.type === "checkout.session.completed" && userId) {
+        if (obj.customer) {
+          await tx.user.update({ where: { id: userId }, data: { stripe_customer_id: String(obj.customer) } });
+        }
+        const pack = getPack(obj.metadata?.pack);
+        if (pack) {
+          await tx.user.update({ where: { id: userId }, data: { total_credits: { increment: dec(pack.credits) } } });
+        }
+        const planId = obj.metadata?.plan;
+        if (planId && getPlan(planId).subscription) {
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              plan: getPlan(planId).id,
+              stripe_subscription_id: obj.subscription ? String(obj.subscription) : undefined,
+            },
+          });
+        }
+        return { kind: "checkout", pack: pack?.id, plan: planId };
       }
 
-      if (userId && credits > 0) {
-        const result = await grantCredits(userId, credits, event.id);
-        log("stripe", "grant", { userId, credits, granted: result.granted, duplicate: !!result.duplicate });
-      } else {
-        log.warn("stripe", "grant-skipped", { hasUser: !!userId, credits });
+      if (event.type === "customer.subscription.deleted" && userId) {
+        await tx.user.update({ where: { id: userId }, data: { plan: "free", stripe_subscription_id: null } });
+        return { kind: "unsubscribe" };
       }
-    }
-    // Other event types acknowledged but not acted on.
+
+      return { kind: "ack" };
+    });
+
+    log("stripe", result.kind, { userId, ...result });
     return res.status(200).json({ received: true });
   } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      // Event already processed (claim collided) — acknowledge, don't re-apply.
+      return res.status(200).json({ received: true, duplicate: true });
+    }
     log.err("stripe", "handler-error", { type: event?.type, msg: err.message });
-    // 500 → Stripe retries; grantCredits idempotency makes that safe.
+    // 500 → Stripe retries; the rolled-back claim makes retries safe.
     return res.status(500).json({ error: "Webhook handler error" });
   }
 }

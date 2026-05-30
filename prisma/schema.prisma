@@ -31,6 +31,13 @@ model User {
   // Credits: seeded at 10 on signup via @default
   total_credits        Decimal   @default(10) @db.Decimal(12, 4)
 
+  // Phase 3 — billing tier + recurring grant tracking (WS3)
+  plan                 String    @default("free")  // PLANS id (plans.js): free|student|pro|machine
+  is_student_verified  Boolean   @default(false)   // free→1500/mo; gate for $5 student plan
+  student_verified_at  DateTime?
+  credits_period       String?   // YYYY-MM of the last monthly grant (top-up idempotency)
+  stripe_subscription_id String? @unique           // active Stripe subscription, if any
+
   // Flexible demographic / preference blob (analytics, Phase 5)
   demographics         Json?
 
@@ -158,4 +165,14 @@ model ApiUsage {
   @@unique([key_id, day], name: "key_id_day")
   @@index([key_id])
   @@map("api_usage")
+}
+
+// Durable Stripe webhook idempotency (R11). A unique insert on the event id is
+// bulletproof — unlike a KV claim, it can't double-grant if the cache is down.
+model ProcessedEvent {
+  event_id     String   @id // Stripe event.id
+  type         String
+  processed_at DateTime @default(now())
+
+  @@map("processed_events")
 }

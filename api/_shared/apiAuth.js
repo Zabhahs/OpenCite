@@ -34,12 +34,13 @@ export async function resolveApiKey(req) {
     return { userId: null, keyId: "master", plan: getPlan("paid"), master: true };
   }
 
-  // Customer key — constant-format hash lookup.
+  // Customer key — constant-format hash lookup. The effective plan comes from the
+  // USER (their subscription), not the key, so a tier change applies to all keys.
   let row;
   try {
     row = await prisma.apiKey.findUnique({
       where: { key_hash: hashApiKey(key) },
-      select: { id: true, user_id: true, plan: true, revoked: true },
+      select: { id: true, user_id: true, revoked: true, user: { select: { plan: true } } },
     });
   } catch {
     return null; // DB hiccup → treat as unauthenticated (caller fails closed on auth)
@@ -51,5 +52,5 @@ export async function resolveApiKey(req) {
     .update({ where: { id: row.id }, data: { last_used_at: new Date() } })
     .catch(() => {});
 
-  return { userId: row.user_id, keyId: row.id, plan: getPlan(row.plan) };
+  return { userId: row.user_id, keyId: row.id, plan: getPlan(row.user?.plan) };
 }
