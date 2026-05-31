@@ -51,10 +51,18 @@ console.warn("[migrate] migrate deploy failed (likely P3005) — applying SQL di
 const execCmd = DIRECT_URL
   ? `npx prisma db execute --url "${DIRECT_URL}" --file ${SQL_FILE}`
   : `npx prisma db execute --schema prisma/schema.prisma --file ${SQL_FILE}`;
-run(execCmd, "direct SQL apply");
+const applied = run(execCmd, "direct SQL apply");
 
-// 2b) Record the migration as applied so future `migrate deploy` runs succeed.
-run(`npx prisma migrate resolve --applied ${MIGRATION}`, "baseline (resolve --applied)");
+// 2b) Record the migration as applied — but ONLY if the SQL actually applied.
+//     Baselining without applying would leave the DB permanently missing the
+//     billing columns (history says "done", so `migrate deploy` never retries),
+//     which breaks the Prisma adapter's user queries → auth fails. If the SQL
+//     apply failed, leave the migration unbaselined so the next deploy retries.
+if (applied) {
+  run(`npx prisma migrate resolve --applied ${MIGRATION}`, "baseline (resolve --applied)");
+} else {
+  console.warn("[migrate] SQL apply failed — NOT baselining; next deploy will retry");
+}
 
 // Always succeed — the frontend + API (and therefore auth) must ship.
 process.exit(0);
