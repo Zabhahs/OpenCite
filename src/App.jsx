@@ -246,7 +246,11 @@ function OpenCITE() {
         )}
 
         {activePanel === "plans" && (
-          <PricingPanel platform={getPlatform()} />
+          <PricingPanel
+            platform={getPlatform()}
+            isAuthenticated={status === "authenticated"}
+            onRequireAuth={() => setShowAuthModal(true)}
+          />
         )}
 
         <ThemeStrip themeKey={themeKey} onChange={changeTheme} />

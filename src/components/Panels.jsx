@@ -16,6 +16,7 @@ import { AbstractAdapter } from "../adapters/_shared/base.js";
 import { getDebugLog, downloadDebugLog, clearDebugLog } from "../lib/log.js";
 import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE } from "../constants/pricing.js";
 import { subscriptionRail, storeName } from "../lib/platform.js";
+import { createCheckoutSession } from "../lib/checkout.js";
 
 function toNCR(item) {
   if (item._normalized) return item;
@@ -179,29 +180,38 @@ export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
 
 // ---------- PricingPanel ----------
 // Clearly lists the payment options (human subscriptions + machine/API credit packs).
-// Platform-aware CTA: subscriptions route to Stripe on web/desktop and to Apple/Google
-// IAP on native mobile (lib/platform.subscriptionRail); packs are always Stripe. The
-// CTA is a graceful "launching soon" seam until the checkout endpoint + keys are live;
-// pass `onCheckout(id, kind, rail)` returning truthy to take over the click.
+// Platform-aware CTA: subscriptions route to Stripe Checkout on web/desktop and to
+// Apple/Google IAP on native mobile (lib/platform.subscriptionRail); packs are always
+// Stripe. Web checkout opens a Stripe-hosted session via /api/checkout; the IAP rail
+// shows a store notice until the native purchase bridge is wired.
+//   isAuthenticated → gate: Stripe checkout requires a signed-in user.
+//   onRequireAuth() → called when an unauthenticated user clicks a paid CTA.
 
-export function PricingPanel({ platform = "web", currentPlan = "free", onCheckout }) {
+export function PricingPanel({ platform = "web", currentPlan = "free", isAuthenticated = false, onRequireAuth }) {
   const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(null); // id of the item currently starting checkout
   const rail = subscriptionRail(platform);
   const store = storeName(platform);
 
-  const handleSubscribe = (plan) => {
-    if (onCheckout?.(plan.id, "subscription", rail)) return;
-    setNotice(
-      rail === "iap"
-        ? `${plan.label} subscriptions will be available via ${store} at launch.`
-        : `${plan.label} checkout launches soon — secure payments are being switched on.`
-    );
+  const goStripe = async (item, payload) => {
+    if (!isAuthenticated) { onRequireAuth?.(); return; }
+    setNotice("");
+    setBusy(item.id);
+    const res = await createCheckoutSession(payload);
+    if (res?.url) { window.location.assign(res.url); return; } // leaving the page
+    setBusy(null);
+    setNotice(res?.error || "Couldn't start checkout — please try again.");
   };
 
-  const handlePack = (pack) => {
-    if (onCheckout?.(pack.id, "pack", "stripe")) return;
-    setNotice("API credit packs launch soon — manage them from the web dashboard.");
+  const handleSubscribe = (plan) => {
+    if (rail === "iap") {
+      setNotice(`${plan.label} subscriptions will be available via ${store} at launch.`);
+      return;
+    }
+    goStripe(plan, { plan: plan.id });
   };
+
+  const handlePack = (pack) => goStripe(pack, { pack: pack.id });
 
   return (
     <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
@@ -236,9 +246,9 @@ export function PricingPanel({ platform = "web", currentPlan = "free", onCheckou
                 ))}
               </ul>
               {plan.cta ? (
-                <button onClick={() => handleSubscribe(plan)}
-                  className={`mono-font text-[10px] uppercase tracking-widest px-4 py-2.5 transition ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border border-stone-700 text-stone-700 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900"}`}>
-                  {rail === "iap" ? `${plan.cta} · ${store}` : plan.cta}
+                <button onClick={() => handleSubscribe(plan)} disabled={busy === plan.id}
+                  className={`mono-font text-[10px] uppercase tracking-widest px-4 py-2.5 transition disabled:opacity-50 disabled:cursor-wait ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border border-stone-700 text-stone-700 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900"}`}>
+                  {busy === plan.id ? "Starting…" : rail === "iap" ? `${plan.cta} · ${store}` : plan.cta}
                 </button>
               ) : (
                 <div className="mono-font text-[10px] uppercase tracking-widest text-stone-400 px-4 py-2.5 text-center border border-dashed border-stone-300">
@@ -265,9 +275,9 @@ export function PricingPanel({ platform = "web", currentPlan = "free", onCheckou
               </div>
               <p className="text-sm text-stone-800">{pack.credits}</p>
               <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500 mb-3">{pack.unit}</p>
-              <button onClick={() => handlePack(pack)}
-                className="w-full mono-font text-[10px] uppercase tracking-widest border border-stone-700 text-stone-700 px-4 py-2 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition">
-                Buy credits
+              <button onClick={() => handlePack(pack)} disabled={busy === pack.id}
+                className="w-full mono-font text-[10px] uppercase tracking-widest border border-stone-700 text-stone-700 px-4 py-2 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition disabled:opacity-50 disabled:cursor-wait">
+                {busy === pack.id ? "Starting…" : "Buy credits"}
               </button>
             </div>
           ))}
