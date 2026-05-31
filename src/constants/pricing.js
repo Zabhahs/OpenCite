@@ -4,7 +4,7 @@
 // entitlement logic live server-side in api/_shared/plans.js (the SSOT the webhook,
 // checkout, and search middleware read). This module is presentation ONLY — it never
 // gates access. Keep the figures below in sync with plans.js when they change:
-//   free 1,000/mo (1,500 verified student) · student $5 → 15,000 · pro $10 → 30,000
+//   free 20/mo (verification unlocks the $5 plan, no free bump)· student $5 → 500 · pro $10 → 1,000
 //   packs $10/10k · $50/60k · $200/300k
 //
 // `rail` encodes HOW each item is sold so the CTA can route correctly:
@@ -22,11 +22,10 @@ export const SUBSCRIPTION_PLANS = [
     price: "$0",
     cadence: "forever",
     tagline: "Casual research",
-    credits: "1,000 searches / month",
+    credits: "20 searches / month",
     sources: `${SOURCE_COUNT.core} core databases`,
     features: [
-      "1,000 searches every month",
-      "1,500 / month for verified students",
+      "20 searches every month",
       "Core scholarly databases",
       "Saved library + search history sync",
     ],
@@ -38,11 +37,11 @@ export const SUBSCRIPTION_PLANS = [
     price: "$5",
     cadence: "/ month",
     tagline: "Students & early researchers",
-    credits: "15,000 searches / month",
+    credits: "500 searches / month",
     sources: `All ${SOURCE_COUNT.all} databases`,
     requiresVerification: true,
     features: [
-      "15,000 searches every month",
+      "500 searches every month",
       `All ${SOURCE_COUNT.all} databases`,
       "Requires valid student verification",
       "Everything in Free",
@@ -55,11 +54,11 @@ export const SUBSCRIPTION_PLANS = [
     price: "$10",
     cadence: "/ month",
     tagline: "Power users & professionals",
-    credits: "30,000 searches / month",
+    credits: "1,000 searches / month",
     sources: `All ${SOURCE_COUNT.all} databases`,
     highlight: true,
     features: [
-      "30,000 searches every month",
+      "1,000 searches every month",
       `All ${SOURCE_COUNT.all} databases`,
       "Priority rate limits",
       "Everything in Student, no verification",

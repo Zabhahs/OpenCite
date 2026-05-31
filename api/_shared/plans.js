@@ -16,10 +16,12 @@
 
 export const CORE_SOURCE_IDS = ["OPENALEX", "CROSSREF", "DOAJ", "CURATED"];
 
-// Free tier monthly allowance, and the bumped allowance once a free user verifies
-// as a student (no paid subscription required — just verification).
-export const FREE_MONTHLY_GRANT = 1000;
-export const FREE_STUDENT_MONTHLY_GRANT = 1500;
+// Free tier monthly allowance. Verification on the free tier does NOT bump the
+// allowance — it only unlocks the $5 Student subscription (500/mo). Kept as a
+// named constant (equal to free) so a free-student bump can be re-introduced
+// later by changing one number.
+export const FREE_MONTHLY_GRANT = 20;
+export const FREE_STUDENT_MONTHLY_GRANT = 20;
 
 // freeBelowBand: a query whose coverage band is at/below this is charged 0 — a
 // half-blind answer isn't a sellable result (ties to coverage.coverageMultiplier,
@@ -38,7 +40,7 @@ export const PLANS = {
     id: "student",
     label: "Student",
     tier: "all",
-    monthlyGrant: 15000,
+    monthlyGrant: 500,
     creditCost: 1,
     rateLimit: { windowSeconds: 60, max: 60 },
     freeBelowBand: "limited",
@@ -50,7 +52,7 @@ export const PLANS = {
     id: "pro",
     label: "Pro",
     tier: "all",
-    monthlyGrant: 30000,
+    monthlyGrant: 1000,
     creditCost: 1,
     rateLimit: { windowSeconds: 60, max: 120 },
     freeBelowBand: "limited",
