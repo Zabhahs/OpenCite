@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx tailwindcss -i ./src/input.css -o ./public/output.css --minify && vite build",
+    "build": "npx prisma migrate deploy && npx tailwindcss -i ./src/input.css -o ./public/output.css --minify && vite build",
     "preview": "vite preview",
     "postinstall": "npx prisma generate"
   },
