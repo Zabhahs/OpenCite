@@ -53,7 +53,12 @@ function OpenCITE() {
   const lib = useLibrary();
   const [filterState, setFilterState] = useState({});
   const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
-  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, settings.semanticSearch);
+  // v.31 — live Lexical↔Semantic fusion weight. Drives reranking immediately; persisted
+  // to settings only on slider commit (avoids per-tick API/localStorage spam, §3).
+  const [rrfWeight, setRrfWeight] = useState(settings.rrfSemanticWeight ?? 0.4);
+  // Keep the live value in sync when settings load / sync from DB.
+  useEffect(() => { setRrfWeight(settings.rrfSemanticWeight ?? 0.4); }, [settings.rrfSemanticWeight]);
+  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, settings.semanticSearch, rrfWeight);
   const effectiveStates = rerankedStates || sectionStates;
   const filteredSections = useFilters(effectiveStates, filterState);
 
@@ -242,6 +247,9 @@ function OpenCITE() {
             isEnabled={isEnabled}
             onToggle={toggleAdapter}
             admin={admin}
+            rrfWeight={rrfWeight}
+            onRrfWeightChange={setRrfWeight}
+            onRrfWeightCommit={(v) => saveSettings({ ...settings, rrfSemanticWeight: v })}
           />
         )}
 

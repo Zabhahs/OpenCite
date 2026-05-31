@@ -300,7 +300,7 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
 // ---------- SettingsPanel ----------
 // v.19: accepts admin prop — shows debug section when true
 
-export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle, admin }) {
+export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle, admin, rrfWeight, onRrfWeightChange, onRrfWeightCommit }) {
   const s = settings;
   const upd = (patch) => onSave({ ...s, ...patch });
 
@@ -441,6 +441,57 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="pt-4 border-t border-stone-300">
+          {(() => {
+            const w = rrfWeight ?? 0.4;
+            const pct = Math.round(w * 100);
+            const on = !!s.semanticSearch;
+            return (
+              <>
+                <div className="flex items-baseline justify-between mb-2">
+                  <label className="mono-font text-xs uppercase tracking-wider text-stone-700">Relevance balance</label>
+                  <button
+                    onClick={() => { onRrfWeightChange(0.4); onRrfWeightCommit(0.4); }}
+                    className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition underline"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <p className="text-xs text-stone-600 mb-3">
+                  Drag toward Lexical for pure keyword (BM25F) ranking, toward Semantic for pure
+                  embedding-similarity ranking. The default favours keyword matching.
+                  Only takes effect when Semantic search is on.
+                </p>
+                <div className={on ? "" : "opacity-50 pointer-events-none"}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={pct}
+                    disabled={!on}
+                    onChange={e => onRrfWeightChange(Number(e.target.value) / 100)}
+                    onPointerUp={e => onRrfWeightCommit(Number(e.target.value) / 100)}
+                    onKeyUp={e => onRrfWeightCommit(Number(e.target.value) / 100)}
+                    onTouchEnd={e => onRrfWeightCommit(Number(e.target.value) / 100)}
+                    className="w-full accent-stone-900 cursor-pointer"
+                  />
+                  <div className="flex justify-between mt-1 mb-2">
+                    <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Lexical</span>
+                    <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Semantic</span>
+                  </div>
+                  <p className="mono-font text-[10px] text-stone-700 text-center">
+                    Lexical {100 - pct} · {pct} Semantic
+                  </p>
+                </div>
+                {!on && (
+                  <p className="text-xs text-stone-500 mt-2">Enable Semantic search to use this.</p>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <div className="pt-4 border-t border-stone-300">

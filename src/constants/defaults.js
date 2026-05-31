@@ -38,5 +38,9 @@ export const DEFAULT_SETTINGS = {
   // When false (default): adapters query content fields only (title/abstract/keywords),
   // so a query like "memon" no longer returns papers merely authored by someone named Memon.
   // When true: adapters revert to author-inclusive / all-field search.
+  rrfSemanticWeight: 0.4,
+  // RRF fusion weight for the Lexical↔Semantic slider when semanticSearch is on.
+  // 0.0 = pure lexical (BM25F), 1.0 = pure semantic (embeddings).
+  // Default 0.4 reproduces the hardcoded 0.6/0.4 balance.
   authorSearch: false,
 };
