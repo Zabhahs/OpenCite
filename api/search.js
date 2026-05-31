@@ -47,11 +47,12 @@ import { toPublicResult } from "./_shared/publicResult.js";
 import { toDebugResult } from "./_shared/debugResult.js";
 import { computeCoverage } from "./_shared/coverage.js";
 import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS, FORMATS } from "./_shared/apiContract.js";
-import { resolveApiKey } from "./_shared/apiAuth.js";
+import { resolveApiKey, resolveSessionAdmin } from "./_shared/apiAuth.js";
 import { allowedSourceIds } from "./_shared/plans.js";
 import { checkRateLimit } from "./_shared/ratelimit.js";
 import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
 import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
+import { serverInjectedKeys } from "./_shared/serverKeys.js";
 
 // DRY-2: the server-safe set is DERIVED from the registry — `capability.serverSafe`
 // lives next to each adapter's transport code, not hardcoded here.
@@ -119,7 +120,10 @@ export default async function handler(req, res) {
 
   // 1. Identity — fail-closed. Retires the old OPENCITE_API_KEY endpoint gate; auth
   // is now per-identity (apiAuth maps x-api-key/?key= → billing identity, or null).
-  const identity = await resolveApiKey(req);
+  // Fallback: no API key but an allowlisted Auth.js admin session → admin identity
+  // (cost 0, debug/simple unlocked) so the browser admin console works without a key.
+  // Non-admin sessions stay null → standard 401 (endpoint remains key-only otherwise).
+  const identity = (await resolveApiKey(req)) || (await resolveSessionAdmin(req));
   if (!identity) {
     return sendJson(res, 401, { error: "Invalid or missing API key." });
   }
@@ -132,6 +136,15 @@ export default async function handler(req, res) {
   // Origin-revealing debug — SERVER-DERIVED gate. A non-admin ?debug=1 is treated as
   // absent (silent no-op): standard origin-blind cards, no telemetry, normal cache.
   const debug = !!identity.admin && isTruthy(firstParam(req.query?.debug));
+
+  // v0.36 DIAGNOSTIC — DEVELOPER-ONLY raw-pipeline mode. Same SERVER-DERIVED admin gate
+  // as debug: a non-admin ?simple=1 is a silent no-op (falls through to the production
+  // pipeline). Simple mode runs the SAME fan-out, then SKIPS dedup/score/confidence-gate/
+  // coverage and returns the raw merged pool in fan-out order with `source` VISIBLE — so
+  // we can tell whether 403s/timeouts/poor relevance originate upstream (adapter) or in
+  // our post-retrieve pipeline. Bypasses cache (always fresh). Admin cost is 0, so no
+  // settle/refund applies. NOT a user feature — gate or remove before any public release.
+  const simpleMode = !!identity.admin && isTruthy(firstParam(req.query?.simple));
 
   const startMs = Date.now();
 
@@ -172,13 +185,23 @@ export default async function handler(req, res) {
     });
   }
 
+  // v0.34: env keys for the three keyed CC0 sources — lifted to a const so the same
+  // object is reused in settings (server branch injection) AND the presence-guard below.
+  const envKeys = serverInjectedKeys();
+
+  // v0.34: drop a keyed source from eligibility when its env key is unset — prevents
+  // it from counting as a "failed adapter" (no false coverage-band drop) and lets
+  // Europeana/DPLA/Smithsonian auto-activate the moment their env var is set (no redeploy).
+  const KEYED_ENV = { EUROPEANA: "europeanaKey", DPLA: "dplaKey", SMITHSONIAN: "smithsonianKey" };
   const adapters = ADAPTERS.filter(
     (a) => tierIds.has(a.id) && selectedIds.includes(a.id)
+         && (!KEYED_ENV[a.id] || !!envKeys[KEYED_ENV[a.id]])
   );
 
   // Settings — defaults + per-request overrides.
   const settings = {
     ...DEFAULT_SETTINGS,
+    ...envKeys,   // v0.34: backend env keys for keyed CC0 sources (server branch)
     authorSearch: isTruthy(firstParam(req.query?.authors)),
     crossrefEmail: firstParam(req.query?.mailto) || process.env.OPENCITE_MAILTO || DEFAULT_SETTINGS.crossrefEmail,
   };
@@ -206,7 +229,7 @@ export default async function handler(req, res) {
     authors: settings.authorSearch,
     format,
   });
-  if (format === "json" && !debug) {
+  if (format === "json" && !debug && !simpleMode) {
     const cached = await readCache(ck);
     if (cached) {
       const charge = await chargeForBand(identity, cached.coverage);
@@ -264,9 +287,39 @@ export default async function handler(req, res) {
       })
     );
 
+    const allRaw = perAdapter.flat();
+
+    // v0.36 SIMPLE MODE — raw merged pool, in fan-out order. SKIPS score/dedup/gate/
+    // coverage entirely. `source` is NOT stripped (we need to know which adapter produced
+    // what). No `_score`, no `inferred-*`, no anonymized id. perAdapter telemetry +
+    // failedAdapters isolate adapter-level failures (403/timeout) from pipeline ones.
+    // Admin-only + cost 0, so we return straight out — no settle, no cache write.
+    if (simpleMode) {
+      const rawResults = allRaw.map((r) => ({
+        id: r.id,
+        title: r.title,
+        url: r.url,
+        source: r.source,
+        year: r.year || null,
+        authorCount: Array.isArray(r.authors) ? r.authors.length : null,
+        citedBy: r.citedBy ?? null,
+      }));
+      return sendJson(res, 200, {
+        query: q,
+        terms,
+        simpleMode: true,
+        pipeline: "raw",
+        count: rawResults.length,
+        perAdapter: adapterStats,
+        failedAdapters: failedAdapters.map((a) => a.id),
+        tookMs: Date.now() - startMs,
+        results: rawResults,
+        note: "Unprocessed adapter output, in fan-out order. Developer diagnostic only.",
+      });
+    }
+
     // Score once over the full candidate set so IDF is consistent, then dedup keeping
     // the highest-scored copy of each work (DOI first, then same-paper title fingerprint).
-    const allRaw = perAdapter.flat();
     const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
     const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
     const afterDoi = dedupHighestScore(scored, doiKey);

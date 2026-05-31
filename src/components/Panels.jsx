@@ -309,7 +309,8 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
       <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700 mb-4">Settings</h2>
       <div className="space-y-4">
         {[
-          ["europeanaKey", "Europeana API key", "required for Europeana", "Free + instant. Register at api.europeana.eu."],
+          // v0.34 - Europeana key moved to the "Extension API keys" block below (transitional
+          // per-user fallback). This top block is for the always-present optional keys.
           ["openAlexKey", "OpenAlex API key", "optional", "Works without a key (rate-limited). Free 30-second signup at openalex.org/settings/api."],
           ["crossrefEmail", "Email for Crossref polite pool", "optional, faster + nicer", "Crossref lets you opt into a faster lane with just your email — no signup."],
         ].map(([field, label, note, help]) => (
@@ -327,11 +328,13 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
 
         <div className="pt-4 border-t border-stone-300">
           <p className="mono-font text-xs uppercase tracking-wider text-stone-700 mb-3">Extension API keys</p>
+          {/* v0.34 — Smithsonian/DPLA/Rijksmuseum keys removed: those sources are now
+              backend-keyed (env) or keyless. CORE/NDLI keep per-user keys (TOS-items.md D7/D8).
+              Europeana is TRANSITIONAL: a per-user key here is a client fallback until the
+              project-level EUROPEANA_API_KEY env is provisioned (then remove this field). */}
           <div className="space-y-3">
             {[
-              ["smithsonianKey", "Smithsonian API key", "Free, instant. Sign up at api.data.gov/signup."],
-              ["dplaKey", "DPLA API key", "Free, request via email at pro.dp.la."],
-              ["rijksKey", "Rijksmuseum API key", "Free, instant. Register a Rijksstudio account at rijksmuseum.nl."],
+              ["europeanaKey", "Europeana API key", "Optional — free + instant at api.europeana.eu. Used as a fallback until OpenCITE provisions a shared key; leave blank if Europeana already returns results."],
               ["coreKey", "CORE API key", "Free + instant at core.ac.uk/services/api. Unlocks 300M+ OA records including 300+ Indian repositories."],
               ["ndliKey", "NDLI API key", "Free at ndl.iitkgp.ac.in — register, then copy key from My Account. India's national digital library (90M+ items)."],
             ].map(([field, label, help]) => (

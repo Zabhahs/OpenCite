@@ -14,6 +14,10 @@ import { proxiedFetch } from "../_shared/proxy.js";
 // Key passed as ?api-key= query param. No public CORS headers → proxiedFetch required.
 // Pagination: start/size (offset/limit). Response: message.total + message.records[].
 // Docs: https://ndl.iitkgp.ac.in/document/static/ndl-api-documentation.pdf
+//
+// v0.34 — serverSafe is intentionally ABSENT (≡ false) per TOS-items.md D8: NDLI's terms
+// restrict programmatic access to individual, per-user credentials, so it is excluded from
+// the /api/search server product + MCP. needsKey stays true (intentional per-user key).
 export const NDLI_ADAPTER = {
   id: "NDLI", name: "NDLI",
   tagline: "90M+ items from 350+ Indian institutions · history, literature & arts",

@@ -18,8 +18,16 @@
 import { prisma } from "./prisma.js";
 import { hashApiKey } from "./crypto.js";
 import { getPlan } from "./plans.js";
+import { getSession } from "./auth.js";
 
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+// Server-side admin allowlist. Reads the SAME VITE_ADMIN_EMAILS that gates the client
+// admin console UI (src/lib/admin.js) — serverless functions can read VITE_-prefixed env
+// at runtime; the prefix only governs client-bundle inlining. ADMIN_EMAILS (unprefixed) is
+// accepted as a fallback name. Comma-separated, lowercased.
+const ADMIN_EMAILS = (process.env.VITE_ADMIN_EMAILS || process.env.ADMIN_EMAILS || "")
+  .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 // Extract the presented key from header or ?key= (header preferred).
 export function presentedKey(req) {
@@ -64,4 +72,21 @@ export async function resolveApiKey(req) {
     plan: getPlan(row.user?.plan),
     admin: row.user?.plan === "admin",
   };
+}
+
+// Session-based admin break-glass for the browser admin console (Score Explainer / Gold-Set
+// Harness). /api/search is API-key-only for normal, billed traffic — but those tools run from
+// the signed-in admin's browser with a session cookie and no API key. This grants an ADMIN
+// identity (plan='admin' → creditCost 0, no rate cap, all-tier, admin:true so debug/simple
+// unlock) when the request carries a valid Auth.js session whose email is in ADMIN_EMAILS
+// (the SAME VITE_ADMIN_EMAILS list that gates the client console UI). A non-admin or anonymous
+// session returns null, so the caller falls through to the standard 401 — sessions never open
+// the metered endpoint for anyone but an allowlisted admin. The real userId is preserved so
+// the (cost-0) traffic stays attributable.
+export async function resolveSessionAdmin(req) {
+  if (!ADMIN_EMAILS.length) return null;
+  const user = await getSession(req);
+  const email = user?.email?.toLowerCase();
+  if (!email || !ADMIN_EMAILS.includes(email)) return null;
+  return { userId: user.id ?? null, keyId: "session-admin", plan: getPlan("admin"), admin: true };
 }

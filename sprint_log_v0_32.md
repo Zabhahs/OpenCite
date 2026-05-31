@@ -351,4 +351,26 @@ breakdown (v0.33 F1).
 
 **⚠️ DEPLOY-TIME OPS (breaking change — intended):** today prod `/api/search` is **open** (no key needed); after this deploy it is **fail-closed (401 without a valid key)**. Consequences: (1) the **website UI is unaffected** — verified it runs adapters client-side and never calls `/api/search`; (2) the **MCP server / any keyless caller starts getting 401** (this is the billing-launch behavior, per `mcp/README.md`); (3) for the **admin path in prod** either set `OPENCITE_API_KEY` (master break-glass) or seed an `admin` user+key. R8 (anonymous leak) holds: auth fails closed.
 
-*End v0.32 sprint. WS-A + WS-B code complete; staging/promotion gated on approval. Admin console UI (WS-C) is v0.33.*
+## 12. Live prod verification (2026-05-31) — ALL ACCEPTANCE CRITERIA PASS
+
+Deployed to prod (commit `c78bbe7`, then redeployed `dpl_B7FW1sDN…` to pick up the rotated pepper).
+Verified directly against `https://citation.today/api/search`:
+
+| Criterion | Result |
+|---|---|
+| Anonymous / invalid key → 401 | ✅ (fail-closed live; confirms new code — old gate w/o `OPENCITE_API_KEY` would've 200'd) |
+| Customer key authenticates + meters | ✅ free key → 200; `meta.creditsCharged:1` (coverage "full"), `meta.balance:98.05` |
+| Ledger debit matches prorated charge | ✅ exact: 100 − 0.95 ("high" search) − 1 ("full" search) = 98.05 |
+| Insufficient balance → 402 | ✅ balance 0.5 → 402, **no charge** (pre-auth gate; balance unchanged) |
+| Source tier enforced | ✅ free key → core only ("high"/"full"); admin → all 22 adapters |
+| Admin: 0-cost, all-tier, debug | ✅ `creditsCharged:0`, 22 adapters, `debug=1` → source-revealing cards + full `meta.debug` (per-adapter ms, dedup trace, coverage internals) |
+| Origin-blind invariant (non-admin debug=1) | ✅ `probe-blind-check` PASS: `meta.debug` absent, no `source` field |
+| Coverage proration | ✅ observed "full"→1, "high"→0.95 live |
+
+Not exercised live (verified by code/logic): refund-on-throw R1 (can't force a live throw); `freeBelowBand "limited"→0`; rate-limit 429 + cache (KV/UPSTASH **not configured in prod** → both fail-open no-ops, as designed — credits are the durable cap).
+
+**Prod environment facts discovered:** `OPENCITE_API_KEY` (master) is **NOT set** in Vercel → the only admin path is a `plan='admin'` user. `API_KEY_PEPPER` **was** set; **rotated** to a fresh value (safe — 0 real keys existed) for Production via Vercel CLI (Preview left unset — unused; CLI stdin quirk). KV/Stripe envs audited.
+
+**Left in prod:** one admin identity `admin-test@opencite.internal` (`plan='admin'`, key prefix `oc_live_GATA`) — provides the otherwise-absent admin/debug access; key handed to Shahbaz. Test customer `free-test` was seeded, used, and **deleted**. No real customer rows touched.
+
+*End v0.32 sprint. WS-A + WS-B shipped AND verified in prod. Admin console UI (WS-C) is v0.33.*

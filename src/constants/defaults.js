@@ -18,14 +18,18 @@ export const DEFAULT_CURATED_JOURNALS = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  europeanaKey: "",
+  // v0.34 — DPLA/Smithsonian/Rijksmuseum keys removed: those sources are now
+  // backend-keyed (env vars, via api/_shared/serverKeys.js) or keyless (Rijksmuseum).
+  // Any stale values in existing users' saved settings are inert (no adapter reads them).
   openAlexKey: "",
   crossrefEmail: "",
   s2Key: "",
-  smithsonianKey: "",
-  dplaKey: "",
-  rijksKey: "",
-  // v.29 — South Asia adapters
+  // TRANSITIONAL (v0.34): Europeana keeps a per-user key as a CLIENT FALLBACK — the
+  // browser calls api.europeana.eu directly with this until the project-level
+  // EUROPEANA_API_KEY env is provisioned; then it flips to backend-only like the others.
+  // TODO(future sprint): drop europeanaKey once that env key lands.
+  europeanaKey: "",
+  // CORE/NDLI keep per-user keys — the one intentional client-side key set (TOS-items.md D7/D8).
   coreKey: "",   // CORE.ac.uk — free at core.ac.uk/services/api
   ndliKey: "",   // NDLI — free at ndl.iitkgp.ac.in
   curatedJournals: DEFAULT_CURATED_JOURNALS,

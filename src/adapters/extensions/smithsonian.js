@@ -8,15 +8,23 @@ export const SMITHSONIAN_ADAPTER = {
   region: ["global", "north-america"], archiveType: ["museum", "research-repository"],
   contentType: ["visual", "primary-source", "3d"],
   color: { bg: "bg-blue-900", text: "text-blue-50" },
-  needsKey: true, keyName: "smithsonianKey", keyLabel: "Smithsonian API key",
-  keyHelp: "Free key from api.data.gov/signup — instant. Used for Smithsonian Open Access.",
+  needsKey: false,
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "key",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 18000000, // ~18M searchable records, si.edu
   },
   search: async (query, settings, opts = {}) => {
-    if (!settings.smithsonianKey) throw new Error("Smithsonian needs an api.data.gov key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
+    if (typeof window !== "undefined") {
+      // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
+      const r = await fetch(`/api/search/smithsonian?q=${encodeURIComponent(query)}&offset=${offset}`);
+      if (!r.ok) throw new Error(`Smithsonian ${r.status}`);
+      return await r.json();                       // { results, hasMore } — already normalized server-side
+    }
+    // SERVER (the api/search/smithsonian route OR the /api/search fan-out): key injected by caller.
+    if (!settings.smithsonianKey) throw new Error("SMITHSONIAN_API_KEY not configured");  // backend config error
     const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const url = `https://api.si.edu/openaccess/api/v1.0/search?q=${encodeURIComponent(query)}&start=${offset}&rows=${rows}&api_key=${encodeURIComponent(settings.smithsonianKey)}`;
     const r = await fetch(url);

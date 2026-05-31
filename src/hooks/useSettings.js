@@ -20,7 +20,7 @@ const apiFetch = (method, body) => apiCall("/api/settings", method, body);
 
 const LEGACY_KEYS = [
   "europeanaKey", "openAlexKey", "openAlexEmail", "crossrefEmail",
-  "s2Key", "smithsonianKey", "dplaKey", "rijksKey",
+  "s2Key", "smithsonianKey", "dplaKey",
   "curatedJournals", "enabledSources", "viewMode",
 ];
 
@@ -31,9 +31,13 @@ function migrateLegacyKeys() {
     const legacyEmail   = localStorage.getItem("openAlexEmail")  || "";
     const crossrefEmail = localStorage.getItem("crossrefEmail")  || legacyEmail || "";
     const s2Key          = localStorage.getItem("s2Key")          || "";
-    const smithsonianKey = localStorage.getItem("smithsonianKey") || "";
-    const dplaKey        = localStorage.getItem("dplaKey")        || "";
-    const rijksKey       = localStorage.getItem("rijksKey")       || "";
+    // v0.34: DPLA/Smithsonian are backend-keyed (env via serverKeys.js) — their user
+    // keys are no longer read client-side, so they're not migrated into namespaced
+    // settings. They stay in LEGACY_KEYS only so any stale bare localStorage entry is
+    // purged. europeanaKey IS still migrated below — it drives the Europeana client
+    // fallback (browser → api.europeana.eu direct) until the project-level
+    // EUROPEANA_API_KEY env is provisioned. TODO(future sprint): drop europeanaKey once
+    // that env key lands (adapter, defaults, Settings field, and this migration).
 
     let enabledSources = {};
     try {
@@ -49,7 +53,7 @@ function migrateLegacyKeys() {
 
     const viewMode = localStorage.getItem("viewMode") || "unified";
 
-    const migrated = { europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, smithsonianKey, dplaKey, rijksKey, curatedJournals, enabledSources, viewMode };
+    const migrated = { europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, curatedJournals, enabledSources, viewMode };
     storage.set("settings", migrated);
 
     for (const key of LEGACY_KEYS) {

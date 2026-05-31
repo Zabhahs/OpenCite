@@ -33,23 +33,25 @@ export function useSearch(settings, isEnabled) {
 
     const initial = {};
     activeAdapters.forEach(a => {
-      initial[a.id] = { loading: true, results: null, error: null, hasMore: false, loadingMore: false, offset: 0 };
+      // pageToken: generic opaque token for token-paginated adapters; undefined for offset-based ones.
+      initial[a.id] = { loading: true, results: null, error: null, hasMore: false, loadingMore: false, offset: 0, pageToken: undefined };
     });
     setSectionStates(initial);
 
     activeAdapters.forEach(async (adapter) => {
       try {
-        let results, hasMore;
+        let results, hasMore, nextPageToken;
 
         if (isMulti) {
           // C3 — run all terms in parallel per adapter, then merge + dedup within the batch
           const batches = await Promise.all(
-            terms.map(t => runSearch(adapter, t, settings, { offset: 0 }))
+            terms.map(t => runSearch(adapter, t, settings, { offset: 0, pageToken: undefined }))
           );
           results = dedupFirstWins(batches.flatMap(b => b.results || []), doiKey, new Set());
           hasMore = false; // load more not supported for multi-keyword
+          nextPageToken = undefined;
         } else {
-          ({ results, hasMore } = await runSearch(adapter, terms[0], settings, { offset: 0 }));
+          ({ results, hasMore, nextPageToken } = await runSearch(adapter, terms[0], settings, { offset: 0, pageToken: undefined }));
         }
 
         // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
@@ -68,12 +70,13 @@ export function useSearch(settings, isEnabled) {
 
         setSectionStates(prev => ({
           ...prev,
-          [adapter.id]: { loading: false, results: filtered, lowConfidence, error: null, hasMore, loadingMore: false, offset: filtered.length }
+          // pageToken: stored generically; undefined for offset-based adapters (harmless).
+          [adapter.id]: { loading: false, results: filtered, lowConfidence, error: null, hasMore, loadingMore: false, offset: filtered.length, pageToken: nextPageToken }
         }));
       } catch (err) {
         setSectionStates(prev => ({
           ...prev,
-          [adapter.id]: { loading: false, results: null, error: err.message || "Search failed", hasMore: false, loadingMore: false, offset: 0 }
+          [adapter.id]: { loading: false, results: null, error: err.message || "Search failed", hasMore: false, loadingMore: false, offset: 0, pageToken: undefined }
         }));
       }
     });
@@ -90,7 +93,12 @@ export function useSearch(settings, isEnabled) {
     const terms = query.split(";").map(s => s.trim()).filter(Boolean);
 
     try {
-      const { results: newResults, hasMore } = await runSearch(adapter, terms[0], settings, { offset: current.offset });
+      // Thread both offset (for offset-based adapters) and pageToken (for token-based adapters,
+      // e.g. Rijksmuseum) into the opts object. Adapters that don't use pageToken ignore it.
+      const { results: newResults, hasMore, nextPageToken } = await runSearch(
+        adapter, terms[0], settings,
+        { offset: current.offset, pageToken: current.pageToken }
+      );
 
       // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
       const deduped = dedupFirstWins(
@@ -107,7 +115,9 @@ export function useSearch(settings, isEnabled) {
       setSectionStates(prev => {
         const existing = prev[adapterId];
         const combined = [...(existing.results || []), ...filtered];
-        return { ...prev, [adapterId]: { ...existing, results: combined, hasMore, loadingMore: false, offset: combined.length } };
+        // Advance offset for offset-based adapters; store updated pageToken for token-based ones.
+        // Both fields coexist safely — offset-based adapters will have nextPageToken=undefined.
+        return { ...prev, [adapterId]: { ...existing, results: combined, hasMore, loadingMore: false, offset: combined.length, pageToken: nextPageToken } };
       });
     } catch (err) {
       setSectionStates(prev => ({

@@ -22,15 +22,23 @@ export const DPLA_ADAPTER = {
   region: ["north-america"], archiveType: ["aggregator", "library"],
   contentType: ["textual", "visual", "primary-source", "manuscript"],
   color: { bg: "bg-indigo-900", text: "text-indigo-50" },
-  needsKey: true, keyName: "dplaKey", keyLabel: "DPLA API key",
-  keyHelp: "Free 32-char key. Email pro.dp.la to request — typically same-day.",
+  needsKey: false,
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "key",
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    serverSafe: true,
+    corpusSize: 10000000, // ~10M items, dp.la
   },
   search: async (query, settings, opts = {}) => {
-    if (!settings.dplaKey) throw new Error("DPLA needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
+    if (typeof window !== "undefined") {
+      // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
+      const r = await fetch(`/api/search/dpla?q=${encodeURIComponent(query)}&offset=${offset}`);
+      if (!r.ok) throw new Error(`DPLA ${r.status}`);
+      return await r.json();                       // { results, hasMore } — already normalized server-side
+    }
+    // SERVER (the api/search/dpla route OR the /api/search fan-out): key injected by caller.
+    if (!settings.dplaKey) throw new Error("DPLA_API_KEY not configured");  // backend config error
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const doiMatch = query.match(/^10\.\d{4,}\/(.+)$/);

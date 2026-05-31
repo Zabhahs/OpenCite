@@ -12,6 +12,11 @@ import { proxiedFetch } from "../_shared/proxy.js";
 // Key passed as ?api_key= query param (Authorization: Bearer not forwarded by proxy).
 // Pagination: offset/limit. totalHits returned.
 // Docs: https://api.core.ac.uk/docs/v3
+//
+// v0.34 — serverSafe is intentionally ABSENT (≡ false) per TOS-items.md D7: CORE is
+// web/app human-only with a per-user key, and is excluded from the /api/search server
+// product + MCP. needsKey stays true — this is one of the two intentional per-user keys
+// remaining (the other is NDLI). Do not add serverSafe/corpusSize without revisiting D7.
 export const CORE_ADAPTER = {
   id: "CORE", name: "CORE",
   tagline: "300M+ open-access records · aggregates 300+ Indian repositories & South Asian journals",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { isAdmin } from "../lib/admin.js";
 import { ScoreExplainer } from "./admin/ScoreExplainer.jsx";
 import { GoldSetHarness } from "./admin/GoldSetHarness.jsx";
 
@@ -9,12 +10,13 @@ export function AdminConsole() {
   const { user, status } = useAuth();
   const [activeTab, setActiveTab] = useState("score-explainer");
 
-  // Check admin status from plan (WS3 identity model: plan='admin').
-  // For now, rely on the Supabase user record; in production, verify via API.
-  const isAdmin = user?.user_metadata?.plan === "admin" ||
-                  (typeof window !== "undefined" && localStorage.getItem("opencite_admin") === "true");
+  // Admin gate — SSOT is the email-based isAdmin() in src/lib/admin.js (VITE_ADMIN_EMAILS),
+  // the SAME gate that controls the ⚗ admin header link + the #/admin/console route in App.jsx.
+  // (Previously this checked user.user_metadata.plan — a Supabase shape this Auth.js app never
+  // populates — so it rejected every account regardless of VITE_ADMIN_EMAILS.)
+  const admin = isAdmin(user);
 
-  if (status !== "authenticated" || !isAdmin) {
+  if (status !== "authenticated" || !admin) {
     return (
       <div className="py-8 text-center border border-red-300 bg-red-50/60 px-4">
         <p className="mono-font text-[11px] uppercase tracking-widest text-red-900">

@@ -182,6 +182,19 @@ second call** (Persistent Identifier Resolver) to get object metadata — a two-
       cross-reference to `TOS-items.md` D7/D8: *web/app human-only, per-user key, excluded from
       `/api/search` + MCP.* CORE/NDLI keep their Settings key fields (`needsKey:true`) — those are the
       one **intentional** per-user keys left.
+- [x] **D.4** Purge dropped keys from the `useSettings` legacy-migration helper too (not just
+      `DEFAULT_SETTINGS`): `rijksKey`, `smithsonianKey`, `dplaKey` removed from the migrated object +
+      `getItem` lines; names retained in `LEGACY_KEYS` so stale bare localStorage entries still get
+      `removeItem`'d.
+- [x] **D.5** Europeana kept as a **TRANSITIONAL client fallback** (decision: restore, not leave dark).
+      WS-A had cut Europeana's client-direct path along with the others, but the project-level
+      `EUROPEANA_API_KEY` env isn't provisioned yet — so without a fallback the source is dark in the
+      browser. Restored: `europeana.js` browser branch now uses the same-origin backend route **only
+      when no user key is set**; with a user key it calls `api.europeana.eu` directly (pre-WS-A
+      behavior). Re-added `europeanaKey` to `DEFAULT_SETTINGS` and the Settings key-field list, and the
+      migration keeps it. **TODO(future sprint):** once `EUROPEANA_API_KEY` lands, remove the fallback
+      branch + `europeanaKey` from defaults, Settings, and the migration — making it backend-only like
+      DPLA/Smithsonian. Search every file for the `TODO(future sprint)` marker.
 
 ---
 

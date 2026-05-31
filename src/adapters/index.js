@@ -124,6 +124,9 @@ export const runSearch = async (adapter, query, settings, opts = {}) => {
 
   const rawResults = Array.isArray(raw) ? raw : (raw.results || []);
   const hasMore = Array.isArray(raw) ? false : !!raw.hasMore;
+  // Pass through the generic nextPageToken field if the adapter returns one.
+  // Offset-based adapters do not set this; it will be undefined and harmless.
+  const nextPageToken = Array.isArray(raw) ? undefined : raw.nextPageToken;
 
   const results = rawResults
     .map(AbstractAdapter.sanitize)
@@ -136,7 +139,7 @@ export const runSearch = async (adapter, query, settings, opts = {}) => {
     log(adapterKey, "parse-ok", { items: results.length, ms: Date.now() - startMs });
   }
 
-  return { results, hasMore };
+  return { results, hasMore, nextPageToken };
 };
 
 export { ADAPTER_CATEGORY };
