@@ -43,6 +43,23 @@ export function meaningfulTerms(terms) {
   return terms.map(t => t.toLowerCase()).filter(t => t.length > 1 && !STOPWORDS.has(t));
 }
 
+// Content-scope predicate — SSOT for "does this result match the query in its CONTENT
+// fields (title/abstract/keywords+subjects)?", using the same fields/tokenization as the
+// BM25F scorer. Used to enforce the author-search-off contract for sources that can only
+// query author-inclusively upstream (e.g. Crossref's query.bibliographic): drop matches
+// that hit on author name alone. A query with no meaningful terms never filters.
+// @param {Object} result
+// @param {string[]} terms  raw query terms (whitespace-split is fine)
+export function hasContentMatch(result, terms) {
+  const words = meaningfulTerms(terms);
+  if (!words.length) return true;
+  const tokens = new Set();
+  for (const f of Object.keys(FIELD_WEIGHTS)) {
+    for (const w of tokenize(fieldText(result, f))) tokens.add(w);
+  }
+  return words.some(w => tokens.has(w));
+}
+
 // Low-confidence gate — SSOT for "loose matches surface only when nothing genuine matched".
 // A meaningful query that scored at least one result > 0 is "genuine": drop every zero-score
 // loose match. When the whole batch scored zero (topic absent from this source), surface its

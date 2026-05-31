@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { hasContentMatch } from "../../lib/scoring.js";
 
 export const CROSSREF_ADAPTER = {
   id: "CROSSREF",
@@ -40,7 +41,7 @@ export const CROSSREF_ADAPTER = {
     if (!r.ok) throw new Error(`Crossref ${r.status}`);
     const data = await r.json();
     const items = data.message?.items || [];
-    const results = items.map((it, i) => {
+    const mapped = items.map((it, i) => {
       const doi = it.DOI || "";
       const title = Array.isArray(it.title) ? it.title[0] : (it.title || "Untitled");
       const authors = (it.author || [])
@@ -74,6 +75,10 @@ export const CROSSREF_ADAPTER = {
         citedBy: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : null,
       };
     });
-    return { results, hasMore: offset + results.length < (data.message?.["total-results"] || 0) };
+    // authorSearch off → enforce content-scope: drop matches that hit on author name
+    // alone (query.bibliographic is author-inclusive). hasMore tracks the raw fetched
+    // window so pagination still advances even when a page is heavily filtered.
+    const results = settings.authorSearch ? mapped : mapped.filter(r => hasContentMatch(r, words));
+    return { results, hasMore: offset + items.length < (data.message?.["total-results"] || 0) };
   }
 };
