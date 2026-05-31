@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS "api_keys" (
   "id"           TEXT NOT NULL,
   "key_hash"     TEXT NOT NULL,
   "key_prefix"   TEXT NOT NULL,
-  "user_id"      TEXT NOT NULL,
+  "user_id"      UUID NOT NULL,  -- matches users.internal_id (native uuid in the live DB)
   "plan"         TEXT NOT NULL DEFAULT 'free',
   "revoked"      BOOLEAN NOT NULL DEFAULT false,
   "created_at"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
