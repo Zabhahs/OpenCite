@@ -38,8 +38,9 @@ architecture in `architecture_report_v0_31.md`.
 
 **Files touched (8):** `SearchControls.jsx` (new) · `App.jsx` · `useSemanticRerank.js` ·
 `useSettings.js` · `defaults.js` · `Panels.jsx` · `scoring.js` · `crossref.js`.  
-**Deferred (T2):** BM25F field-weight sliders + K1/B (need `scoring.js` refactor that also unblocks
-v0.33 F3 tunable playground). Lands as an "Advanced" section in the `SearchControls` disclosure.
+**Deferred (T2) → now a v0.33 task (F3):** BM25F field-weight sliders + K1/B are **tagged to v0.33**
+as feature F3 (Live Tunable Playground); need the `scoring.js` weight-override refactor. Land as an
+"Advanced" section in the `SearchControls` disclosure.
 
 **Independence:** None — worked in isolation, blocks nothing. Done.
 

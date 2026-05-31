@@ -237,10 +237,12 @@ results-gate restructure) stayed in-house.
 - **Author-search-off must be enforced per-adapter**, including client-side filtering for sources
   that can only query author-inclusively upstream.
 
-**Carried forward:** T2 (BM25F field-weight sliders + K1/B) → future log; needs `scoring.js` SSOT
-refactor (also unblocks v0.33 F3 tunable playground). When it lands, it slots into the `SearchControls`
-disclosure as an "Advanced" section. Watch item: if a single slow adapter makes the `resultsReady`
-hold feel laggy, add a soft per-adapter cap so one straggler can't hold the whole list.
+**Carried forward → now a v0.33 task (F3):** T2 (BM25F field-weight sliders + K1/B) is **tagged to
+v0.33** as feature **F3 (Live Tunable Playground)** — see `sprint_log_v0_33.md` (it already credits
+"v0.31 T2"). Needs the `scoring.js` SSOT refactor to accept weight overrides. When it lands it slots
+into the `SearchControls` disclosure as an "Advanced" section. Watch item: if a single slow adapter
+makes the `resultsReady` hold feel laggy, add a soft per-adapter cap so one straggler can't hold the
+whole list.
 
 ---
 

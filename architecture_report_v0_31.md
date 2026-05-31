@@ -147,11 +147,11 @@ v0.31 was **independent** (no dependencies, blocks nothing) and is **done**. Per
   envelope. **This unblocks v0.34** (needs tier-gating) **and v0.33** (consumes the debug envelope).
 - The only v0.30 wire-up still open is **credit *spend* in `search.js`** — v0.32 WS-A is exactly that.
 
-**Carried forward from v0.31:** T2 (BM25F field-weight sliders + K1/B) — deferred; needs a `scoring.js`
-SSOT refactor to accept weight overrides (server behavior unchanged via defaults). Lands as an
-"Advanced" section inside the `SearchControls` disclosure, and also unblocks the v0.33 F3 tuning
-playground. Watch item: if one slow adapter makes the `resultsReady` hold feel laggy, add a soft
-per-adapter cap.
+**Carried forward from v0.31 → tagged to v0.33 (F3):** T2 (BM25F field-weight sliders + K1/B) is now a
+**v0.33 task — feature F3 (Live Tunable Playground)** in `sprint_log_v0_33.md` (which already credits
+"v0.31 T2"). Needs a `scoring.js` SSOT refactor to accept weight overrides (server behavior unchanged
+via defaults). Lands as an "Advanced" section inside the `SearchControls` disclosure. Watch item: if
+one slow adapter makes the `resultsReady` hold feel laggy, add a soft per-adapter cap.
 
 ---
 
