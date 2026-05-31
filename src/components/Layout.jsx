@@ -120,7 +120,7 @@ function AuthButton() {
 
 // ---------- Header ----------
 
-export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick, libraryCount, historyCount }) {
+export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onLogoClick, libraryCount, historyCount }) {
   const [shaking, setShaking] = useState(false);
 
   const handleEagleClick = () => {
@@ -139,6 +139,9 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onLogoClick
           </button>
           <button onClick={onHistory} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ↻ history{historyCount > 0 ? ` (${historyCount})` : ""}
+          </button>
+          <button onClick={onPlans} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
+            ◇ plans
           </button>
           <button onClick={onSettings} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ⚙ settings

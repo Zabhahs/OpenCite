@@ -14,6 +14,8 @@ import {
 import { normalizeRecord, createDedupMap } from "../adapters/_shared/normalize.js";
 import { AbstractAdapter } from "../adapters/_shared/base.js";
 import { getDebugLog, downloadDebugLog, clearDebugLog } from "../lib/log.js";
+import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE } from "../constants/pricing.js";
+import { subscriptionRail, storeName } from "../lib/platform.js";
 
 function toNCR(item) {
   if (item._normalized) return item;
@@ -172,6 +174,116 @@ export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------- PricingPanel ----------
+// Clearly lists the payment options (human subscriptions + machine/API credit packs).
+// Platform-aware CTA: subscriptions route to Stripe on web/desktop and to Apple/Google
+// IAP on native mobile (lib/platform.subscriptionRail); packs are always Stripe. The
+// CTA is a graceful "launching soon" seam until the checkout endpoint + keys are live;
+// pass `onCheckout(id, kind, rail)` returning truthy to take over the click.
+
+export function PricingPanel({ platform = "web", currentPlan = "free", onCheckout }) {
+  const [notice, setNotice] = useState("");
+  const rail = subscriptionRail(platform);
+  const store = storeName(platform);
+
+  const handleSubscribe = (plan) => {
+    if (onCheckout?.(plan.id, "subscription", rail)) return;
+    setNotice(
+      rail === "iap"
+        ? `${plan.label} subscriptions will be available via ${store} at launch.`
+        : `${plan.label} checkout launches soon — secure payments are being switched on.`
+    );
+  };
+
+  const handlePack = (pack) => {
+    if (onCheckout?.(pack.id, "pack", "stripe")) return;
+    setNotice("API credit packs launch soon — manage them from the web dashboard.");
+  };
+
+  return (
+    <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
+      <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700 mb-1">Plans &amp; pricing</h2>
+      <p className="text-xs text-stone-600 mb-5">
+        Search across every open-access database. Upgrade for more monthly searches and the full source library.
+      </p>
+
+      {/* Human subscriptions */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {SUBSCRIPTION_PLANS.map(plan => {
+          const isCurrent = plan.id === currentPlan;
+          return (
+            <div key={plan.id}
+              className={`flex flex-col bg-white p-4 ${plan.highlight ? "border-2 border-stone-900" : "border border-stone-300"}`}>
+              <div className="flex items-baseline justify-between mb-1 gap-2">
+                <span className="display-font font-bold text-lg text-stone-900">{plan.label}</span>
+                {isCurrent
+                  ? <span className="mono-font text-[9px] uppercase tracking-widest bg-amber-200 text-amber-900 px-2 py-0.5">Current</span>
+                  : plan.highlight && <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-900 text-amber-50 px-2 py-0.5">Popular</span>}
+              </div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="display-font font-black text-3xl text-stone-900">{plan.price}</span>
+                <span className="mono-font text-[10px] uppercase tracking-widest text-stone-500">{plan.cadence}</span>
+              </div>
+              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500 mb-3">{plan.tagline}</p>
+              <ul className="space-y-1.5 mb-4 flex-1">
+                {plan.features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-stone-700">
+                    <span className="text-amber-700 mt-0.5 shrink-0">✓</span><span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              {plan.cta ? (
+                <button onClick={() => handleSubscribe(plan)}
+                  className={`mono-font text-[10px] uppercase tracking-widest px-4 py-2.5 transition ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border border-stone-700 text-stone-700 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900"}`}>
+                  {rail === "iap" ? `${plan.cta} · ${store}` : plan.cta}
+                </button>
+              ) : (
+                <div className="mono-font text-[10px] uppercase tracking-widest text-stone-400 px-4 py-2.5 text-center border border-dashed border-stone-300">
+                  {isCurrent ? "Your plan" : "Included free"}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Machine / API credit packs */}
+      <div className="mt-6 pt-5 border-t border-stone-300">
+        <p className="mono-font text-xs uppercase tracking-wider text-stone-700 mb-1">For developers &amp; AI agents</p>
+        <p className="text-xs text-stone-600 mb-4">
+          Pay-as-you-go credit packs for the grounding API — per-query, no subscription. Bought on the web dashboard.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {CREDIT_PACKS.map(pack => (
+            <div key={pack.id} className={`bg-white p-4 ${pack.best ? "border-2 border-stone-900" : "border border-stone-300"}`}>
+              <div className="flex items-baseline justify-between mb-1 gap-2">
+                <span className="display-font font-black text-2xl text-stone-900">{pack.price}</span>
+                {pack.best && <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-900 text-amber-50 px-2 py-0.5">Best value</span>}
+              </div>
+              <p className="text-sm text-stone-800">{pack.credits}</p>
+              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500 mb-3">{pack.unit}</p>
+              <button onClick={() => handlePack(pack)}
+                className="w-full mono-font text-[10px] uppercase tracking-widest border border-stone-700 text-stone-700 px-4 py-2 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition">
+                Buy credits
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {notice && (
+        <div className="mt-5 border border-amber-300 bg-amber-100/60 px-4 py-3">
+          <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">{notice}</p>
+        </div>
+      )}
+
+      <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 pt-4 mt-5 border-t border-stone-300 leading-relaxed">
+        {COVERAGE_NOTE}
+      </p>
+    </section>
   );
 }
 

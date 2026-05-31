@@ -24,7 +24,8 @@ import { UnifiedResultList } from "./components/UnifiedResultList.jsx";
 import { SearchStatusBar } from "./components/SearchStatusBar.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
-import { SettingsPanel, HistoryPanel, LibraryPanel } from "./components/Panels.jsx";
+import { SettingsPanel, HistoryPanel, LibraryPanel, PricingPanel } from "./components/Panels.jsx";
+import { getPlatform } from "./lib/platform.js";
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext.jsx";
@@ -206,6 +207,7 @@ function OpenCITE() {
           onLibrary={() => togglePanel("library")}
           onHistory={() => togglePanel("history")}
           onSettings={() => togglePanel("settings")}
+          onPlans={() => togglePanel("plans")}
           onLogoClick={handleLogoClick}
           libraryCount={lib.items.length}
           historyCount={hist.entries.length}
@@ -241,6 +243,10 @@ function OpenCITE() {
             onToggle={toggleAdapter}
             admin={admin}
           />
+        )}
+
+        {activePanel === "plans" && (
+          <PricingPanel platform={getPlatform()} />
         )}
 
         <ThemeStrip themeKey={themeKey} onChange={changeTheme} />
