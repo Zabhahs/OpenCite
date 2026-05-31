@@ -29,14 +29,12 @@ Built for citizen scientists, citizen scholars, independent researchers, and any
 ### Extensions (opt-in)
 | Source | Coverage |
 |---|---|
-| [Semantic Scholar](https://semanticscholar.org) | AI-curated, cross-disciplinary |
 | [Europeana](https://europeana.eu) | Cultural heritage, museums, primary sources |
 | [The Met](https://metmuseum.org) | 470,000+ artworks |
 | [Smithsonian](https://si.edu) | 11M+ records across 19 museums |
 | [DPLA](https://dp.la) | Digital Public Library of America — 50M+ items |
 | [Rijksmuseum](https://rijksmuseum.nl) | Dutch Golden Age, 700,000+ objects |
-| [Internet Archive](https://archive.org) | 42M+ texts |
-| [BDPI](https://www.iberoamericadigital.net) | 16 Iberoamerican national libraries |
+| [Internet Archive](https://archive.org) | 42M+ texts, full-text search |
 | [BnF Gallica](https://gallica.bnf.fr) | Bibliothèque nationale de France — 9M+ items |
 | [Thaqalayn](https://thaqalayn.net) | Comprehensive Shi'i hadith library |
 | [NCBI Entrez](https://ncbi.nlm.nih.gov) | PubMed — biomedical & life sciences |
@@ -46,6 +44,14 @@ Built for citizen scientists, citizen scholars, independent researchers, and any
 | [PANGAEA](https://pangaea.de) | Earth & environment data, archaeogenetic metadata |
 | [OpenNeuro](https://openneuro.org) | BIDS neuroimaging datasets |
 | [ENA](https://ebi.ac.uk/ena) | European Nucleotide Archive — ancient DNA |
+| [SciELO](https://scielo.org) | Latin American & Caribbean peer-reviewed journals |
+| [OAPEN](https://oapen.org) | Open-access academic books & monographs |
+| [LA Referencia](https://www.lareferencia.info) | ~50 Latin American institutional repositories |
+| [OpenEdition](https://www.openedition.org) | Francophone & European SSH journals and books |
+| [Open Library](https://openlibrary.org) | 40M+ book edition records |
+| [CORE](https://core.ac.uk) | 200M+ OA research outputs worldwide |
+| [NDLI](https://ndl.iitkgp.ac.in) | National Digital Library of India |
+| [BASE](https://www.base-search.net) | 300M+ OA documents from 11,000+ sources |
 
 ### External Launchers
 23 archives without queryable APIs — pre-filled search opens in a new tab, grouped by region. Includes JSTOR, Qatar Digital Library, OpenITI, British Library, HMML, and more.

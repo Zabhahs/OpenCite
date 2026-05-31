@@ -176,3 +176,19 @@ model ProcessedEvent {
 
   @@map("processed_events")
 }
+
+// ─── F1 (v0.33) — Gold-set relevance labels for regression testing ────────────
+// Admin console: store expected-good rankings for queries. Used by F2 harness to
+// compute nDCG@10, MRR, recall metrics and detect scoring regressions.
+// grade: 0=irrelevant, 1=marginal, 2=relevant, 3=perfect.
+model relevance_labels {
+  id         Int       @id @default(autoincrement())
+  query      String                           // the search query
+  doi        String                           // the result's DOI (or title fingerprint if no DOI)
+  grade      Int       @default(0)            // relevance: 0|1|2|3
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@index([query, grade])
+  @@map("relevance_labels")
+}

@@ -154,8 +154,10 @@ export const INTERNET_ARCHIVE_ADAPTER = {
   capability: {
     // Dual-endpoint: advancedsearch metadata + full-text "search inside" (OCR page text).
     protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 10000, auth: "none",
-    // citedBy carries download counts, not citations — Sprint 2 gates whether to honor it.
-    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    // citedBy carries download counts, not citations — emitted for display only, NOT honored
+    // for rank (citedBy:false). Honoring it inflated high-download non-scholarly items over
+    // peer-reviewed work. Genuine-citation sources (OpenAlex/Crossref) keep citedBy:true.
+    rankFields: { abstract: "full", subjects: "full", citedBy: false },
     serverSafe: true,
     corpusSize: 40000000, // ~40M texts (conservative); archive.org
   },

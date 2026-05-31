@@ -120,7 +120,7 @@ function AuthButton() {
 
 // ---------- Header ----------
 
-export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onLogoClick, libraryCount, historyCount }) {
+export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onLogoClick, libraryCount, historyCount, admin }) {
   const [shaking, setShaking] = useState(false);
 
   const handleEagleClick = () => {
@@ -146,6 +146,11 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, on
           <button onClick={onSettings} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ⚙ settings
           </button>
+          {admin && (
+            <a href="#/admin/console" className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
+              ⚗ admin
+            </a>
+          )}
           <AuthButton />
         </div>
       </div>

@@ -26,6 +26,7 @@ import { SearchStatusBar } from "./components/SearchStatusBar.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel, PricingPanel } from "./components/Panels.jsx";
+import { AdminConsole } from "./components/AdminConsole.jsx";
 import { getPlatform } from "./lib/platform.js";
 
 // Contexts
@@ -47,6 +48,9 @@ function OpenCITE() {
 
   // v.19 — admin status drives debug logger install + UI exposure
   const admin = isAdmin(user);
+
+  // v0.33 F1/F2 — admin console route (hash-based for SPA)
+  const showAdminConsole = admin && window.location.hash === "#/admin/console";
 
   const { themeKey, theme, changeTheme } = useTheme();
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
@@ -222,7 +226,29 @@ function OpenCITE() {
     >
       <div className="grain" />
 
-      <div className="relative max-w-4xl mx-auto px-6 py-10 md:py-16" style={{ zIndex: 2 }}>
+      {/* v0.33 F1/F2 — admin console route */}
+      {showAdminConsole ? (
+        <div className="relative max-w-4xl mx-auto px-6 py-10 md:py-16" style={{ zIndex: 2 }}>
+          <Header
+            adapters={ADAPTERS}
+            onLibrary={() => {}}
+            onHistory={() => {}}
+            onSettings={() => {}}
+            onPlans={() => {}}
+            onLogoClick={() => { window.location.hash = ""; window.location.reload(); }}
+            libraryCount={0}
+            historyCount={0}
+            activePanel={null}
+            admin={admin}
+          />
+          <div className="my-6 border-b border-stone-200 pb-4">
+            <p className="mono-font text-xs uppercase tracking-widest text-stone-600 mb-4">Admin Console (v0.33)</p>
+            <AdminConsole />
+          </div>
+          <Footer />
+        </div>
+      ) : (
+        <div className="relative max-w-4xl mx-auto px-6 py-10 md:py-16" style={{ zIndex: 2 }}>
         <Header
           adapters={ADAPTERS}
           onLibrary={() => togglePanel("library")}
@@ -233,6 +259,7 @@ function OpenCITE() {
           libraryCount={lib.items.length}
           historyCount={hist.entries.length}
           activePanel={activePanel}
+          admin={admin}
         />
 
         {activePanel === "library" && (
@@ -422,6 +449,7 @@ function OpenCITE() {
         <ConnectCard />
         <Footer />
       </div>
+      )}
 
       {showAuthModal && <AuthModal onDismiss={dismissModal} />}
     </div>

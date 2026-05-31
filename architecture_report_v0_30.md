@@ -155,6 +155,10 @@ GET /api/search
 | v0.28 | Public REST search endpoint (`api/search.js`) — core scholarly adapters only; JSON + bibliography formats; optional API-key gate. |
 | v0.29 | Capability-aware ranking; 7 humanities adapters; secondary dedup → `lib/dedup.js`; book-chapter clustering; unified-view load-more fixes; `docs/adapter-authoring-standard.md`. |
 | v0.30 | **Monetization sprint.** WS0-2: origin-blind `/api/search` contract (no `source`, opaque `oc_` ids, corpus-weighted `coverage` bands; R10 500 fixed); 4→22 keyless server-safe adapters; runtime-aware `proxiedFetch`. WS4: MCP server. **WS3 billing shipped:** Stripe Checkout (`checkout.js`), full-event webhook w/ durable idempotency, Plans UI (platform-aware IAP-vs-Stripe), idempotent Prisma Migrate workflow (`scripts/migrate.mjs`, P3005-safe). Survived a production OAuth incident (Prisma-Client/DB column mismatch + TEXT-vs-UUID FK). **Left:** wire credit spend into `search.js`; student verification. **WS5 cache** pending KV. |
+| v0.31 | **Relevance controls.** T1: RRF lexical↔semantic balance slider (live fusion weight, instant re-rank, no re-embed). T2 deferred: BM25F field-weight sliders. |
+| v0.32 | **Credit meter wiring + admin debug.** WS-A: wire `resolveApiKey`/`preAuthorize`/`settle`/`checkRateLimit`/cache into `/api/search` (complete billing pipeline). WS-B: admin identity, origin-revealing debug mode (`debug=1`, per-adapter telemetry, dedup trace), test harness. Admin console UI deferred to v0.33. |
+| v0.33 | **Admin console (brainstorm → scoped T1).** F1: Score Explainer (per-result signal breakdown). F2: Gold-Set Regression Harness (saved queries + nDCG/MRR). Both admin-only, fed by v0.32 debug envelope. T2/T3: tunable playground, A/B diffs, adapter health, dedup inspector, labeling UI, coverage calibration. |
+| v0.34 | **Backend-keyed Wave-3 sources + Settings declutter.** WS-A: dedicated per-source endpoints (`api/search/<source>`) for Europeana/DPLA/Smithsonian; keys read from env server-side only (no client exposure). WS-B: `serverSafe` + corpus-weighted + paid tier. WS-C: Rijksmuseum keyless (Linked-Art, two-step resolve). WS-D: remove 4 key fields from Settings; comment-lock CORE/NDLI off server set (`TOS-items.md` D7/D8). Depends on v0.32 tier-gating. |
 
 ---
 ## Roadmap — remaining v0.30 workstreams
@@ -174,8 +178,8 @@ Shipped: API-key issuance (`keys.js`), Stripe Checkout (`checkout.js`), full-eve
 ### WS5 — Result cache (blocked on KV)
 `cache.js` + shared `kv.js`. Cache the final origin-blind payload (TTL 1–24h); placement between rate-limit and fan-out; charge-on-hit default yes; **fail-open** if KV is down.
 
-### Out of scope (next sprints)
-Wave 3 (+7 key-gated adapters, project-level keys, ToS checks), Wave 4 (+4 Edge-port), Stripe metered overage, key-management dashboard UI, relative score floor (needs A/B), `?synonyms=1`, agent billing (SIWE / `agent_wallet_address`).
+### Out of scope (future sprints)
+Wave 3 (+7 key-gated adapters, project-level keys, ToS checks) → **In progress: v0.34 ships 3 CC0 sources (Europeana, DPLA, Smithsonian) backend-keyed; CORE/NDLI held web/app-only per `TOS-items.md` D7/D8.** Wave 4 (+4 Edge-port: Gallica, British Library, OpenContext, OpenEdition), Stripe metered overage, key-management dashboard UI, relative score floor (needs A/B in v0.33 console), `?synonyms=1`, agent billing (SIWE / `agent_wallet_address`), student verification (SheerID/VerifyPass).
 
 ---
 ## Key architectural constraints
