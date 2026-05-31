@@ -59,6 +59,22 @@ export async function settle(userId, preAuthAmount, band, { freeBelowBand } = {}
   return finalCharge;
 }
 
+// Current credit balance, for surfacing in the API response `meta.balance`. The
+// ledger module owns ledger reads (SSOT); search.js stays decoupled from Prisma.
+// Best-effort: null on no-user / DB hiccup so the response can omit balance gracefully.
+export async function getBalance(userId) {
+  if (!userId) return null;
+  try {
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { total_credits: true },
+    });
+    return u ? Number(u.total_credits) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Credit grant (Stripe top-up / monthly allowance). Pure atomic increment —
 // idempotency is the CALLER's job (the webhook claims the Stripe event id in the
 // processed_events table first; the monthly grant guards on credits_period). This

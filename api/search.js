@@ -16,7 +16,7 @@
 //   q          required — search query. Multi-keyword: separate with ";".
 //   limit      optional — max merged results (default 25, max 100).
 //   sources    optional — comma-separated adapter IDs to include
-//                         (subset of OPENALEX,CROSSREF,DOAJ,CURATED).
+//                         (subset of the caller's plan tier).
 //   authors    optional — "1"/"true" flips adapters to author-inclusive search.
 //   mailto     optional — email for the OpenAlex/Crossref polite pool
 //                         (defaults to env OPENCITE_MAILTO).
@@ -26,8 +26,17 @@
 //                         | "csl-json". Non-json returns a text/plain (or JSON
 //                         array for csl-json) bibliography of all results.
 //
-// Auth: open by default. If env OPENCITE_API_KEY is set, requests must send a
-// matching key via the x-api-key header or ?key= query param.
+// Auth + billing (WS3, wired v0.32): every request must present a valid API key
+// (x-api-key header or ?key=) — FAIL-CLOSED, no anonymous access. The key maps to
+// a billing identity (apiAuth.resolveApiKey); the search is metered through the
+// credit ledger (preAuthorize → coverage-prorated settle), tier-gated, and
+// rate-limited. The pipeline NEVER bills a failed search (refund-on-throw).
+//
+// Admin path: an admin identity (master key, or a user with plan='admin') runs at
+// 0 credits, no rate cap, all-tier, and may pass ?debug=1 for an ORIGIN-REVEALING
+// envelope (per-result source + raw score + pipeline telemetry). debug is gated
+// strictly on the server-derived identity.admin — a non-admin ?debug=1 is a silent
+// no-op, so origin-blindness can never be pierced by a normal caller.
 
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
@@ -35,8 +44,14 @@ import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../
 import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { toPublicResult } from "./_shared/publicResult.js";
+import { toDebugResult } from "./_shared/debugResult.js";
 import { computeCoverage } from "./_shared/coverage.js";
-import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS } from "./_shared/apiContract.js";
+import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS, FORMATS } from "./_shared/apiContract.js";
+import { resolveApiKey } from "./_shared/apiAuth.js";
+import { allowedSourceIds } from "./_shared/plans.js";
+import { checkRateLimit } from "./_shared/ratelimit.js";
+import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
+import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
 
 // DRY-2: the server-safe set is DERIVED from the registry — `capability.serverSafe`
 // lives next to each adapter's transport code, not hardcoded here.
@@ -51,6 +66,14 @@ const isTruthy = (v) => v === "1" || v === "true" || v === "yes";
 
 // First query param value, whether req.query gives a string or string[].
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+// Stable per-caller id for the rate limiter when no keyId is available (keyId is
+// always set post-auth, so this is belt-and-suspenders). First hop of x-forwarded-for.
+const clientIp = (req) => {
+  const xff = req.headers?.["x-forwarded-for"];
+  const first = Array.isArray(xff) ? xff[0] : xff;
+  return (first || "").split(",")[0].trim() || "anon";
+};
 
 const sendJson = (res, status, body) => {
   res.statusCode = status;
@@ -67,8 +90,19 @@ const withTimeout = (promise, ms, label) =>
     ),
   ]);
 
-// `toPublicResult` (origin-blind card) now lives in _shared/publicResult.js and the
-// self-doc `usage` payload is generated from _shared/apiContract.js (DRY-4).
+// Charge a search against a known coverage band: pre-authorize the full unit cost,
+// then settle down to the coverage-prorated net (refunding the diff). Used on the
+// cache-hit path, where there's no fan-out to gate between the two phases.
+// Admin/master (cost 0) → { ok:true, creditsCharged:0 }, ledger untouched.
+async function chargeForBand(identity, band) {
+  const cost = identity.plan.creditCost;
+  const pre = await preAuthorize(identity.userId, cost);
+  if (!pre.ok) return { ok: false, creditsCharged: 0 };
+  const creditsCharged = await settle(identity.userId, cost, band, {
+    freeBelowBand: identity.plan.freeBelowBand,
+  });
+  return { ok: true, creditsCharged };
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -83,19 +117,21 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: "Method not allowed. Use GET." });
   }
 
-  // Optional API-key gate — only enforced when OPENCITE_API_KEY is configured.
-  const requiredKey = process.env.OPENCITE_API_KEY;
-  if (requiredKey) {
-    const provided = req.headers["x-api-key"] || firstParam(req.query?.key);
-    if (provided !== requiredKey) {
-      return sendJson(res, 401, { error: "Invalid or missing API key." });
-    }
+  // 1. Identity — fail-closed. Retires the old OPENCITE_API_KEY endpoint gate; auth
+  // is now per-identity (apiAuth maps x-api-key/?key= → billing identity, or null).
+  const identity = await resolveApiKey(req);
+  if (!identity) {
+    return sendJson(res, 401, { error: "Invalid or missing API key." });
   }
 
   const q = firstParam(req.query?.q).trim();
   if (!q) {
     return sendJson(res, 200, { ok: true, usage: buildUsage() });
   }
+
+  // Origin-revealing debug — SERVER-DERIVED gate. A non-admin ?debug=1 is treated as
+  // absent (silent no-op): standard origin-blind cards, no telemetry, normal cache.
+  const debug = !!identity.admin && isTruthy(firstParam(req.query?.debug));
 
   const startMs = Date.now();
 
@@ -111,17 +147,24 @@ export default async function handler(req, res) {
     .filter((s) => VALID_CITE.has(s));
 
   const format = (firstParam(req.query?.format).trim().toLowerCase()) || "json";
+  // Validate format up-front (before any fan-out / charge) so a malformed request is
+  // never billed and never triggers a search. FORMATS is the apiContract SSOT.
+  if (!FORMATS.includes(format)) {
+    return sendJson(res, 400, { error: `Unknown format "${format}".`, allowed: FORMATS });
+  }
 
-  // Source selection — restricted to the derived server-safe set. Origin-blind: we
-  // never echo the internal source catalog, so an unrecognized selection just yields a
+  // 2. Source selection — intersect the request with the plan's tier (allowedSourceIds
+  // restricts the server-safe set to "core" or "all"). Origin-blind: we never echo the
+  // internal source catalog, so an unrecognized/out-of-tier selection just yields a
   // generic 400 (no upstream names leaked).
+  const tierIds = new Set(allowedSourceIds(identity.plan, [...SERVER_SAFE_IDS]));
   const requested = firstParam(req.query?.sources)
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
   const selectedIds = requested.length
-    ? requested.filter((id) => SERVER_SAFE_IDS.has(id))
-    : [...SERVER_SAFE_IDS];
+    ? requested.filter((id) => tierIds.has(id))
+    : [...tierIds];
 
   if (!selectedIds.length) {
     return sendJson(res, 400, {
@@ -130,7 +173,7 @@ export default async function handler(req, res) {
   }
 
   const adapters = ADAPTERS.filter(
-    (a) => SERVER_SAFE_IDS.has(a.id) && selectedIds.includes(a.id)
+    (a) => tierIds.has(a.id) && selectedIds.includes(a.id)
   );
 
   // Settings — defaults + per-request overrides.
@@ -144,97 +187,165 @@ export default async function handler(req, res) {
   const terms = q.split(";").map((s) => s.trim()).filter(Boolean);
   const isMulti = terms.length > 1;
 
-  // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
-  // signal (an empty result set is NOT a failure — it means "no match", full coverage).
-  // We keep the adapter objects (not ids/messages) so coverage.js can weight by corpusSize
-  // and no upstream name ever reaches the response (origin-blind).
-  const failedAdapters = [];
+  // 3. Rate limit — ephemeral KV burst cap, SEPARATE from credits, fail-open if KV is
+  // down/unconfigured. Admin (max:0) always returns ok.
+  const rl = await checkRateLimit(identity.keyId ?? clientIp(req), identity.plan);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter));
+    return sendJson(res, 429, { error: "Rate limit exceeded. Please retry later." });
+  }
 
-  // Run every adapter independently; one failure never sinks the request.
-  const perAdapter = await Promise.all(
-    adapters.map(async (adapter) => {
-      try {
-        let results;
-        if (isMulti) {
-          const batches = await withTimeout(
-            Promise.all(terms.map((t) => runSearch(adapter, t, settings, { offset: 0 }))),
-            ADAPTER_TIMEOUT_MS,
-            adapter.id
-          );
-          results = dedupFirstWins(batches.flatMap((b) => b.results || []), doiKey, new Set());
-        } else {
-          ({ results } = await withTimeout(
-            runSearch(adapter, terms[0], settings, { offset: 0 }),
-            ADAPTER_TIMEOUT_MS,
-            adapter.id
-          ));
+  // 4. Cache (json + non-debug only). Charge-on-hit using the band stored in the
+  // payload, so a hit is billed the SAME coverage-prorated amount as the original.
+  // Debug always runs fresh and is never cached (it must never poison the public
+  // cache with origin-revealing cards).
+  const ck = cacheKey({
+    query: q,
+    sources: selectedIds,
+    limit,
+    authors: settings.authorSearch,
+    format,
+  });
+  if (format === "json" && !debug) {
+    const cached = await readCache(ck);
+    if (cached) {
+      const charge = await chargeForBand(identity, cached.coverage);
+      if (!charge.ok) return sendJson(res, 402, { error: "Insufficient credits." });
+      const balance = await getBalance(identity.userId);
+      const meta = { creditsCharged: charge.creditsCharged };
+      if (balance != null) meta.balance = balance;
+      return sendJson(res, 200, { ...cached, tookMs: Date.now() - startMs, meta });
+    }
+  }
+
+  // 5. Pre-authorize — gates the expensive fan-out (402 if short). Admin cost 0 → ok,
+  // ledger untouched.
+  const pre = await preAuthorize(identity.userId, identity.plan.creditCost);
+  if (!pre.ok) return sendJson(res, 402, { error: "Insufficient credits." });
+
+  // 6. Fan-out + score + dedup + coverage — wrapped so ANY throw refunds the pre-auth
+  // (R1: never bill a failed search).
+  let limited, coverageBand, deduped, debugMeta, lowConfidence;
+  try {
+    // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
+    // signal (an empty result set is NOT a failure — it means "no match", full coverage).
+    const failedAdapters = [];
+    // Per-adapter telemetry (B.3) — collected during the existing fan-out; surfaced
+    // only on the admin debug path, ignored by the public path.
+    const adapterStats = [];
+
+    // Run every adapter independently; one failure never sinks the request.
+    const perAdapter = await Promise.all(
+      adapters.map(async (adapter) => {
+        const t0 = Date.now();
+        try {
+          let results;
+          if (isMulti) {
+            const batches = await withTimeout(
+              Promise.all(terms.map((t) => runSearch(adapter, t, settings, { offset: 0 }))),
+              ADAPTER_TIMEOUT_MS,
+              adapter.id
+            );
+            results = dedupFirstWins(batches.flatMap((b) => b.results || []), doiKey, new Set());
+          } else {
+            ({ results } = await withTimeout(
+              runSearch(adapter, terms[0], settings, { offset: 0 }),
+              ADAPTER_TIMEOUT_MS,
+              adapter.id
+            ));
+          }
+          adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: results.length, errored: false });
+          return results;
+        } catch {
+          failedAdapters.push(adapter);
+          adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: 0, errored: true });
+          return [];
         }
-        return results;
-      } catch {
-        failedAdapters.push(adapter);
-        return [];
-      }
-    })
-  );
+      })
+    );
 
-  // Score once over the full candidate set so IDF is consistent, then dedup keeping
-  // the highest-scored copy of each work (see below).
-  const allRaw = perAdapter.flat();
-  // v.29 Sprint 2 — pooled heterogeneous set: resolve each result's capability by source
-  // so the scorer can gate the citation tiebreak and apply the thin-source prior per-source.
-  const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
-  const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
+    // Score once over the full candidate set so IDF is consistent, then dedup keeping
+    // the highest-scored copy of each work (DOI first, then same-paper title fingerprint).
+    const allRaw = perAdapter.flat();
+    const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
+    const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
+    const afterDoi = dedupHighestScore(scored, doiKey);
+    deduped = dedupHighestScore(afterDoi, titleFingerprint);
 
-  // Pooled dedup keeping the highest-scored copy: DOI first, then the same-paper title
-  // fingerprint (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
-  const deduped = dedupHighestScore(dedupHighestScore(scored, doiKey), titleFingerprint);
+    // Global low-confidence gate (v0.27 useFilters parity): if any genuine match exists
+    // anywhere, drop every zero-score loose match; only when nothing matched do we surface
+    // best guesses, flagged lowConfidence.
+    const gated = applyConfidenceGate(deduped, meaningfulTerms(terms));
+    const finalResults = gated.results;
+    lowConfidence = gated.lowConfidence;
 
-  // Global low-confidence gate (v0.27 useFilters parity): if any genuine match exists
-  // anywhere, drop every zero-score loose match; only when nothing matched do we surface
-  // best guesses, flagged lowConfidence. (R10 fix: use the gate's own lowConfidence — the
-  // old inline `meaningful`/`anyGenuine` refs were undefined and 500'd every JSON response.)
-  const { results: finalResults, lowConfidence } = applyConfidenceGate(
-    deduped,
-    meaningfulTerms(terms)
-  );
+    // Corpus-weighted, bucketed coverage band (origin-blind health signal). Denominator =
+    // the eligible set for THIS request, so coverage is honest relative to what was searched.
+    const cov = computeCoverage(adapters, failedAdapters);
+    coverageBand = cov.band;
 
-  // Corpus-weighted, bucketed coverage band (origin-blind health signal — replaces the
-  // old per-source `degraded`/`sources` meta). Denominator = the eligible set for THIS
-  // request, so coverage is honest relative to what was searched. Only the band leaves
-  // the server; the raw %/failed-count/upstream names never do (coverage.js SSOT).
-  const { band: coverage } = computeCoverage(adapters, failedAdapters);
+    finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
+    limited = finalResults.slice(0, limit);
 
-  finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
-  const limited = finalResults.slice(0, limit);
-  const publicResults = limited.map((r) => toPublicResult(r, citeFormats));
+    if (debug) {
+      debugMeta = {
+        perAdapter: adapterStats,
+        dedup: { raw: scored.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
+        coverage: { rawPercent: Math.round(cov.coverage * 1000) / 10, failedCount: failedAdapters.length, band: cov.band },
+      };
+    }
+  } catch {
+    await refund(identity.userId, identity.plan.creditCost);
+    return sendJson(res, 500, { error: "Search failed." });
+  }
 
-  // Non-JSON formats — return a flat bibliography of the ranked results.
+  // 7. Settle against the realized coverage band (refunds the unavailable-portion diff;
+  // freeBelowBand waives a sub-threshold answer entirely).
+  const creditsCharged = await settle(identity.userId, identity.plan.creditCost, coverageBand, {
+    freeBelowBand: identity.plan.freeBelowBand,
+  });
+  const balance = await getBalance(identity.userId);
+
+  // Non-JSON formats — flat bibliography of the ranked results. Still metered; billing
+  // headers carry the charge. (Non-json is not cached — text body ≠ structured payload,
+  // and debug cards don't apply since exportAs renders from the raw record.)
   if (format !== "json") {
+    res.setHeader("X-OpenCITE-Credits", String(creditsCharged));
+    if (balance != null) res.setHeader("X-OpenCITE-Balance", String(balance));
     if (format === "csl-json") {
       const arr = limited.map((r) => JSON.parse(exportAs(r, "csl-json")));
       return sendJson(res, 200, arr);
     }
-    if (format === "mla" || format === "apa" || format === "bibtex" || format === "ris") {
-      const sep = format === "bibtex" || format === "ris" ? "\n\n" : "\n";
-      const body = limited.map((r) => exportAs(r, format)).join(sep);
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      return res.end(body);
-    }
-    return sendJson(res, 400, {
-      error: `Unknown format "${format}".`,
-      allowed: ["json", "mla", "apa", "bibtex", "ris", "csl-json"],
-    });
+    // format is already validated against FORMATS, so this is mla|apa|bibtex|ris.
+    const sep = format === "bibtex" || format === "ris" ? "\n\n" : "\n";
+    const text = limited.map((r) => exportAs(r, format)).join(sep);
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    return res.end(text);
   }
 
-  return sendJson(res, 200, {
+  // 8. Render — admin debug gets origin-REVEALING cards; everyone else origin-blind.
+  const renderCard = debug ? toDebugResult : toPublicResult;
+  const results = limited.map((r) => renderCard(r, citeFormats));
+
+  const meta = { creditsCharged };
+  if (balance != null) meta.balance = balance;
+  if (debug) meta.debug = debugMeta;
+
+  // Public body (no per-caller meta) — this is what gets cached + charge-on-hit reuses.
+  const body = {
     query: q,
     terms,
-    coverage,
+    coverage: coverageBand,
     lowConfidence,
-    count: publicResults.length,
+    count: results.length,
     totalCandidates: deduped.length,
     tookMs: Date.now() - startMs,
-    results: publicResults,
-  });
+    results,
+  };
+
+  // 9. Cache the PUBLIC payload (json + non-debug). Best-effort, fail-open.
+  if (format === "json" && !debug) await writeCache(ck, body);
+
+  return sendJson(res, 200, { ...body, meta });
 }

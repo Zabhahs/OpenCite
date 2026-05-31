@@ -69,6 +69,22 @@ export const PLANS = {
     freeBelowBand: "limited",
     payg: true,
   },
+  // Internal/admin tier — never offered for purchase, provisioned out-of-band
+  // (a real user row with plan='admin', or the OPENCITE_API_KEY master key).
+  // creditCost 0 + rateLimit.max 0 ⇒ the meter and burst cap are no-ops, so admin
+  // traffic is unmetered, uncapped, and all-tier — while STILL attributable to a
+  // real userId/keyId (see apiAuth.js Shape B). `admin: true` on the resolved
+  // identity (server-derived, never request-honored) is what gates debug=1.
+  admin: {
+    id: "admin",
+    label: "Admin",
+    tier: "all",
+    monthlyGrant: 0,
+    creditCost: 0,
+    rateLimit: { windowSeconds: 60, max: 0 },
+    freeBelowBand: "limited",
+    internal: true,
+  },
 };
 
 export const DEFAULT_PLAN_ID = "free";

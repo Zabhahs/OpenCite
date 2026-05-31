@@ -108,6 +108,8 @@ export const RESPONSE_SHAPE = {
   totalCandidates: "Total deduped candidates considered before the limit.",
   tookMs: "Server processing time in milliseconds.",
   results: "Array of origin-blind result cards (see fields below).",
+  meta: "Billing metadata: { creditsCharged, balance } — credits spent on this call " +
+    "(coverage-prorated; 0 for unmetered tiers) and the caller's remaining balance.",
 };
 
 export const API_CONTRACT = {

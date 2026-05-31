@@ -7,9 +7,13 @@
 // Origin-blind / no-leak: a bad key yields null (caller returns a generic 401) —
 // we never reveal whether a key existed-but-revoked vs. never-existed.
 //
-// Dormant until WS3 is wired: search.js does NOT call this yet. The optional
-// OPENCITE_API_KEY master key is retained for internal/admin access and bypasses
-// the ledger (treated as the paid tier, no userId).
+// The optional OPENCITE_API_KEY master key is retained as documented break-glass
+// internal/admin access: it resolves to the `admin` plan (creditCost 0, no rate
+// cap, all-tier) with admin:true and no userId — bypassing the ledger.
+//
+// `admin` is SERVER-DERIVED here (master key, or a user whose plan is 'admin');
+// it is NEVER read from the request. search.js gates the origin-revealing debug=1
+// mode strictly on this flag, so an ordinary caller can never pierce origin-blindness.
 
 import { prisma } from "./prisma.js";
 import { hashApiKey } from "./crypto.js";
@@ -29,9 +33,11 @@ export async function resolveApiKey(req) {
   if (!key) return null;
 
   // Internal/admin master key — full access, no ledger attribution.
+  // NOTE: getPlan("admin") (not the old "paid", which fell back to free → the master
+  // key was silently metered + core-only). The `admin` plan zeroes cost + rate cap.
   const master = process.env.OPENCITE_API_KEY;
   if (master && key === master) {
-    return { userId: null, keyId: "master", plan: getPlan("paid"), master: true };
+    return { userId: null, keyId: "master", plan: getPlan("admin"), master: true, admin: true };
   }
 
   // Customer key — constant-format hash lookup. The effective plan comes from the
@@ -52,5 +58,10 @@ export async function resolveApiKey(req) {
     .update({ where: { id: row.id }, data: { last_used_at: new Date() } })
     .catch(() => {});
 
-  return { userId: row.user_id, keyId: row.id, plan: getPlan(row.user?.plan) };
+  return {
+    userId: row.user_id,
+    keyId: row.id,
+    plan: getPlan(row.user?.plan),
+    admin: row.user?.plan === "admin",
+  };
 }
