@@ -149,6 +149,21 @@ function OpenCITE() {
     [enabledAdapters, sectionStates]
   );
 
+  // v.31 — hold the list until the FINAL sort is known: no populate-then-reshuffle.
+  // Reveal only once every adapter has settled and, when semantic ranking is on, the
+  // RRF fuse has completed (or terminally failed → falls back to BM25F order).
+  const totalResults = useMemo(
+    () => Object.values(sectionStates).reduce((n, s) => n + (s.results?.length || 0), 0),
+    [sectionStates]
+  );
+  const resultsReady =
+    !hasSearched ? false
+    : !allDone ? false
+    : totalResults === 0 ? true
+    : !settings.semanticSearch ? true
+    : (rerankStatus === "done" || rerankStatus === "error");
+  const semanticPreparing = settings.semanticSearch && allDone && rerankStatus === "reranking";
+
   const sortedAdapters = useMemo(() => {
     if (!allDone) return enabledAdapters;
     const sectionAvgScore = (id) => {
@@ -278,7 +293,7 @@ function OpenCITE() {
           onOpenSettings={() => setActivePanel("settings")}
         />
 
-        {hasSearched && (
+        {hasSearched && resultsReady && (
           <FilterBar
             sectionStates={sectionStates}
             filterState={filterState}
@@ -288,75 +303,98 @@ function OpenCITE() {
 
         {hasSearched && (
           <div className="space-y-12">
-            {/* D2 — sparse results prompt */}
-            {isSparseResults && (
-              <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
-                <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
-                  Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
-                </p>
-              </div>
-            )}
+            {/* Progress is always visible during a search (unified). The result list
+                itself stays hidden until the final sort is known — see resultsReady. */}
+            {isUnified && <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />}
 
-            {isUnified ? (
-              /* ── Unified view ── */
-              <>
-                <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />
-                <UnifiedResultList
-                  filteredSections={filteredSections}
-                  sectionStates={sectionStates}
-                  onCopy={copyText}
-                  copied={copied}
-                  isInLibrary={lib.isInLibrary}
-                  onToggleLibrary={lib.toggle}
-                  onLoadMoreAll={handleLoadMoreAll}
-                  searchKey={searchCount}
-                  sortBy={filterState.sortBy}
-                />
-              </>
+            {!resultsReady ? (
+              /* ── Loading — hold the list until the final sort is ready (no reshuffle) ── */
+              <div className="py-6 space-y-2">
+                {!isUnified && (
+                  <div className="flex items-center gap-2">
+                    <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
+                    <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Searching sources…</span>
+                  </div>
+                )}
+                {semanticPreparing && (
+                  <div className="flex items-center gap-2">
+                    <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
+                    <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">
+                      Ranking results… preparing semantic model (first run downloads ~23MB, then cached)
+                    </span>
+                  </div>
+                )}
+              </div>
             ) : (
-              /* ── Source view ── */
               <>
-                {withResults.map(adapter => (
-                  <SourceSection
-                    key={adapter.id}
-                    adapter={adapter}
-                    state={filteredSections[adapter.id] || {}}
+                {/* D2 — sparse results prompt */}
+                {isSparseResults && (
+                  <div className="border border-amber-300 bg-amber-50/60 px-4 py-3">
+                    <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900">
+                      Few results found — try different keywords, or use <strong>;</strong> to search multiple terms at once (e.g. <em>climate; global warming</em>).
+                    </p>
+                  </div>
+                )}
+
+                {isUnified ? (
+                  /* ── Unified view ── */
+                  <UnifiedResultList
+                    filteredSections={filteredSections}
+                    sectionStates={sectionStates}
                     onCopy={copyText}
                     copied={copied}
                     isInLibrary={lib.isInLibrary}
                     onToggleLibrary={lib.toggle}
-                    onLoadMore={(id) => loadMore(id, query)}
+                    onLoadMoreAll={handleLoadMoreAll}
+                    searchKey={searchCount}
+                    sortBy={filterState.sortBy}
                   />
-                ))}
+                ) : (
+                  /* ── Source view ── */
+                  <>
+                    {withResults.map(adapter => (
+                      <SourceSection
+                        key={adapter.id}
+                        adapter={adapter}
+                        state={filteredSections[adapter.id] || {}}
+                        onCopy={copyText}
+                        copied={copied}
+                        isInLibrary={lib.isInLibrary}
+                        onToggleLibrary={lib.toggle}
+                        onLoadMore={(id) => loadMore(id, query)}
+                      />
+                    ))}
 
-                {/* Zero-result sources — collapsed chip row at bottom */}
-                {withoutResults.length > 0 && (
-                  <div className="border-t border-stone-200 pt-5">
-                    <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mb-2">
-                      No matches in
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {withoutResults.map(a => (
-                        <span
-                          key={a.id}
-                          className={`mono-font text-[9px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-0.5 opacity-30`}
-                        >
-                          {a.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                    {/* Zero-result sources — collapsed chip row at bottom */}
+                    {withoutResults.length > 0 && (
+                      <div className="border-t border-stone-200 pt-5">
+                        <p className="mono-font text-[9px] uppercase tracking-widest text-stone-400 mb-2">
+                          No matches in
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {withoutResults.map(a => (
+                            <span
+                              key={a.id}
+                              className={`mono-font text-[9px] uppercase tracking-widest ${a.color.bg} ${a.color.text} px-2 py-0.5 opacity-30`}
+                            >
+                              {a.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
+
+                {/* D3 — external launcher prompt on sparse results */}
+                {isSparseResults && (
+                  <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
+                    No API results? These external archives may have what you need ↓
+                  </p>
+                )}
+                <LauncherBlock query={query} launchers={LAUNCHERS} />
               </>
             )}
-
-            {/* D3 — external launcher prompt on sparse results */}
-            {isSparseResults && (
-              <p className="mono-font text-[10px] uppercase tracking-widest text-stone-500">
-                No API results? These external archives may have what you need ↓
-              </p>
-            )}
-            <LauncherBlock query={query} launchers={LAUNCHERS} />
           </div>
         )}
 

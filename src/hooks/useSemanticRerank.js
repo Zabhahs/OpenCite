@@ -74,8 +74,10 @@ export function useSemanticRerank(sectionStates, query, enabled, semanticWeight 
       } catch (err) {
         console.warn("[opencite:semantic] rerank failed, falling back to BM25F", err);
         if (!cancelled) {
-          didRerankRef.current = false;
-          setRerankStatus("idle");
+          // Terminal: leave didRerankRef set so we don't loop, and signal "error" so
+          // the results gate stops waiting and reveals the BM25F order (rerankedStates
+          // stays null → effectiveStates falls back to sectionStates).
+          setRerankStatus("error");
         }
       }
     })();
