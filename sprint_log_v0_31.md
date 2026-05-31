@@ -152,51 +152,96 @@ Surface T2 as an "Advanced" disclosure below the T1 slider when it lands.
 
 ## 8. Definition of done
 
-- [ ] `Lexical ↔ Semantic` slider in `SettingsPanel`, correctly labeled (lexical left / semantic right),
-      with live readout and reset-to-0.4.
-- [ ] Instant re-fusion on drag (no re-fetch / re-embed), verified in browser.
-- [ ] `rrfSemanticWeight` persisted, back-filled for existing users, one POST per commit.
-- [ ] Disabled state when semantic search is off.
-- [ ] Both view modes respected.
-- [ ] This log updated with actuals; T2 carried forward.
+- [x] `Lexical ↔ Semantic` slider, correctly labeled (lexical left / semantic right), live readout,
+      reset-to-0.4. **(Relocated mid-sprint from `SettingsPanel` → always-visible `SearchControls`
+      under the search bar — see §9 round 2.)**
+- [x] Instant re-fusion on drag (no re-fetch / re-embed).
+- [x] `rrfSemanticWeight` persisted, back-filled for existing users, one POST per commit.
+- [x] Disabled state when semantic search is off.
+- [x] Both view modes respected.
+- [x] This log updated with actuals; T2 carried forward.
 
 ---
 
-## 9. Actuals (2026-05-31)
+## 9. Actuals — SHIPPED 2026-05-31 (4 rounds, all live on `citation.today`)
 
-**Shipped T1 exactly to spec. 4 files touched, no scope creep, `vite build` green (119 modules).**
+> The sprint started as the §4 T1 plan (slider in Settings) but expanded under live user feedback
+> into a relevance-controls UX overhaul + two bug fixes. All four rounds deployed to prod via
+> Vercel auto-deploy on `main`. Full architecture in **`architecture_report_v0_31.md`**.
 
-**Parallelization (Opus orchestrator + delegated agents):**
-- **Opus (in-house):** the architectural spine — `useSemanticRerank.js` two-phase refactor (T1.2,
-  highest risk) + `App.jsx` wiring (T1.3). Froze the props contract before delegating.
-- **Sonnet agent:** `Panels.jsx` slider UI (T1.4 + T1.5) against the frozen contract.
-- **Haiku agent:** `defaults.js` one-line default (T1.1).
+**Commits (on `main`, in order):**
+| SHA | What |
+|---|---|
+| `60b0963` | T1 as planned — `Lexical↔Semantic` slider inside `SettingsPanel` |
+| `bec4a6c` | **Round 2** — relocate controls under the search bar (`SearchControls`) + default semantic/synonym **on** |
+| `2ffcfbf` | **Round 3** — hold results until final sort (no populate-then-reshuffle) + "preparing model" hint |
+| `d626027` | **Round 4** — `fix(crossref)`: respect author-search-off (drop author-only matches) |
 
-**Implementation notes / deltas from plan:**
-- Hook signature is now `useSemanticRerank(sectionStates, query, enabled, semanticWeight = 0.4)`.
-  The single rerank effect split into **expensive** (deps `[sectionStates, enabled]`: embeds +
-  builds `lexicalRanks`/`semanticRanks`, snapshots section shape, writes `fusionInputs` state) and
-  **cheap** (deps `[fusionInputs, semanticWeight]`: pure `fuseRanks` + re-slice). Slider drag hits
-  only the cheap effect — **no re-embed, no re-fetch** (R1 mitigated). `fusionInputs` is cleared on
-  new-search + toggle-off resets (R2 mitigated). Per-section count-based slice preserved (R3).
-- `fuseRanks` weights: `[{lexical, 1 - w}, {semantic, w}]`, `w` clamped to `[0,1]`.
-- **Persistence (R4):** `App` holds live `rrfWeight` (seeded from `settings.rrfSemanticWeight ?? 0.4`,
-  re-synced via effect on settings change). Slider `onChange` → live `setRrfWeight` (drives fusion,
-  no persist); `onPointerUp/onKeyUp/onTouchEnd` → `onRrfWeightCommit` → single `saveSettings` (one
-  POST per commit, not per tick). Back-fills for existing users via `DEFAULT_SETTINGS` merge — no
-  migration.
-- **Gating (R5):** range `disabled` + `opacity-50 pointer-events-none` + "Enable Semantic search to
-  use this" note when `semanticSearch` is off.
-- Labels hard-coded **Lexical (left) ↔ Semantic (right)**; live readout `Lexical {100−pct} · {pct}
-  Semantic`; Reset → 0.4 (live + commit).
+**Parallelization:** Opus owned the coupled architectural spine each round (the rerank hook, App
+wiring, the results gate, the scoring helper); Haiku took the trivial `defaults.js` edits; Sonnet
+built the round-1 slider UI against a frozen props contract. Coupled JSX surgery (Panels relocation,
+results-gate restructure) stayed in-house.
 
-**Acceptance (§6):** all code-level criteria met; only **§6 manual browser drag test (T1.6)** is left
-for Shahbaz to eyeball — instant reorder on drag, exactly-one-POST-per-commit in network tab, and
-both view modes. Build/compile verified green.
+### Round 1 — slider (`60b0963`)
+- `useSemanticRerank(sectionStates, query, enabled, semanticWeight = 0.4)` split into **expensive**
+  (deps `[sectionStates, enabled]`: embeds + builds `lexicalRanks`/`semanticRanks`, snapshots section
+  shape into `fusionInputs` state) and **cheap** (deps `[fusionInputs, semanticWeight]`: pure
+  `fuseRanks` + re-slice). Slider drag hits only the cheap effect → **no re-embed/re-fetch** (R1).
+  `fusionInputs` cleared on new-search + toggle-off (R2); per-section slice preserved (R3).
+- `fuseRanks` weights `[{lexical, 1−w}, {semantic, w}]`, `w` clamped `[0,1]`.
+- Persistence (R4): `App` holds live `rrfWeight`; `onChange` → live `setRrfWeight` (drives fusion,
+  no persist); pointer/key/touch-up → `onRrfWeightCommit` → single `saveSettings` (one POST/commit).
+
+### Round 2 — relocation + always-on defaults (`bec4a6c`)
+- **`src/components/SearchControls.jsx` (NEW):** renders **permanently under the search bar**. The
+  `Lexical↔Semantic` slider is always visible; a **"Search settings ▾" disclosure** beneath it holds
+  the Semantic / Synonym / Author toggles + an "All settings →" link. Local `Toggle` helper (DRY).
+- **`defaults.js`:** `semanticSearch: true`, `synonyms: true` (were false), + `searchDefaultsV31: true`.
+- **`useSettings.load()` one-time migration:** existing users whose saved settings predate the
+  always-on defaults get `semanticSearch`+`synonyms` flipped **on** once (guarded by
+  `searchDefaultsV31`), then their later toggles are respected. Critical: this also flips the
+  founder's own stale `localStorage` so the change is actually visible.
+- **`Panels.jsx`:** removed the slider + Synonym/Semantic/Author blocks from `SettingsPanel`
+  (relocated, no duplication). **Result layout, sources, keys, curated journals stay in Settings.**
+- **`App.jsx`:** `<SearchControls>` mounted directly under `<SearchInput>`; slider props dropped
+  from `<SettingsPanel>`.
+
+### Round 3 — no reshuffle + model hint (`2ffcfbf`)
+- **`resultsReady` gate in `App.jsx`:** the result list is **held until the final sort is known** —
+  reveal only once all adapters settle **and** (semantic on) the RRF fuse completes. Zero-result and
+  BM25-only paths reveal at settle. While waiting: `SearchStatusBar` progress + a *"Ranking results…
+  preparing semantic model (first run downloads ~23MB, then cached)"* hint during the embed.
+  `FilterBar` also gated on `resultsReady`.
+- **`useSemanticRerank` failure is now terminal** (`rerankStatus: "error"`) so the gate falls back to
+  BM25F order instead of waiting forever.
+
+### Round 4 — Crossref author-search-off fix (`d626027`)
+- Bug: `"kutchi memon"` with author search off still surfaced papers matched on author surname
+  "Memon". Crossref has no title-only index → queries `query.bibliographic` (author-inclusive); when
+  no hit carried the term in title/abstract, `applyConfidenceGate`'s low-confidence fallback
+  resurfaced the author matches.
+- **`scoring.js`:** new `hasContentMatch(result, terms)` — SSOT predicate reusing the scorer's
+  content fields (title/abstract/keywords+subjects) + tokenization.
+- **`crossref.js`:** author-search-off → filter the fetched page to content matches *before* scoring;
+  `hasMore` tracks the raw fetched window so pagination still advances. Rides the shared adapter →
+  fixes browser **and** API paths. Author-search-on unchanged.
+
+### Files touched (8)
+`defaults.js` · `useSemanticRerank.js` · `useSettings.js` · `App.jsx` ·
+**`SearchControls.jsx` (new)** · `Panels.jsx` · `scoring.js` · `crossref.js`.
+
+### Product decisions made this sprint
+- **Semantic + synonym ranking are now ON by default** (were off). Cost: every user's *first* search
+  downloads the ~23MB MiniLM model (cached after) — accepted deliberately; surfaced via the hint.
+- **Relevance controls belong under the search bar, not in Settings** (ease-of-use, zero extra clicks).
+- **Author-search-off must be enforced per-adapter**, including client-side filtering for sources
+  that can only query author-inclusively upstream.
 
 **Carried forward:** T2 (BM25F field-weight sliders + K1/B) → future log; needs `scoring.js` SSOT
-refactor (also unblocks v0.33 F3 tunable playground).
+refactor (also unblocks v0.33 F3 tunable playground). When it lands, it slots into the `SearchControls`
+disclosure as an "Advanced" section. Watch item: if a single slow adapter makes the `resultsReady`
+hold feel laggy, add a soft per-adapter cap so one straggler can't hold the whole list.
 
 ---
 
-*End v0.31 sprint plan. T1 only this sprint; T2 (BM25F field-weight sliders) carried to a future log.*
+*End v0.31 sprint — SHIPPED. Next: v0.32 (credit-meter wiring + admin debug). See `ROADMAP_v0_31-v0_34.md`.*
