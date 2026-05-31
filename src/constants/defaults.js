@@ -33,8 +33,8 @@ export const DEFAULT_SETTINGS = {
   // "unified" = single ranked list across all adapters (default)
   // "source"  = per-adapter sections (power-user / source view)
   viewMode: "unified",
-  synonyms: false,
-  semanticSearch: false,
+  synonyms: true,
+  semanticSearch: true,
   // When false (default): adapters query content fields only (title/abstract/keywords),
   // so a query like "memon" no longer returns papers merely authored by someone named Memon.
   // When true: adapters revert to author-inclusive / all-field search.
@@ -42,5 +42,7 @@ export const DEFAULT_SETTINGS = {
   // RRF fusion weight for the Lexical↔Semantic slider when semanticSearch is on.
   // 0.0 = pure lexical (BM25F), 1.0 = pure semantic (embeddings).
   // Default 0.4 reproduces the hardcoded 0.6/0.4 balance.
+  searchDefaultsV31: true,
+  // One-time migration flag — marks that v.31 always-on search defaults (semantic + synonym) have been applied.
   authorSearch: false,
 };

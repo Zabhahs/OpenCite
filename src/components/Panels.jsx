@@ -300,7 +300,7 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
 // ---------- SettingsPanel ----------
 // v.19: accepts admin prop — shows debug section when true
 
-export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle, admin, rrfWeight, onRrfWeightChange, onRrfWeightCommit }) {
+export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle, admin }) {
   const s = settings;
   const upd = (patch) => onSave({ ...s, ...patch });
 
@@ -397,125 +397,9 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
           </div>
         </div>
 
-        <div className="pt-4 border-t border-stone-300">
-          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Synonym expansion</label>
-          <p className="text-xs text-stone-600 mb-3">
-            When enabled, scoring also matches synonyms and spelling variants (e.g. "climate change" also scores "global warming").
-            Does not change what APIs return — only affects how results are ranked.
-          </p>
-          <div className="flex gap-2">
-            {[[true, "On"], [false, "Off (default)"]].map(([val, label]) => (
-              <button
-                key={String(val)}
-                onClick={() => upd({ synonyms: val })}
-                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
-                  (s.synonyms || false) === val
-                    ? "bg-stone-900 text-amber-50 border-stone-900"
-                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="pt-4 border-t border-stone-300">
-          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Semantic search</label>
-          <p className="text-xs text-stone-600 mb-3">
-            Uses an AI embedding model to understand meaning, not just keywords. Finds results that express similar ideas in different words.
-            First use downloads a ~23MB model (cached permanently). Combined with keyword scoring via rank fusion.
-          </p>
-          <div className="flex gap-2">
-            {[[true, "On"], [false, "Off (default)"]].map(([val, label]) => (
-              <button
-                key={String(val)}
-                onClick={() => upd({ semanticSearch: val })}
-                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
-                  (s.semanticSearch || false) === val
-                    ? "bg-stone-900 text-amber-50 border-stone-900"
-                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="pt-4 border-t border-stone-300">
-          {(() => {
-            const w = rrfWeight ?? 0.4;
-            const pct = Math.round(w * 100);
-            const on = !!s.semanticSearch;
-            return (
-              <>
-                <div className="flex items-baseline justify-between mb-2">
-                  <label className="mono-font text-xs uppercase tracking-wider text-stone-700">Relevance balance</label>
-                  <button
-                    onClick={() => { onRrfWeightChange(0.4); onRrfWeightCommit(0.4); }}
-                    className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition underline"
-                  >
-                    Reset
-                  </button>
-                </div>
-                <p className="text-xs text-stone-600 mb-3">
-                  Drag toward Lexical for pure keyword (BM25F) ranking, toward Semantic for pure
-                  embedding-similarity ranking. The default favours keyword matching.
-                  Only takes effect when Semantic search is on.
-                </p>
-                <div className={on ? "" : "opacity-50 pointer-events-none"}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={pct}
-                    disabled={!on}
-                    onChange={e => onRrfWeightChange(Number(e.target.value) / 100)}
-                    onPointerUp={e => onRrfWeightCommit(Number(e.target.value) / 100)}
-                    onKeyUp={e => onRrfWeightCommit(Number(e.target.value) / 100)}
-                    onTouchEnd={e => onRrfWeightCommit(Number(e.target.value) / 100)}
-                    className="w-full accent-stone-900 cursor-pointer"
-                  />
-                  <div className="flex justify-between mt-1 mb-2">
-                    <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Lexical</span>
-                    <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Semantic</span>
-                  </div>
-                  <p className="mono-font text-[10px] text-stone-700 text-center">
-                    Lexical {100 - pct} · {pct} Semantic
-                  </p>
-                </div>
-                {!on && (
-                  <p className="text-xs text-stone-500 mt-2">Enable Semantic search to use this.</p>
-                )}
-              </>
-            );
-          })()}
-        </div>
-
-        <div className="pt-4 border-t border-stone-300">
-          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Author search</label>
-          <p className="text-xs text-stone-600 mb-3">
-            Off (default): searches only content — title, abstract, and keywords — so a name like "memon" won't surface papers merely written by an author of that name.
-            On: includes author and all-field matching at the source.
-          </p>
-          <div className="flex gap-2">
-            {[[true, "On"], [false, "Off (default)"]].map(([val, label]) => (
-              <button
-                key={String(val)}
-                onClick={() => upd({ authorSearch: val })}
-                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
-                  (s.authorSearch || false) === val
-                    ? "bg-stone-900 text-amber-50 border-stone-900"
-                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* v.31 — Synonym, Semantic, relevance slider & Author search moved to the
+            always-visible SearchControls under the search bar (quick "Search settings"
+            disclosure). Result layout stays here; Sources/keys/curated remain below. */}
 
         <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>

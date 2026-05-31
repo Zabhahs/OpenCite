@@ -18,6 +18,7 @@ import { HISTORY_MAX } from "./constants/defaults.js";
 
 // Components
 import { SearchInput } from "./components/SearchInput.jsx";
+import { SearchControls } from "./components/SearchControls.jsx";
 import { FilterBar } from "./components/FilterBar.jsx";
 import { SourceSection } from "./components/SourceSection.jsx";
 import { UnifiedResultList } from "./components/UnifiedResultList.jsx";
@@ -247,9 +248,6 @@ function OpenCITE() {
             isEnabled={isEnabled}
             onToggle={toggleAdapter}
             admin={admin}
-            rrfWeight={rrfWeight}
-            onRrfWeightChange={setRrfWeight}
-            onRrfWeightCommit={(v) => saveSettings({ ...settings, rrfSemanticWeight: v })}
           />
         )}
 
@@ -268,6 +266,16 @@ function OpenCITE() {
           onChange={setQuery}
           onSearch={handleSearch}
           inputRef={inputRef}
+        />
+
+        {/* v.31 — relevance slider + quick search settings, always visible under the search bar */}
+        <SearchControls
+          settings={settings}
+          onSave={saveSettings}
+          rrfWeight={rrfWeight}
+          onRrfWeightChange={setRrfWeight}
+          onRrfWeightCommit={(v) => saveSettings({ ...settings, rrfSemanticWeight: v })}
+          onOpenSettings={() => setActivePanel("settings")}
         />
 
         {hasSearched && (

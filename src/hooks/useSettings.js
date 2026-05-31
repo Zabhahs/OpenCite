@@ -80,12 +80,21 @@ export function useSettings() {
   const load = () => {
     try {
       const stored = storage.get("settings");
+      let base;
       if (stored && typeof stored === "object" && !Array.isArray(stored)) {
-        setSettings({ ...DEFAULT_SETTINGS, ...stored });
+        base = { ...DEFAULT_SETTINGS, ...stored };
       } else {
         const migrated = migrateLegacyKeys();
-        setSettings(migrated ? { ...DEFAULT_SETTINGS, ...migrated } : DEFAULT_SETTINGS);
+        base = migrated ? { ...DEFAULT_SETTINGS, ...migrated } : { ...DEFAULT_SETTINGS };
       }
+      // v.31 one-time: enable semantic + synonym ranking for existing users whose
+      // saved settings predate the always-on defaults. Flips on once, then respects
+      // any later toggle (the flag is persisted alongside their choice).
+      if (!base.searchDefaultsV31) {
+        base = { ...base, semanticSearch: true, synonyms: true, searchDefaultsV31: true };
+        persistLocally(base);
+      }
+      setSettings(base);
     } catch {}
     setLoaded(true);
   };
