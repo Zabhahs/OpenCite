@@ -75,10 +75,15 @@ export async function grantCredits(userId, credits) {
 // Monthly allowance top-up. Idempotent per calendar month via User.credits_period:
 // tops the balance UP TO `grant` (doesn't stack monthly allowance, but never reduces
 // a larger purchased balance) and stamps the period so a re-run this month no-ops.
-export async function applyMonthlyGrant(userId, grant, period) {
+//
+// Pass { client: tx } to run inside a caller's transaction (the Stripe webhook does
+// this so the grant and the processed_events claim commit atomically — a partial
+// failure rolls back BOTH, and the Stripe retry re-applies safely). Called without a
+// client it opens its own transaction so the read-then-write stays atomic.
+export async function applyMonthlyGrant(userId, grant, period, { client } = {}) {
   if (!userId || !(grant > 0)) return { granted: false };
   // Guarded update: only when this period hasn't been granted yet.
-  const res = await prisma.$transaction(async (tx) => {
+  const run = async (tx) => {
     const u = await tx.user.findUnique({
       where: { id: userId },
       select: { total_credits: true, credits_period: true },
@@ -89,8 +94,8 @@ export async function applyMonthlyGrant(userId, grant, period) {
     if (u.total_credits.lessThan(floor)) data.total_credits = floor; // top up to allowance
     await tx.user.update({ where: { id: userId }, data });
     return { granted: true };
-  });
-  return res;
+  };
+  return client ? run(client) : prisma.$transaction(run);
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────

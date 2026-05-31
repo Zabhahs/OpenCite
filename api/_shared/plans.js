@@ -108,3 +108,15 @@ export function stripePriceId(planOrPack) {
   const env = planOrPack?.priceEnv;
   return env ? process.env[env] || null : null;
 }
+
+// Reverse map: a Stripe Price id (from a subscription item or invoice line) → our
+// plan id. Used by the webhook to re-sync User.plan on subscription.updated and to
+// pick the right allowance on invoice.paid — authoritative from Stripe, not the
+// client. Returns null if no subscription plan's price env matches (e.g. env unset).
+export function planIdForPriceId(priceId) {
+  if (!priceId) return null;
+  for (const p of Object.values(PLANS)) {
+    if (p.subscription && p.priceEnv && process.env[p.priceEnv] === priceId) return p.id;
+  }
+  return null;
+}
