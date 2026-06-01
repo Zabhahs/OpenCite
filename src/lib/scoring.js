@@ -51,7 +51,10 @@ export function meaningfulTerms(terms) {
 // @param {Object} result
 // @param {string[]} terms  raw query terms (whitespace-split is fine)
 export function hasContentMatch(result, terms) {
-  const words = meaningfulTerms(terms);
+  // Run query through the same tokenize pipeline (normalizeForMatch included) so that
+  // e.g. "Koran" → "quran" on the query side matches "quran" on the document side.
+  // Then filter stopwords the same way meaningfulTerms does.
+  const words = terms.flatMap(t => tokenize(t)).filter(t => t.length > 1 && !STOPWORDS.has(t));
   if (!words.length) return true;
   const tokens = new Set();
   for (const f of Object.keys(FIELD_WEIGHTS)) {
@@ -78,8 +81,66 @@ export function applyConfidenceGate(scored, meaningful) {
   };
 }
 
+// ─── Orthographic normalisation (D5) ────────────────────────────────────────
+// Maps variant spellings / diacritics → a single canonical token so that, e.g.,
+// "Koran" and "Qur'an" both score as "quran" when matching "quran" in a query.
+//
+// RISK GUARD: only fold clusters that are unambiguously co-referential in the
+// academic context (proper-noun / title variants). When in doubt, leave it out.
+//
+// Canonical form (key) must itself survive normaliseForMatch unchanged.
+const ALIAS_CLUSTERS = [
+  // Islamic scripture
+  ["quran", ["koran", "alquran", "quraan", "coran"]],
+  // Prophet's name
+  ["muhammad", ["mohammed", "mohammad", "mohamed", "muhammed", "mohamad"]],
+  // Historiographic / cultural figures
+  ["hussain", ["hussein", "husain", "husein"]],
+  // Hadith compilers / scholars
+  ["usmani", ["osmani", "uthmani"]],
+  // DELIBERATELY REJECTED as too risky / ambiguous:
+  //   ali        → too common as an English word-fragment
+  //   omar/umar  → personal names with distinct historical referents
+  //   jesus/isa  → cross-linguistic but risk of false fold with English word "is"
+];
+
+// Build lookup: variant → canonical
+const ALIAS_MAP = new Map();
+for (const [canonical, variants] of ALIAS_CLUSTERS) {
+  for (const v of variants) ALIAS_MAP.set(v, canonical);
+}
+
+// Combining diacritical marks block (U+0300–U+036F)
+const COMBINING_MARKS_RE = /[̀-ͯ]/g;
+// Intra-word apostrophes / modifier letters used in romanised Arabic/Quranic text
+const INTRA_APOSTROPHE_RE = /['’ʾʿ]/g;
+
+/**
+ * Normalise a single lowercased token for scoring purposes only.
+ * Does NOT alter the original query sent to upstream APIs.
+ * @param {string} token  already lowercased
+ * @returns {string}      canonical form
+ */
+export function normalizeForMatch(token) {
+  // 1. NFKD decompose then strip combining diacritical marks
+  let t = token.normalize("NFKD").replace(COMBINING_MARKS_RE, "");
+  // 2. Strip intra-word apostrophes / ʾ / ʿ so qur'an → quran
+  t = t.replace(INTRA_APOSTROPHE_RE, "");
+  // 3. Map through alias table
+  return ALIAS_MAP.get(t) ?? t;
+}
+
+// Regex: split on anything that is NOT a letter (a-z, ASCII digit, apostrophe-family,
+// Latin-extended block À-ɏ). This keeps intra-word apostrophes joined so
+// "Qur'an" arrives at normalizeForMatch whole rather than pre-split.
+const TOKENIZE_SPLIT_RE = /[^a-z0-9'’ʾʿÀ-ɏ]+/;
+
 function tokenize(text) {
-  return (text || "").toLowerCase().split(/\W+/).filter(Boolean);
+  return (text || "")
+    .toLowerCase()
+    .split(TOKENIZE_SPLIT_RE)
+    .map(normalizeForMatch)
+    .filter(Boolean);
 }
 
 function fieldText(result, field) {

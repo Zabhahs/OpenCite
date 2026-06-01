@@ -14,7 +14,7 @@ export const DOAJ_ADAPTER = {
   needsKey: false,
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
-    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    rankFields: { abstract: "full", subjects: "full", citedBy: false, nativeRelevance: "rank" },
     serverSafe: true,
     corpusSize: 10000000, // ~10M articles, doaj.org
   },
@@ -58,6 +58,9 @@ export const DOAJ_ADAPTER = {
         keywords: Array.isArray(b.keywords) ? b.keywords : [],
         subjects: (b.subject || []).map(s => s.term || s).filter(Boolean),
         language: Array.isArray(b.journal?.language) ? b.journal.language[0] || "" : "",
+        // v.35 — native relevance (D3): DOAJ exposes no _score, so position in its
+        // relevance-ordered response is the prior (capability nativeRelevance: "rank").
+        nativeRank: offset + i,
       };
     });
     return { results, hasMore: offset + results.length < (data.total || 0) };

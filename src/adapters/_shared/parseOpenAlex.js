@@ -11,13 +11,20 @@ export const OA_SELECT = [
   "id", "title", "display_name", "authorships", "publication_year",
   "primary_location", "biblio", "doi", "open_access", "abstract_inverted_index",
   "type", "keywords", "topics", "mesh", "cited_by_count", "language",
+  // v.35 — full-corpus relevance score (D3). Returned per work when sorting by
+  // relevance_score:desc; a valid select field (verified live), so it survives the trim.
+  "relevance_score",
 ].join(",");
 
 /**
  * parseOpenAlexWork — shared by OPENALEX_ADAPTER and CURATED_JOURNALS_ADAPTER.
  * Normalises a raw OpenAlex work object into a UnifiedResult.
+ * @param {Object} w      raw OpenAlex work
+ * @param {string} idx    stable id suffix
+ * @param {number} [rank] 0-based native relevance position (v.35). Upstream is sorted by
+ *                        relevance_score:desc, so array position IS the relevance rank.
  */
-export const parseOpenAlexWork = (w, idx) => {
+export const parseOpenAlexWork = (w, idx, rank = null) => {
   const oaUrl = w.open_access?.oa_url || w.primary_location?.landing_page_url || "";
   const doi = w.doi ? w.doi.replace(/^https?:\/\/doi\.org\//, "") : "";
   return {
@@ -58,5 +65,8 @@ export const parseOpenAlexWork = (w, idx) => {
     })(),
     citedBy: typeof w.cited_by_count === "number" ? w.cited_by_count : null,
     language: w.language || "",
+    // v.35 — native relevance (D3): OpenAlex's full-corpus relevance_score + position prior.
+    nativeScore: typeof w.relevance_score === "number" ? w.relevance_score : null,
+    nativeRank: rank,
   };
 };

@@ -17,7 +17,7 @@ export const OPENALEX_ADAPTER = {
   keyHelp: "Optional. Works without a key via the polite pool (rate-limited). For higher quotas, get a free key at openalex.org/settings/api — 30-second signup.",
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
-    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    rankFields: { abstract: "full", subjects: "full", citedBy: true, nativeRelevance: "score" },
     serverSafe: true,
     corpusSize: 250000000, // ~250M works, openalex.org
   },
@@ -50,7 +50,7 @@ export const OPENALEX_ADAPTER = {
       throw new Error(`OpenAlex ${r.status}`);
     }
     const data = await r.json();
-    const results = (data.results || []).map((w, i) => parseOpenAlexWork(w, `${offset}-${i}`));
+    const results = (data.results || []).map((w, i) => parseOpenAlexWork(w, `${offset}-${i}`, offset + i));
     return { results, hasMore: offset + results.length < (data.meta?.count || 0) };
   }
 };

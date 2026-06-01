@@ -14,7 +14,7 @@ export const CURATED_JOURNALS_ADAPTER = {
   needsKey: false,
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: 10000, auth: "polite",
-    rankFields: { abstract: "full", subjects: "full", citedBy: true },
+    rankFields: { abstract: "full", subjects: "full", citedBy: true, nativeRelevance: "score" },
     serverSafe: true,
     corpusSize: 10000, // ~10K; subset of OpenAlex filtered to a user ISSN list (conservative)
   },
@@ -44,7 +44,7 @@ export const CURATED_JOURNALS_ADAPTER = {
     }
     const data = await r.json();
     const results = (data.results || [])
-      .map((w, i) => parseOpenAlexWork(w, `${offset}-${i}`))
+      .map((w, i) => parseOpenAlexWork(w, `${offset}-${i}`, offset + i))
       .map(item => ({ ...item, source: "CURATED" }));
     return { results, hasMore: offset + results.length < (data.meta?.count || 0) };
   }

@@ -48,7 +48,10 @@ export function toPublicResult(r, citeFormats = []) {
     subjects: r.subjects,
     language: r.language,
     citedBy: r.citedBy ?? null,
-    score: Number((r._score ?? 0).toFixed(4)),
+    // v0.35 (D4): the public card no longer exposes a raw relevance score. With per-pool
+    // RRF fusion no absolute score is meaningful across queries (the old BM25F magnitude —
+    // "1.79 vs 16.17" — falsely implied it was). Results are returned in fused-rank order;
+    // ordering IS the relevance signal. The admin debug card still carries _score/_fused.
     lowConfidence: !!r._lowConfidence,
     citations,
   };

@@ -43,6 +43,13 @@ export class AbstractAdapter {
       subjects:  arr(result.subjects),
       language:  str(result.language),
       citedBy:   num(result.citedBy),
+      // v.35 — native upstream relevance signal (D3). nativeScore: the source's own
+      // full-corpus relevance number (OpenAlex relevance_score, Crossref Solr score);
+      // null when the API exposes none. nativeRank: 0-based position in the source's
+      // native relevance order — the universal fallback prior (every relevance-ordered
+      // source has it). The ranker FUSES nativeRank (scale-free) with local BM25F via RRF.
+      nativeScore: num(result.nativeScore),
+      nativeRank:  num(result.nativeRank),
     };
   }
 }
@@ -71,6 +78,10 @@ export class AbstractAdapter {
  * @property {string[]} [subjects]    — v.17: controlled vocabulary terms
  * @property {string}   [language]    — v.17: ISO 639 language code
  * @property {number}   [citedBy]     — v.17: citation count (relevance signal)
+ * @property {number}   [nativeScore] — v.35: source's own full-corpus relevance number
+ *           (OpenAlex relevance_score, Crossref Solr score); null when none exposed
+ * @property {number}   [nativeRank]  — v.35: 0-based position in the source's native
+ *           relevance order; the RRF fusion's scale-free relevance prior
  */
 
 /**
@@ -104,4 +115,9 @@ export class AbstractAdapter {
  * @property {("full"|"sparse"|"none")} subjects — keyword/subject signal richness
  *           (merged with keywords under one BM25F weight); "sparse" = non-topical labels
  * @property {boolean} citedBy — emits a numeric citedBy value (note: IA emits download counts)
+ * @property {("score"|"rank"|"none")} [nativeRelevance] — v.35: trust level of the source's
+ *           native ordering. "score": emits a real full-corpus relevance number into
+ *           nativeScore (OpenAlex, Crossref); "rank": returns results in relevance order so
+ *           position (nativeRank) is a valid prior (DOAJ, IA); "none"/absent: order is not a
+ *           relevance signal — excluded from native-rank fusion (gets BM25F/semantic only).
  */

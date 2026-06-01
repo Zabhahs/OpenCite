@@ -29,12 +29,16 @@ export function toDebugResult(r, citeFormats = []) {
   return {
     ...toPublicResult(r, citeFormats),
     source: r.source ?? null,                    // upstream adapter id — REVEALED (admin only)
-    _score: Number((r._score ?? 0).toFixed(4)),  // raw BM25F score (same precision as public `score`)
+    _score: Number((r._score ?? 0).toFixed(4)),  // raw BM25F score (PRE-fusion lexical signal)
+    // v0.35: the fused RRF value that actually ordered the results, plus the native signal
+    // captured from the upstream (relevance_score/Solr score, or position when score-less).
+    _fused: Number((r._fused ?? r._score ?? 0).toFixed(6)),
+    _native: { score: r.nativeScore ?? null, rank: r.nativeRank ?? null },
     _scoreBreakdown: r._scoreBreakdown ?? {      // F1: score math. Fallback: just the total.
       bm25f: {},
       phrase: 0,
       thin_source: 0,
-      rrf_rank: { lex: 0, sem: 0 },
+      rrf_rank: { lex: 0, sem: 0, native: 0 },
       gateDisposition: "kept",
     },
   };

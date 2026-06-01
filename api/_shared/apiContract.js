@@ -92,7 +92,6 @@ export const RESULT_FIELDS = {
   subjects: "Controlled-vocabulary subject terms.",
   language: "ISO-639 language code, when known.",
   citedBy: "Citation count, when the work carries one (else null).",
-  score: "Relevance score (BM25F) for this query.",
   lowConfidence: "True when no genuine match existed and this is a best-guess.",
   citations: "Formatted citations: { mla, apa, …extra requested formats }.",
 };
@@ -107,7 +106,8 @@ export const RESPONSE_SHAPE = {
   count: "Number of results returned.",
   totalCandidates: "Total deduped candidates considered before the limit.",
   tookMs: "Server processing time in milliseconds.",
-  results: "Array of origin-blind result cards (see fields below).",
+  results: "Array of origin-blind result cards in relevance-ranked order (native upstream " +
+    "relevance fused with local BM25F via RRF). No raw score is exposed — order is the signal.",
   meta: "Billing metadata: { creditsCharged, balance } — credits spent on this call " +
     "(coverage-prorated; 0 for unmetered tiers) and the caller's remaining balance.",
 };

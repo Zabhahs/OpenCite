@@ -15,7 +15,7 @@ export const CROSSREF_ADAPTER = {
   needsKey: false,
   capability: {
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: 10000, auth: "polite",
-    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: true },
+    rankFields: { abstract: "sparse", subjects: "sparse", citedBy: true, nativeRelevance: "score" },
     serverSafe: true,
     corpusSize: 155000000, // ~155M works, crossref.org
   },
@@ -73,12 +73,21 @@ export const CROSSREF_ADAPTER = {
         language: it.language || "",
         // Sprint 3 — citation count feeds the capability-gated citedBy tiebreak.
         citedBy: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : null,
+        // v.35 — native relevance (D3): Crossref Solr `score` + upstream position prior.
+        // nativeRank is the PRE-filter Crossref order (the source's true relevance rank);
+        // the hasContentMatch filter below removes rows but never renumbers survivors.
+        nativeScore: typeof it.score === "number" ? it.score : null,
+        nativeRank: offset + i,
       };
     });
     // authorSearch off → enforce content-scope: drop matches that hit on author name
     // alone (query.bibliographic is author-inclusive). hasMore tracks the raw fetched
     // window so pagination still advances even when a page is heavily filtered.
-    const results = settings.authorSearch ? mapped : mapped.filter(r => hasContentMatch(r, words));
+    // v0.36 — simple/raw mode returns Crossref's direct API output (like it did before the
+    // v0.31 relevance work): no content-scope filter, just query → cards.
+    const results = (settings.authorSearch || settings.simpleSearch)
+      ? mapped
+      : mapped.filter(r => hasContentMatch(r, words));
     return { results, hasMore: offset + items.length < (data.message?.["total-results"] || 0) };
   }
 };

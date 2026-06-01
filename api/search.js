@@ -41,6 +41,7 @@
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
+import { buildNativeRanks, nativeWeight, rrfScores } from "../src/lib/rrf.js";
 import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { toPublicResult } from "./_shared/publicResult.js";
@@ -337,7 +338,30 @@ export default async function handler(req, res) {
     const cov = computeCoverage(adapters, failedAdapters);
     coverageBand = cov.band;
 
-    finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
+    // v0.35 (D3/D4) — FUSE native upstream relevance with local BM25F via RRF instead of
+    // ranking on raw BM25F alone. nativeRanks = each result's position in its own source's
+    // full-corpus relevance order (the signal we used to discard); lexRanks = BM25F order
+    // over the pooled set (normalizes across heterogeneous sources + the only signal where
+    // no native one exists). RRF is scale-free, so this structurally eliminates the cross-
+    // query magnitude artifact (D4). Native weight rises as the pool shrinks (§5.3: a 20-doc
+    // IDF is statistical noise). _score (BM25F) is preserved untouched for the gate above,
+    // dedup, and the admin debug card; _fused is the new ordering key.
+    const nativeRanks = buildNativeRanks(finalResults, (r) => capBySource[r.source]);
+    const lexRanks = new Map();
+    finalResults
+      .map((r, i) => [i, r._score || 0])
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([i], rank) => lexRanks.set(i, rank));
+    const wNative = nativeWeight(finalResults.length);
+    const fused = rrfScores(finalResults.length, [
+      { ranks: nativeRanks, weight: wNative },
+      { ranks: lexRanks, weight: 1 - wNative },
+    ]);
+    finalResults.forEach((r, i) => { r._fused = fused[i]; });
+    // Sort by fused rank; tie-break on raw BM25F so identical-fusion rows stay deterministic.
+    // Order IS the relevance signal — the public card exposes no raw score (D4); admin debug
+    // still carries _score (BM25F) + _fused for inspection.
+    finalResults.sort((a, b) => (b._fused - a._fused) || ((b._score || 0) - (a._score || 0)));
     limited = finalResults.slice(0, limit);
 
     if (debug) {
@@ -345,6 +369,7 @@ export default async function handler(req, res) {
         perAdapter: adapterStats,
         dedup: { raw: scored.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
         coverage: { rawPercent: Math.round(cov.coverage * 1000) / 10, failedCount: failedAdapters.length, band: cov.band },
+        fusion: { wNative, nativeRanked: nativeRanks.size, pool: finalResults.length },
       };
     }
   } catch {

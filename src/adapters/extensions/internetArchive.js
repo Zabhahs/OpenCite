@@ -157,7 +157,10 @@ export const INTERNET_ARCHIVE_ADAPTER = {
     // citedBy carries download counts, not citations — emitted for display only, NOT honored
     // for rank (citedBy:false). Honoring it inflated high-download non-scholarly items over
     // peer-reviewed work. Genuine-citation sources (OpenAlex/Crossref) keep citedBy:true.
-    rankFields: { abstract: "full", subjects: "full", citedBy: false },
+    // v.35 (D2): retrieval now uses IA's default relevance order (no downloads sort), so
+    // merged position is a valid relevance prior. advancedsearch.php strips the Solr score
+    // field, so there is no nativeScore — position only (nativeRelevance: "rank").
+    rankFields: { abstract: "full", subjects: "full", citedBy: false, nativeRelevance: "rank" },
     serverSafe: true,
     corpusSize: 40000000, // ~40M texts (conservative); archive.org
   },
@@ -174,7 +177,11 @@ export const INTERNET_ARCHIVE_ADAPTER = {
       : `(title:(${clean}) OR description:(${clean}) OR subject:(${clean}))`;
     const metaQ = `${scoped} AND mediatype:texts`;
     const flParams = FIELDS.map(f => `fl[]=${f}`).join("&");
-    const metaParams = `q=${encodeURIComponent(metaQ)}&${flParams}&sort=downloads+desc&rows=${pageSize}&page=${page}&output=json`;
+    // v.35 (D2): NO sort param → IA's Solr default relevance order. Previously this forced
+    // `sort=downloads+desc`, retrieving the most-downloaded items containing the token rather
+    // than the most relevant — popularity was both fetched AND (pre-v.29) re-rewarded as
+    // citedBy. Relevance order makes merged position a usable native-rank prior (D3).
+    const metaParams = `q=${encodeURIComponent(metaQ)}&${flParams}&rows=${pageSize}&page=${page}&output=json`;
     const metaUrl = `https://archive.org/advancedsearch.php?${metaParams}`;
 
     // Metadata search alone misses books whose match lives only in the OCR'd page text
@@ -218,7 +225,9 @@ export const INTERNET_ARCHIVE_ADAPTER = {
       if (r._identifier) byIdentifier.set(r._identifier, r);
       results.push(r);
     }
-    for (const r of results) delete r._identifier;
+    // v.35 (D3): stamp native relevance rank from final merged order (metadata-relevance
+    // first, then new FTS hits). IA exposes no Solr score, so position is the only prior.
+    results.forEach((r, i) => { r.nativeRank = offset + i; delete r._identifier; });
 
     const metaTotal = metaData.response?.numFound || 0;
     const ftsTotalRaw = ftsData?.hits?.total;
