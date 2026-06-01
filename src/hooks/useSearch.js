@@ -25,6 +25,9 @@ export function useSearch(settings, isEnabled) {
     seenDOIs.current.clear();
     seenTitles.current.clear();
 
+    // v0.36 — raw diagnostic mode: skip dedup/score/gate, show adapter output as-is.
+    const simple = !!settings.simpleSearch;
+
     // C3 — multi-keyword parsing
     const terms = query.split(";").map(s => s.trim()).filter(Boolean);
     const isMulti = terms.length > 1;
@@ -43,30 +46,39 @@ export function useSearch(settings, isEnabled) {
         let results, hasMore, nextPageToken;
 
         if (isMulti) {
-          // C3 — run all terms in parallel per adapter, then merge + dedup within the batch
+          // C3 — run all terms in parallel per adapter, then merge. Within-batch dedup is
+          // skipped in simple mode (raw passthrough).
           const batches = await Promise.all(
             terms.map(t => runSearch(adapter, t, settings, { offset: 0, pageToken: undefined }))
           );
-          results = dedupFirstWins(batches.flatMap(b => b.results || []), doiKey, new Set());
+          const merged = batches.flatMap(b => b.results || []);
+          results = simple ? merged : dedupFirstWins(merged, doiKey, new Set());
           hasMore = false; // load more not supported for multi-keyword
           nextPageToken = undefined;
         } else {
           ({ results, hasMore, nextPageToken } = await runSearch(adapter, terms[0], settings, { offset: 0, pageToken: undefined }));
         }
 
-        // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
-        // (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
-        const deduped = dedupFirstWins(
-          dedupFirstWins(results, doiKey, seenDOIs.current),
-          titleFingerprint, seenTitles.current
-        );
+        let filtered, lowConfidence;
+        if (simple) {
+          // v0.36 — raw: no cross-adapter dedup, no score, no confidence gate.
+          filtered = results;
+          lowConfidence = undefined;
+        } else {
+          // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
+          // (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
+          const deduped = dedupFirstWins(
+            dedupFirstWins(results, doiKey, seenDOIs.current),
+            titleFingerprint, seenTitles.current
+          );
 
-        // C4 — BM25F relevance scoring with optional synonym expansion.
-        // v.29 Sprint 2 — pass the adapter's capability so the scorer can gate the citation
-        // tiebreak and apply the thin-source prior (batch is homogeneous → constant capability).
-        const scoringTerms = await expandTerms(terms, settings.synonyms);
-        const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-        const { results: filtered, lowConfidence } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms));
+          // C4 — BM25F relevance scoring with optional synonym expansion.
+          // v.29 Sprint 2 — pass the adapter's capability so the scorer can gate the citation
+          // tiebreak and apply the thin-source prior (batch is homogeneous → constant capability).
+          const scoringTerms = await expandTerms(terms, settings.synonyms);
+          const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
+          ({ results: filtered, lowConfidence } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms)));
+        }
 
         setSectionStates(prev => ({
           ...prev,
@@ -100,17 +112,23 @@ export function useSearch(settings, isEnabled) {
         { offset: current.offset, pageToken: current.pageToken }
       );
 
-      // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
-      const deduped = dedupFirstWins(
-        dedupFirstWins(newResults, doiKey, seenDOIs.current),
-        titleFingerprint, seenTitles.current
-      );
+      let filtered;
+      if (settings.simpleSearch) {
+        // v0.36 — raw passthrough: no dedup/score/gate on load-more either.
+        filtered = newResults;
+      } else {
+        // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
+        const deduped = dedupFirstWins(
+          dedupFirstWins(newResults, doiKey, seenDOIs.current),
+          titleFingerprint, seenTitles.current
+        );
 
-      // C4 — BM25F score load-more results (capability-aware, per Sprint 2), then gate so
-      // loose matches stay flagged _lowConfidence and don't slip past the unified-view filter.
-      const scoringTerms = await expandTerms(terms, settings.synonyms);
-      const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-      const { results: filtered } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms));
+        // C4 — BM25F score load-more results (capability-aware, per Sprint 2), then gate so
+        // loose matches stay flagged _lowConfidence and don't slip past the unified-view filter.
+        const scoringTerms = await expandTerms(terms, settings.synonyms);
+        const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
+        ({ results: filtered } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms)));
+      }
 
       setSectionStates(prev => {
         const existing = prev[adapterId];

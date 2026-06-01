@@ -377,32 +377,9 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
           )}
         </div>
 
-        <div className="pt-4 border-t border-stone-300">
-          <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-2">Result layout</label>
-          <p className="text-xs text-stone-600 mb-3">
-            Unified ranks results by relevance across all sources — best results first.
-            Source view groups results per database for per-adapter auditing.
-          </p>
-          <div className="flex gap-2">
-            {[["unified", "Unified (default)"], ["source", "Source view"]].map(([val, label]) => (
-              <button
-                key={val}
-                onClick={() => upd({ viewMode: val })}
-                className={`mono-font text-[10px] uppercase tracking-widest px-3 py-2 border transition ${
-                  (s.viewMode || "unified") === val
-                    ? "bg-stone-900 text-amber-50 border-stone-900"
-                    : "bg-transparent text-stone-600 border-stone-400 hover:border-stone-700 hover:text-stone-900"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* v.31 — Synonym, Semantic, relevance slider & Author search moved to the
-            always-visible SearchControls under the search bar (quick "Search settings"
-            disclosure). Result layout stays here; Sources/keys/curated remain below. */}
+        {/* v.31/v.37 — Synonym, Semantic, relevance slider, Author search AND Result layout
+            (Unified/Source) all live in the always-visible SearchControls under the search bar
+            (quick "Search settings" disclosure). Sources/keys/curated remain below. */}
 
         <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>

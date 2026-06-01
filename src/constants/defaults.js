@@ -49,4 +49,10 @@ export const DEFAULT_SETTINGS = {
   searchDefaultsV31: true,
   // One-time migration flag — marks that v.31 always-on search defaults (semantic + synonym) have been applied.
   authorSearch: false,
+  // v0.36 — DEVELOPER diagnostic (admin-gated in the UI). When true, the client search
+  // pipeline returns RAW adapter output in fan-out order: skips cross-adapter dedup,
+  // BM25F scoring, and the confidence gate (and semantic rerank is bypassed in App).
+  // Lets an admin see whether poor results originate upstream (adapter) or in our
+  // post-retrieve pipeline. Default off; never shown to non-admins.
+  simpleSearch: false,
 };

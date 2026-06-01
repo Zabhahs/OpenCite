@@ -63,7 +63,9 @@ function OpenCITE() {
   const [rrfWeight, setRrfWeight] = useState(settings.rrfSemanticWeight ?? 0.4);
   // Keep the live value in sync when settings load / sync from DB.
   useEffect(() => { setRrfWeight(settings.rrfSemanticWeight ?? 0.4); }, [settings.rrfSemanticWeight]);
-  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, settings.semanticSearch, rrfWeight);
+  // v0.36 — simple (raw) mode bypasses semantic rerank entirely.
+  const semanticActive = settings.semanticSearch && !settings.simpleSearch;
+  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, semanticActive, rrfWeight);
   const effectiveStates = rerankedStates || sectionStates;
   const filteredSections = useFilters(effectiveStates, filterState);
 
@@ -164,9 +166,9 @@ function OpenCITE() {
     !hasSearched ? false
     : !allDone ? false
     : totalResults === 0 ? true
-    : !settings.semanticSearch ? true
+    : !semanticActive ? true
     : (rerankStatus === "done" || rerankStatus === "error");
-  const semanticPreparing = settings.semanticSearch && allDone && rerankStatus === "reranking";
+  const semanticPreparing = semanticActive && allDone && rerankStatus === "reranking";
 
   const sortedAdapters = useMemo(() => {
     if (!allDone) return enabledAdapters;
@@ -318,6 +320,7 @@ function OpenCITE() {
           onRrfWeightChange={setRrfWeight}
           onRrfWeightCommit={(v) => saveSettings({ ...settings, rrfSemanticWeight: v })}
           onOpenSettings={() => setActivePanel("settings")}
+          admin={admin}
         />
 
         {hasSearched && resultsReady && (
