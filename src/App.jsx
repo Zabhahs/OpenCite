@@ -67,7 +67,7 @@ function OpenCITE() {
   const semanticActive = settings.semanticSearch && !settings.simpleSearch;
   const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, semanticActive, rrfWeight);
   const effectiveStates = rerankedStates || sectionStates;
-  const filteredSections = useFilters(effectiveStates, filterState);
+  const filteredSections = useFilters(effectiveStates, filterState, settings.simpleSearch);
 
   // v.19 — install debug logger ring buffer once when admin signs in
   useEffect(() => {

@@ -8,7 +8,7 @@ import { normalizeLanguage } from "../lib/langNormalize.js";
 // keyword: lowercase string matched against keywords[] and subjects[]
 // oaOnly: boolean — keep only results where isOA === true
 
-export function useFilters(sectionStates, filterState = {}) {
+export function useFilters(sectionStates, filterState = {}, bypass = false) {
   const { type, language, yearMin, yearMax, sortBy = "default", keyword, oaOnly } = filterState;
 
   return useMemo(() => {
@@ -26,6 +26,10 @@ export function useFilters(sectionStates, filterState = {}) {
     const out = {};
     for (const [id, section] of Object.entries(sectionStates)) {
       if (!section.results) { out[id] = section; continue; }
+
+      // v0.36 simple/raw mode — render adapter output exactly as fetched: no low-confidence
+      // gate, no facet filters, no re-sort. Direct query → cards.
+      if (bypass) { out[id] = section; continue; }
 
       let results = section.results;
 
@@ -55,5 +59,5 @@ export function useFilters(sectionStates, filterState = {}) {
       out[id] = { ...section, results };
     }
     return out;
-  }, [sectionStates, type, language, yearMin, yearMax, sortBy, keyword, oaOnly]);
+  }, [sectionStates, type, language, yearMin, yearMax, sortBy, keyword, oaOnly, bypass]);
 }
