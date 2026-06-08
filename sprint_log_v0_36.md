@@ -254,3 +254,43 @@ most refactor work.
 *End v0.36 sprint plan. T1–T4 this sprint. Outcome: a side-by-side diagnostic view that
 tells us whether the adapters or the pipeline is broken, so v0.37+ can refactor with
 confidence.*
+
+---
+
+## 9. Changelog — 2026-06-08: "Simple search ACTUALLY bypasses all rank + filter"
+
+**Symptom (reported):** Admin enabled the Simple-search UI toggle, but results still came
+back filtered/ranked. The client toggle only ever skipped the *useSearch* pipeline
+(cross-adapter dedup / BM25F score / confidence gate / semantic rerank). Two filters it
+did **not** bypass were still shaping the cards.
+
+**Root cause — two surviving filters:**
+
+1. **Crossref `hasContentMatch` filter** (`src/adapters/core/crossref.js`). Drops every
+   Crossref row that doesn't token-match title/abstract/keywords. Was gated only on
+   `authorSearch`, so it ran in simple mode too. (Added `d626027` during v0.31 work.)
+2. **Render-layer gate in `useFilters`** (`src/hooks/useFilters.js`). The rendered cards
+   come from `filteredSections = useFilters(...)`, NOT the raw `sectionStates` that simple
+   mode populates. `useFilters` applies the global low-confidence gate + facet filters +
+   re-sort on every search. (Added `e71fb0f`.) This was the main culprit — it ran on 100%
+   of searches regardless of the simple flag.
+
+**Fix (3 files, committed `733c0f1` + `2bd7aba`):**
+- `src/adapters/core/crossref.js` — content filter now also skipped when
+  `settings.simpleSearch` (direct API output → cards, like pre-v0.31).
+- `src/hooks/useFilters.js` — new `bypass` arg; when set, each section is returned
+  as-fetched (no gate, no facets, no re-sort). Added to the memo deps.
+- `src/App.jsx` — threads `settings.simpleSearch` as the `bypass` arg into `useFilters()`.
+
+**Net behavior:** simple ON → each adapter direct-queried → cards returned in fan-out
+order, nothing dropped or reranked.
+
+**Deliberately NOT changed (these are query mechanics, not post-filters):**
+- `met.js` / `openNeuro.js` client-side `.filter()` — those APIs have no server-side
+  search; the filter IS how the query is applied. Removing it would dump the whole catalog
+  ignoring the query, which is the opposite of "query and return."
+- Internet Archive title/desc/subject field-scoping — that's how IA is queried, not a
+  post-filter.
+
+**UX gotcha:** toggling Simple search does not auto-rerun; it changes the *next* search.
+Re-run the query after flipping it on.
