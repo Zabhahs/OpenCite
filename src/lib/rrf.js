@@ -35,12 +35,15 @@ export function fuseRanks(results, rankLists, k = 60) {
 // semantic only (a documented, accepted weak-signal gap).
 // @param {Object[]} results
 // @param {(r: Object) => (import("../adapters/_shared/base.js").AdapterCapability|undefined)} getCapability
+// @param {("score"|"rank")[]} [accept] which native-relevance tiers to include. Split by
+//   tier so the caller can weight a position-only "rank" prior (IA/DOAJ) BELOW a real
+//   full-corpus "score" prior (OpenAlex/Crossref) — see RANK_NATIVE_DISCOUNT.
 // @returns {Map<number, number>} resultIndex → dense 0-based native rank
-export function buildNativeRanks(results, getCapability) {
+export function buildNativeRanks(results, getCapability, accept = ["score", "rank"]) {
   const bySource = new Map();
   results.forEach((r, i) => {
     const nr = getCapability(r)?.rankFields?.nativeRelevance;
-    if (nr !== "score" && nr !== "rank") return;
+    if (!accept.includes(nr)) return;
     if (!Number.isFinite(r.nativeRank)) return;
     const key = r.source || "_";
     if (!bySource.has(key)) bySource.set(key, []);
@@ -54,12 +57,22 @@ export function buildNativeRanks(results, getCapability) {
   return out;
 }
 
+// A position-only ("rank") native prior — IA/DOAJ return results in relevance order but
+// expose no score, and that order still carries OCR/popularity noise (live finding: IA's
+// "VIC Revealed" / "BEST ISLAMIC BOOKS" surfaced high on bare-surname queries). So a "rank"
+// source's native pull is discounted to this fraction of a real "score" source's (OpenAlex
+// relevance_score / Crossref Solr score), which BM25F can then correctly out-vote.
+export const RANK_NATIVE_DISCOUNT = 0.5;
+
 // Pool-size-aware native weight (v0.35 §5.3). The local BM25F IDF is degenerate on a
 // micro-pool (measured 14–45 docs), so the smaller the pooled candidate set, the more we
-// trust the upstream full-corpus native ordering. Returns the native share ∈ [0,1]; the
-// caller assigns the remainder to lexical (+ semantic, in the UI's 3-way split).
+// trust the upstream full-corpus native ordering. CAPPED at 0.5 (tuned post-launch): above
+// that, native out-voted BM25F on tiny pools and dragged in IA OCR/popularity artifacts +
+// demoted a clean phrase match ("Kutchi Memon Cookbook" #1→#4). Returns the "score"-tier
+// native share ∈ [0,1]; the caller assigns the remainder to lexical (+ semantic in the UI),
+// and a separate, discounted share to the "rank" tier.
 export function nativeWeight(poolSize) {
-  if (poolSize < 20) return 0.7;
-  if (poolSize < 50) return 0.6;
-  return 0.5;
+  if (poolSize < 20) return 0.5;
+  if (poolSize < 50) return 0.45;
+  return 0.4;
 }

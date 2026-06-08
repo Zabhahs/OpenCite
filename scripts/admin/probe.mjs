@@ -150,6 +150,18 @@ try {
       console.log(`    band         : ${cov.band ?? "(none)"}`);
       console.log("");
     }
+
+    // v0.35 — RRF fusion internals (native upstream relevance ⊕ local BM25F).
+    const fus = dbg.fusion ?? null;
+    if (fus) {
+      console.log("  Fusion (v0.35):");
+      console.log(`    wNative      : ${fus.wNative ?? "(none)"}  (score-tier native share; capped 0.5)`);
+      console.log(`    rankDiscount : ${fus.rankDiscount ?? "(none)"}  (rank-tier native weight = wNative × this)`);
+      console.log(`    scoreRanked  : ${fus.scoreRanked ?? fus.nativeRanked ?? "(none)"}  (OpenAlex/Crossref — real relevance prior)`);
+      console.log(`    rankRanked   : ${fus.rankRanked ?? "(none)"}  (IA/DOAJ — position-only prior, discounted)`);
+      console.log(`    pool         : ${fus.pool ?? "(none)"}`);
+      console.log("");
+    }
   } else {
     console.log("── meta.debug: (absent — admin debug envelope did not materialize) ──");
     console.log("");
@@ -161,24 +173,31 @@ try {
   if (results.length > 0) {
     console.log("── results ─────────────────────────────────────────────────────");
     console.log("");
+    // v0.35: debug card carries _fused (the ranking key), _score (BM25F), and _native
+    // {score,rank}. The public `score` field was dropped, so prefer the debug internals.
     console.log(
       "  " +
         col("#", 3) +
-        col("source", 18) +
-        rcol("score", 7) +
+        col("source", 16) +
+        rcol("fused", 9) +
+        rcol("bm25", 7) +
+        rcol("nrk", 4) +
         rcol("year", 5) +
         rcol("citedBy", 8) +
         "  title"
     );
-    console.log("  " + "─".repeat(80));
+    console.log("  " + "─".repeat(84));
     for (let i = 0; i < results.length; i++) {
       const r = results[i];
-      const title = (r.title || "(no title)").slice(0, 78);
+      const title = (r.title || "(no title)").slice(0, 74);
+      const nrk = r._native?.rank;
       console.log(
         "  " +
           col(i + 1, 3) +
-          col(r.source ?? "(hidden)", 18) +
-          rcol(r.score != null ? Number(r.score).toFixed(4) : "(n/a)", 7) +
+          col(r.source ?? "(hidden)", 16) +
+          rcol(r._fused != null ? Number(r._fused).toFixed(5) : (r.score != null ? Number(r.score).toFixed(4) : "(n/a)"), 9) +
+          rcol(r._score != null ? Number(r._score).toFixed(2) : "", 7) +
+          rcol(nrk != null ? nrk : "", 4) +
           rcol(r.year ?? "", 5) +
           rcol(r.citedBy ?? "", 8) +
           "  " +

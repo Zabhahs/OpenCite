@@ -41,7 +41,7 @@
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
-import { buildNativeRanks, nativeWeight, rrfScores } from "../src/lib/rrf.js";
+import { buildNativeRanks, nativeWeight, rrfScores, RANK_NATIVE_DISCOUNT } from "../src/lib/rrf.js";
 import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { toPublicResult } from "./_shared/publicResult.js";
@@ -346,7 +346,12 @@ export default async function handler(req, res) {
     // query magnitude artifact (D4). Native weight rises as the pool shrinks (§5.3: a 20-doc
     // IDF is statistical noise). _score (BM25F) is preserved untouched for the gate above,
     // dedup, and the admin debug card; _fused is the new ordering key.
-    const nativeRanks = buildNativeRanks(finalResults, (r) => capBySource[r.source]);
+    // Native priors are split by TIER: "score" sources (OpenAlex/Crossref — real full-corpus
+    // relevance) carry full native weight; "rank" sources (IA/DOAJ — position-only, noisier)
+    // are discounted so BM25F can out-vote their OCR/popularity artifacts (post-launch tuning).
+    const getCap = (r) => capBySource[r.source];
+    const scoreNative = buildNativeRanks(finalResults, getCap, ["score"]);
+    const rankNative = buildNativeRanks(finalResults, getCap, ["rank"]);
     const lexRanks = new Map();
     finalResults
       .map((r, i) => [i, r._score || 0])
@@ -354,7 +359,8 @@ export default async function handler(req, res) {
       .forEach(([i], rank) => lexRanks.set(i, rank));
     const wNative = nativeWeight(finalResults.length);
     const fused = rrfScores(finalResults.length, [
-      { ranks: nativeRanks, weight: wNative },
+      { ranks: scoreNative, weight: wNative },
+      { ranks: rankNative, weight: wNative * RANK_NATIVE_DISCOUNT },
       { ranks: lexRanks, weight: 1 - wNative },
     ]);
     finalResults.forEach((r, i) => { r._fused = fused[i]; });
@@ -369,7 +375,7 @@ export default async function handler(req, res) {
         perAdapter: adapterStats,
         dedup: { raw: scored.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
         coverage: { rawPercent: Math.round(cov.coverage * 1000) / 10, failedCount: failedAdapters.length, band: cov.band },
-        fusion: { wNative, nativeRanked: nativeRanks.size, pool: finalResults.length },
+        fusion: { wNative, rankDiscount: RANK_NATIVE_DISCOUNT, scoreRanked: scoreNative.size, rankRanked: rankNative.size, pool: finalResults.length },
       };
     }
   } catch {
