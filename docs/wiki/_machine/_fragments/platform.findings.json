@@ -6,7 +6,9 @@
     "title": "MCP SDK pinned with ^ semver — breaking minor releases allowed",
     "detail": "@modelcontextprotocol/sdk ^1.0.0 in mcp/package.json allows any 1.x release. The MCP SDK has had breaking changes between minor versions. A future npm install could silently upgrade to an incompatible version.",
     "path": "mcp/package.json",
-    "modules": ["mcp.server"],
+    "modules": [
+      "mcp.server"
+    ],
     "status": "open",
     "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
     "fix_hint": "Pin to the exact tested version, e.g. \"@modelcontextprotocol/sdk\": \"1.0.4\". Re-test on each intentional upgrade."
@@ -18,7 +20,9 @@
     "title": "MCP non-JSON format responses return {_text} — undocumented shape for AI clients",
     "detail": "When format=mla/apa/bibtex/ris is requested, client.js returns {_text: string} rather than a JSON object. The MCP tool description does not document this distinction. AI clients that always expect a JSON object will receive a misshapen response without a clear error.",
     "path": "mcp/src/client.js:63",
-    "modules": ["mcp.client"],
+    "modules": [
+      "mcp.client"
+    ],
     "status": "open",
     "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
     "fix_hint": "Add a note to the tool description: 'When format is not json, the response is a plain text bibliography in the _text field rather than a structured object.' Or detect at call site in server.js and surface as a separate content block."
@@ -30,7 +34,9 @@
     "title": "ApiUsage.key_id has no FK to api_keys — orphaned usage rows accumulate silently",
     "detail": "The ApiUsage model references key_id but declares no @@relation to ApiKey. If an ApiKey row is deleted (via user delete Cascade), its ApiUsage rows remain. Over time this pollutes the analytics table with orphaned counts.",
     "path": "prisma/schema.prisma:158",
-    "modules": ["prisma.schema"],
+    "modules": [
+      "prisma.schema"
+    ],
     "status": "open",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Add a relation: keyId ApiKey @relation(fields: [key_id], references: [id], onDelete: Cascade). Add a migration."
@@ -42,7 +48,10 @@
     "title": "relevance_labels table missing from billing migration — re-provisioning will fail",
     "detail": "prisma/schema.prisma defines the relevance_labels model but the only migration file (20260530120000_billing/migration.sql) does not create it. A fresh prisma migrate deploy will not create the table, breaking the F2 gold-set harness on a new environment.",
     "path": "prisma/migrations/20260530120000_billing/migration.sql",
-    "modules": ["prisma.schema", "scripts.migrate"],
+    "modules": [
+      "prisma.schema",
+      "scripts.migrate"
+    ],
     "status": "open",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Add a second migration file (e.g. 20260531000000_relevance_labels/migration.sql) with the CREATE TABLE IF NOT EXISTS for relevance_labels, or append to the existing migration (only safe on a fresh DB)."
@@ -66,7 +75,9 @@
     "title": "users.total_credits is Decimal(12,4) but may be treated as float in JS arithmetic",
     "detail": "Prisma returns Decimal values as Decimal.js objects (or strings, depending on the client version). If caller code does arithmetic with + or * rather than Decimal methods, silent precision loss occurs. Credit debit/credit paths in api/_shared/billing.js must coerce carefully.",
     "path": "prisma/schema.prisma:33",
-    "modules": ["prisma.schema"],
+    "modules": [
+      "prisma.schema"
+    ],
     "status": "open",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Audit billing.js for any plain JS arithmetic on total_credits. Prefer Prisma's atomic $increment/$decrement operations which keep the value in Postgres arithmetic."
@@ -78,7 +89,9 @@
     "title": "public/output.css is committed — stale during local dev without tailwindcss --watch",
     "detail": "The Tailwind output is committed to the repo and served statically. During vite dev, changes to src/input.css or src/**/*.{jsx,js} are not reflected until tailwindcss CLI is also run. A developer running only `vite` will see stale styles.",
     "path": "public/output.css",
-    "modules": ["tailwind.config"],
+    "modules": [
+      "tailwind.config"
+    ],
     "status": "open",
     "wiki": "08-Build-Deploy/Build-Deploy.md#css-pipeline",
     "fix_hint": "Add a dev script: \"dev\": \"concurrently \\\"vite\\\" \\\"tailwindcss -i ./src/input.css -o ./public/output.css --watch\\\"\". Or import input.css via Vite instead of linking output.css in index.html."
@@ -90,7 +103,9 @@
     "title": "@auth/core and @auth/prisma-adapter use ^ semver — Auth.js v5 minor releases have broken adapters",
     "detail": "@auth/core ^0.37.4 and @auth/prisma-adapter ^2.7.4 in package.json. Auth.js v5 has historically changed adapter interfaces and session shape in minor releases. An npm install on a new Vercel deployment could silently upgrade to a breaking version.",
     "path": "package.json",
-    "modules": ["package"],
+    "modules": [
+      "package"
+    ],
     "status": "open",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Pin to exact versions. Use a lockfile (package-lock.json or yarn.lock) and commit it. Enable Dependabot for controlled upgrade PRs."
@@ -102,7 +117,11 @@
     "title": ".env.example documents DATABASE_URL/DIRECT_URL but Prisma schema reads POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING",
     "detail": ".env.example shows DATABASE_URL and DIRECT_URL (old Supabase naming convention). prisma/schema.prisma and scripts/migrate.mjs read POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING (Vercel Postgres naming). A developer copying .env.example verbatim will get a Prisma environment variable error.",
     "path": ".env.example",
-    "modules": ["package", "prisma.schema", "scripts.migrate"],
+    "modules": [
+      "package",
+      "prisma.schema",
+      "scripts.migrate"
+    ],
     "status": "open",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Update .env.example to use POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING with appropriate comments. Add OPENCITE_MAILTO, KV_REST_API_URL, KV_REST_API_TOKEN, SETTINGS_ENCRYPTION_KEY, API_KEY_PEPPER to .env.example as they are all undocumented required vars."
@@ -112,10 +131,10 @@
     "type": "security",
     "severity": "med",
     "title": "API_KEY_PEPPER defaults to empty string — no startup guard for missing pepper",
-    "detail": "api/_shared/crypto.js:69 uses process.env.API_KEY_PEPPER || \"\". If the env var is not set in production, all API key hashes are computed without a pepper, reducing the hash to a bare SHA-256. An attacker who compromises the DB can rainbow-table the key hashes. There is no startup assertion that fails if the pepper is missing.",
+    "detail": "api/_shared/crypto.js:69 uses process.env.API_KEY_PEPPER || \"\". If the env var is not set in production, all API key hashes are computed without a pepper, reducing the hash to a bare SHA-256. An attacker who compromises the DB can rainbow-table the key hashes. There is no startup assertion that fails if the pepper is missing. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/crypto.js:69",
     "modules": [],
-    "status": "open",
+    "status": "fixed",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Add a startup guard: if (!process.env.API_KEY_PEPPER && process.env.NODE_ENV === 'production') throw new Error('API_KEY_PEPPER must be set in production'). Or at minimum, warn loudly on startup."
   }

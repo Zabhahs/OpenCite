@@ -616,7 +616,7 @@
     "type": "security",
     "severity": "med",
     "title": "parseBody has no body size limit — memory exhaustion on large payloads",
-    "detail": "api/_shared/parseBody.js accumulates the entire request body in a string before JSON-parsing. There is no maxBytes check. Vercel's platform-level 4.5MB limit is the only bound. Routes using parseBody (history, library, settings via checkout) can be fed large payloads within that limit without route-level rejection, wasting function memory and invocation time.",
+    "detail": "api/_shared/parseBody.js accumulates the entire request body in a string before JSON-parsing. There is no maxBytes check. Vercel's platform-level 4.5MB limit is the only bound. Routes using parseBody (history, library, settings via checkout) can be fed large payloads within that limit without route-level rejection, wasting function memory and invocation time. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/parseBody.js:3",
     "modules": [
       "api.shared.parseBody",
@@ -624,7 +624,7 @@
       "api.library",
       "api.checkout"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
     "fix_hint": "Add a maxBytes check: reject with 413 before accumulating more than ~64KB."
   },
@@ -633,13 +633,13 @@
     "type": "security",
     "severity": "low",
     "title": "getSession loopback URL constructed from unvalidated x-forwarded-host header",
-    "detail": "api/_shared/auth.js:38 builds the loopback URL as `${protocol}://${host}/api/auth/session` where host = req.headers['x-forwarded-host'] || req.headers.host. A crafted host header could redirect this internal fetch (which carries the caller's session cookies) to an arbitrary external host. On Vercel managed infrastructure x-forwarded-host is set by the platform and cannot be caller-controlled, so this is low severity in deployment but structurally unsafe for any non-Vercel deployment.",
+    "detail": "api/_shared/auth.js:38 builds the loopback URL as `${protocol}://${host}/api/auth/session` where host = req.headers['x-forwarded-host'] || req.headers.host. A crafted host header could redirect this internal fetch (which carries the caller's session cookies) to an arbitrary external host. On Vercel managed infrastructure x-forwarded-host is set by the platform and cannot be caller-controlled, so this is low severity in deployment but structurally unsafe for any non-Vercel deployment. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/auth.js:38",
     "modules": [
       "api.shared.auth",
       "api.shared.apiAuth"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md#getSession",
     "fix_hint": "Validate host against TRUSTED_ORIGINS before using it in the loopback URL, or use a hardcoded base URL from an env var."
   },
@@ -648,12 +648,12 @@
     "type": "security",
     "severity": "low",
     "title": "Master API key compared with === (not timing-safe)",
-    "detail": "api/_shared/apiAuth.js:47 checks `if (master && key === master)`. String equality is not timing-safe — an attacker measuring response latency differences across many requests could theoretically enumerate the key character-by-character. Practical exploitation requires many precisely timed requests, but the master key is the highest-privilege credential in the system.",
+    "detail": "api/_shared/apiAuth.js:47 checks `if (master && key === master)`. String equality is not timing-safe — an attacker measuring response latency differences across many requests could theoretically enumerate the key character-by-character. Practical exploitation requires many precisely timed requests, but the master key is the highest-privilege credential in the system. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/apiAuth.js:47",
     "modules": [
       "api.shared.apiAuth"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md#api-key-resolution",
     "fix_hint": "Use crypto.timingSafeEqual(Buffer.from(key), Buffer.from(master)) — both buffers must be equal length (pad/hash first to avoid length leak)."
   },
@@ -662,13 +662,13 @@
     "type": "security",
     "severity": "low",
     "title": "Rate limiter is fail-open — KV outage disables burst protection",
-    "detail": "api/_shared/ratelimit.js:26 returns {ok:true} when incrWithTtl returns null (KV unavailable). This is intentional (paid searches must not fail on KV outage) but means a KV outage or an attacker-induced KV unavailability disables the burst cap. The credit ledger remains the durable quota, but burst throughput is uncapped.",
+    "detail": "api/_shared/ratelimit.js:26 returns {ok:true} when incrWithTtl returns null (KV unavailable). This is intentional (paid searches must not fail on KV outage) but means a KV outage or an attacker-induced KV unavailability disables the burst cap. The credit ledger remains the durable quota, but burst throughput is uncapped. [F-403: kept fail-open by design (credits are the durable quota) + added in-process burst fallback during KV outage.]",
     "path": "api/_shared/ratelimit.js:26",
     "modules": [
       "api.shared.ratelimit",
       "api.shared.kv"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#ratelimitjs",
     "fix_hint": "Consider a in-process LRU fallback rate limiter when KV is unavailable. Or accept the risk (credits are the real quota)."
   },
@@ -677,12 +677,12 @@
     "type": "security",
     "severity": "low",
     "title": "API_KEY_PEPPER is optional — unpepped key hashes are offline brute-forceable on DB leak",
-    "detail": "api/_shared/crypto.js:69 — `const pepper = process.env.API_KEY_PEPPER || ''`. If API_KEY_PEPPER is not set, all key hashes are SHA-256(key) with a known prefix (oc_live_). A DB leak + knowledge of the key format enables offline dictionary/brute-force attacks on the short random suffix (24 bytes = 32 base64url chars, but entropy is 192 bits — brute-force is not feasible). The real risk is that without a pepper, a DB dump alone is sufficient to test candidate keys without hitting the API.",
+    "detail": "api/_shared/crypto.js:69 — `const pepper = process.env.API_KEY_PEPPER || ''`. If API_KEY_PEPPER is not set, all key hashes are SHA-256(key) with a known prefix (oc_live_). A DB leak + knowledge of the key format enables offline dictionary/brute-force attacks on the short random suffix (24 bytes = 32 base64url chars, but entropy is 192 bits — brute-force is not feasible). The real risk is that without a pepper, a DB dump alone is sufficient to test candidate keys without hitting the API. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/crypto.js:69",
     "modules": [
       "api.shared.crypto"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#cryptojs",
     "fix_hint": "Set API_KEY_PEPPER to a random 32-byte hex string in Vercel env and document it as required."
   },
@@ -706,10 +706,10 @@
     "type": "security",
     "severity": "med",
     "title": "vercel.json has no security headers — no CSP, HSTS, X-Frame-Options",
-    "detail": "vercel.json contains only two rewrite rules and no `headers` block. There are no global HTTP security headers set: no Content-Security-Policy, no Strict-Transport-Security, no X-Frame-Options, no Referrer-Policy, no Permissions-Policy. The proxy route adds X-Content-Type-Options:nosniff per response but this is not applied globally. Without CSP, XSS in any page has full document access.",
+    "detail": "vercel.json contains only two rewrite rules and no `headers` block. There are no global HTTP security headers set: no Content-Security-Policy, no Strict-Transport-Security, no X-Frame-Options, no Referrer-Policy, no Permissions-Policy. The proxy route adds X-Content-Type-Options:nosniff per response but this is not applied globally. Without CSP, XSS in any page has full document access. [F-406: headers enforced; CSP ships Content-Security-Policy-Report-Only first — flip to enforcing after violation monitoring.]",
     "path": "vercel.json:1",
     "modules": [],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#health-audit",
     "fix_hint": "Add a `headers` block in vercel.json with at minimum: Strict-Transport-Security, X-Content-Type-Options:nosniff, X-Frame-Options:DENY, Referrer-Policy:strict-origin-when-cross-origin, and a Content-Security-Policy appropriate for the SPA."
   },
@@ -718,14 +718,14 @@
     "type": "security",
     "severity": "med",
     "title": "Keyed per-source routes (Europeana/DPLA/Smithsonian) are unauthenticated — quota drain risk",
-    "detail": "api/search/europeana.js, dpla.js, smithsonian.js have no auth, no rate limit, and no credit charge. Any caller with network access to the Vercel function URLs can send unlimited queries, burning the project's Europeana/DPLA/Smithsonian API quota without any cost to themselves. These URLs are discoverable from the client adapter source code.",
+    "detail": "api/search/europeana.js, dpla.js, smithsonian.js have no auth, no rate limit, and no credit charge. Any caller with network access to the Vercel function URLs can send unlimited queries, burning the project's Europeana/DPLA/Smithsonian API quota without any cost to themselves. These URLs are discoverable from the client adapter source code. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/europeana.js:11",
     "modules": [
       "api.route.europeana",
       "api.route.dpla",
       "api.route.smithsonian"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
     "fix_hint": "Add a simple origin/referer check or a lightweight auth token (e.g., require a valid session cookie, or check Origin against TRUSTED_ORIGINS). Rate-limiting via IP would also help."
   },
@@ -734,12 +734,12 @@
     "type": "security",
     "severity": "low",
     "title": "BL SPARQL route injects query into SPARQL template with minimal sanitization",
-    "detail": "api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser.",
+    "detail": "api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/bl.js:15",
     "modules": [
       "api.route.bl"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Per-Source-Routes.md#bl---british-library-sparql",
     "fix_hint": "Use parameterized SPARQL via the Upstash or a SPARQL-safe encoding, or at minimum strip all non-alphanumeric characters from the query before injection."
   },
@@ -748,12 +748,12 @@
     "type": "security",
     "severity": "low",
     "title": "Mexicana route passes resumptionToken from query param directly into OAI-PMH URL",
-    "detail": "api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens.",
+    "detail": "api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/mexicana.js:51",
     "modules": [
       "api.route.mexicana"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Per-Source-Routes.md#mexicanajs---mexicana-oai-pmh",
     "fix_hint": "Validate that resumptionToken matches a known format (alphanumeric + limited punctuation) before using it."
   },
@@ -762,12 +762,12 @@
     "type": "security",
     "severity": "med",
     "title": "Proxy route does not enforce https: scheme — HTTP downgrade not blocked",
-    "detail": "api/proxy.js:61 checks only the hostname against the allowlist, not the URL scheme. A caller can pass `http://gallica.bnf.fr/...` and the proxy will forward in plaintext. The platform will likely upgrade to HTTPS for most hosts but the proxy itself provides no scheme enforcement.",
+    "detail": "api/proxy.js:61 checks only the hostname against the allowlist, not the URL scheme. A caller can pass `http://gallica.bnf.fr/...` and the proxy will forward in plaintext. The platform will likely upgrade to HTTPS for most hosts but the proxy itself provides no scheme enforcement. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/proxy.js:61",
     "modules": [
       "api.proxy"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
     "fix_hint": "Add `if (targetUrl.protocol !== 'https:') return new Response('Only HTTPS targets allowed', { status: 400 });` before the allowlist check."
   },
@@ -776,12 +776,12 @@
     "type": "security",
     "severity": "med",
     "title": "Proxy follows redirects without re-validating the redirect destination hostname",
-    "detail": "api/proxy.js:78 sets `redirect: 'follow'`. If an allowlisted upstream host issues an HTTP redirect to a non-allowlisted or internal host (e.g. 169.254.169.254 metadata endpoint, or an internal service), the proxy follows the redirect without re-checking the destination against ALLOWED_DOMAINS. This is a classic SSRF-via-redirect vector.",
+    "detail": "api/proxy.js:78 sets `redirect: 'follow'`. If an allowlisted upstream host issues an HTTP redirect to a non-allowlisted or internal host (e.g. 169.254.169.254 metadata endpoint, or an internal service), the proxy follows the redirect without re-checking the destination against ALLOWED_DOMAINS. This is a classic SSRF-via-redirect vector. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/proxy.js:78",
     "modules": [
       "api.proxy"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
     "fix_hint": "Set `redirect: 'manual'`, then check the Location header against ALLOWED_DOMAINS before following, or use `redirect: 'error'` and return a 302 to the client to follow directly."
   },
@@ -790,12 +790,12 @@
     "type": "security",
     "severity": "low",
     "title": "Proxy 502 error body leaks upstream error.message",
-    "detail": "api/proxy.js:103 returns `{ error: 'Proxy Execution Error', details: error.message }` where error.message can include the target URL, network error details, or internal host resolution information visible to the caller.",
+    "detail": "api/proxy.js:103 returns `{ error: 'Proxy Execution Error', details: error.message }` where error.message can include the target URL, network error details, or internal host resolution information visible to the caller. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/proxy.js:103",
     "modules": [
       "api.proxy"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
     "fix_hint": "Log error.message server-side and return only a generic 'Upstream unreachable' message to the caller."
   },
@@ -804,12 +804,12 @@
     "type": "security",
     "severity": "low",
     "title": "No per-user API key count limit — a user can mint unbounded keys",
-    "detail": "api/keys.js:50-59 — POST creates a new key without checking how many the user already has. Each key still spends from the user's own credit pool, so the financial impact is self-limiting. The risk is that a large number of keys creates noise in the api_keys table and makes key management harder.",
+    "detail": "api/keys.js:50-59 — POST creates a new key without checking how many the user already has. Each key still spends from the user's own credit pool, so the financial impact is self-limiting. The risk is that a large number of keys creates noise in the api_keys table and makes key management harder. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/keys.js:50",
     "modules": [
       "api.keys"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",
     "fix_hint": "Reject POST when the user already has N (e.g. 10) non-revoked keys."
   },
@@ -818,12 +818,12 @@
     "type": "security",
     "severity": "med",
     "title": "AUTH_SECRET env var not validated at startup — absent/weak secret allows session forgery",
-    "detail": "api/auth/handler.js passes AUTH_SECRET from process.env to the Auth.js config without checking it is present or of sufficient length. If AUTH_SECRET is unset or empty, Auth.js v5 will reject it at runtime (throws on token signing), but there is no startup-time assertion that surfaces the misconfiguration early. A weak/known secret could allow session token forgery.",
+    "detail": "api/auth/handler.js passes AUTH_SECRET from process.env to the Auth.js config without checking it is present or of sufficient length. If AUTH_SECRET is unset or empty, Auth.js v5 will reject it at runtime (throws on token signing), but there is no startup-time assertion that surfaces the misconfiguration early. A weak/known secret could allow session token forgery. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/auth/handler.js:21",
     "modules": [
       "api.auth.handler"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md",
     "fix_hint": "Add a startup check: `if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) throw new Error('AUTH_SECRET must be at least 32 chars');`"
   },
@@ -832,12 +832,12 @@
     "type": "security",
     "severity": "low",
     "title": "Checkout baseUrl accepts any *.vercel.app origin for post-checkout redirects",
-    "detail": "api/checkout.js:28 — `if (origin && (TRUSTED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app'))) return origin;`. The `*.vercel.app` pattern accepts any Vercel preview deployment from any account, not just OpenCITE's own. A malicious actor could create a Vercel project at `evil.vercel.app`, craft a checkout request with `Origin: https://evil.vercel.app`, and redirect users there post-checkout.",
+    "detail": "api/checkout.js:28 — `if (origin && (TRUSTED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app'))) return origin;`. The `*.vercel.app` pattern accepts any Vercel preview deployment from any account, not just OpenCITE's own. A malicious actor could create a Vercel project at `evil.vercel.app`, craft a checkout request with `Origin: https://evil.vercel.app`, and redirect users there post-checkout. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/checkout.js:28",
     "modules": [
       "api.checkout"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "05-Billing/Billing-Credits.md#stripe-checkout",
     "fix_hint": "Restrict the vercel.app check to a known project prefix: `origin.endsWith('-opencite.vercel.app') || origin.match(/^https:\\/\\/opencite.*\\.vercel\\.app$/)`."
   },
@@ -846,12 +846,12 @@
     "type": "bug",
     "severity": "low",
     "title": "Webhook silently no-ops when client_reference_id absent and stripe_customer_id has no DB match",
-    "detail": "api/stripe/webhook.js:104 — resolveUserId returns null when neither client_reference_id nor a matching stripe_customer_id is found. The event is still claimed in processedEvent (no retry), but no credit/plan update occurs. This can happen if a customer was created in Stripe manually or if the DB reference was lost.",
+    "detail": "api/stripe/webhook.js:104 — resolveUserId returns null when neither client_reference_id nor a matching stripe_customer_id is found. The event is still claimed in processedEvent (no retry), but no credit/plan update occurs. This can happen if a customer was created in Stripe manually or if the DB reference was lost. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/stripe/webhook.js:104",
     "modules": [
       "api.stripe.webhook"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "05-Billing/Billing-Credits.md#stripe-webhook",
     "fix_hint": "Log a structured warning when userId is null for a handled event type so it surfaces in Vercel logs."
   },
@@ -860,12 +860,12 @@
     "type": "security",
     "severity": "low",
     "title": "Webhook trusts Stripe metadata for pack/plan attribution — safe only while STRIPE_SECRET_KEY is uncompromised",
-    "detail": "api/stripe/webhook.js:117 uses obj.metadata.pack and obj.metadata.plan to determine what credits/plan to grant. Stripe metadata is only writable via the secret key, so this is safe in normal operation. If STRIPE_SECRET_KEY is compromised, an attacker could craft arbitrary checkout sessions with inflated pack/plan metadata.",
+    "detail": "api/stripe/webhook.js:117 uses obj.metadata.pack and obj.metadata.plan to determine what credits/plan to grant. Stripe metadata is only writable via the secret key, so this is safe in normal operation. If STRIPE_SECRET_KEY is compromised, an attacker could craft arbitrary checkout sessions with inflated pack/plan metadata. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/stripe/webhook.js:117",
     "modules": [
       "api.stripe.webhook"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "05-Billing/Billing-Credits.md#stripe-webhook",
     "fix_hint": "Cross-validate pack/plan from metadata against CREDIT_PACKS/PLANS before granting — reject unknown values explicitly."
   },
@@ -1001,10 +1001,10 @@
     "type": "security",
     "severity": "med",
     "title": "API_KEY_PEPPER defaults to empty string — no startup guard for missing pepper",
-    "detail": "api/_shared/crypto.js:69 uses process.env.API_KEY_PEPPER || \"\". If the env var is not set in production, all API key hashes are computed without a pepper, reducing the hash to a bare SHA-256. An attacker who compromises the DB can rainbow-table the key hashes. There is no startup assertion that fails if the pepper is missing.",
+    "detail": "api/_shared/crypto.js:69 uses process.env.API_KEY_PEPPER || \"\". If the env var is not set in production, all API key hashes are computed without a pepper, reducing the hash to a bare SHA-256. An attacker who compromises the DB can rainbow-table the key hashes. There is no startup assertion that fails if the pepper is missing. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/_shared/crypto.js:69",
     "modules": [],
-    "status": "open",
+    "status": "fixed",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Add a startup guard: if (!process.env.API_KEY_PEPPER && process.env.NODE_ENV === 'production') throw new Error('API_KEY_PEPPER must be set in production'). Or at minimum, warn loudly on startup."
   }
