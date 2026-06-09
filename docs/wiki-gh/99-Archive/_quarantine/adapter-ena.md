@@ -1,3 +1,29 @@
+---
+machine_ids: [adapters.extensions.ena]
+findings: [F-109, F-208]
+runtime: both
+status: quarantined
+tags: [archive, quarantine, adapter, ena]
+---
+<!-- AUTO-GENERATED from docs/wiki/99-Archive/_quarantine/adapter-ena.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
+
+
+# 🔒 Quarantined: ENA (European Nucleotide Archive) adapter
+
+> **Removed from build in v0.38.** Original path: `src/adapters/extensions/ena.js`. Full source below.
+
+## Why removed
+`ena.js:23` builds `study_title="*query*" OR study_description="*query*"` — the ENA Portal API does
+**not** support wildcard-within-quotes Lucene syntax and returns **HTTP 400** for most free-text
+queries. `serverSafe:true` → forced `partial` coverage. See [Bugs](../../09-Audit/Bugs.md#f-109), [Bugs](../../09-Audit/Bugs.md#f-208).
+
+## Revival checklist
+- [ ] Rewrite the query without wildcard-in-quotes, e.g. `study_title=query OR study_description=query` (test ENA's exact accepted syntax).
+- [ ] Add a real total/`hasMore` instead of the page-full heuristic (`items.length === pageSize`).
+- [ ] Re-add export + registry entry; verify live results across several genomic queries; flip `status`.
+
+## Verbatim source (as of v0.37)
+```js
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
@@ -44,3 +70,7 @@ export const ENA_ADAPTER = {
     return { results, hasMore: items.length === pageSize };
   }
 };
+```
+
+## See also
+[Quarantine register](../../01-Frontend/Components/_index.md) · [Extension-Adapters](../../02-Adapters/Extension-Adapters.md#ena) · [v0.38 sprint](../../10-Sprints/Index.md)

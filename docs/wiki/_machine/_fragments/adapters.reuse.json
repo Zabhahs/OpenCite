@@ -1,0 +1,62 @@
+[
+  {
+    "id": "R-100",
+    "title": "xmlUtils helpers duplicated in api/search/mexicana.js Edge route",
+    "shared_module": "adapters.shared.xmlUtils",
+    "client_users": ["adapters.extensions.onb", "adapters.extensions.bnfApi"],
+    "server_users": ["api.search"],
+    "opportunity": "divergent-duplicate",
+    "detail": "src/adapters/_shared/xmlUtils.js cannot be imported by api/search/mexicana.js (Vercel Edge route, cross-import constraint). The DC/OAI helpers are inlined in mexicana.js. Fix: move xmlUtils.js to a packages/shared-utils workspace package importable by both sides. Estimated effort: 2h (extract, add package.json, update imports). Risk: low (pure functions, no side effects).",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs"
+  },
+  {
+    "id": "R-101",
+    "title": "parseOpenAlexWork already shared between OPENALEX and CURATED adapters",
+    "shared_module": "adapters.shared.parseOpenAlex",
+    "client_users": ["adapters.core.openalex", "adapters.core.curatedJournals"],
+    "server_users": ["adapters.core.openalex", "adapters.core.curatedJournals"],
+    "opportunity": "already-shared",
+    "detail": "parseOpenAlexWork is correctly extracted to _shared/parseOpenAlex.js and imported by both OPENALEX and CURATED. OA_SELECT is the SSOT for the select= field list. This is the exemplary pattern to follow for future adapters that share an upstream API.",
+    "wiki": "02-Adapters/Core-Adapters.md"
+  },
+  {
+    "id": "R-102",
+    "title": "try-direct-fetch-then-proxiedFetch pattern repeated across 3 adapters",
+    "shared_module": "adapters.shared.proxy",
+    "client_users": ["adapters.extensions.northwestern", "adapters.extensions.onb", "adapters.extensions.bnfApi"],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "Northwestern (northwestern.js:27-30), ONB (onb.js:26-29), and BnF Catalogue (bnfApi.js:28-31) all implement the same pattern: try direct fetch(), catch network error, fall back to proxiedFetch(). This produces a silent CORS network error in the browser on every call before the proxy leg succeeds. The pattern should be replaced by the proxiedFetch() branch check (typeof window === 'undefined') that already exists in proxy.js. Estimated effort: 30 min per adapter. Risk: low.",
+    "wiki": "02-Adapters/Extension-Adapters.md#f-102"
+  },
+  {
+    "id": "R-103",
+    "title": "Thin-shim adapters lack capability metadata needed by coverage engine",
+    "shared_module": null,
+    "client_users": ["adapters.extensions.gallica", "adapters.extensions.openContext", "adapters.extensions.bdh", "adapters.extensions.britishLibrary", "adapters.extensions.openEdition", "adapters.extensions.mexicana"],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "Six thin-shim adapters (Gallica, OpenContext, BDH, BritishLibrary, OpenEdition, Mexicana) are missing serverSafe and/or corpusSize in their capability objects. The coverage engine cannot weight their contribution and the ranker cannot include them in the server fan-out. Add serverSafe: false (they route through backend), and realistic corpusSize estimates. Effort: 15 min each.",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#serversafe-gaps"
+  },
+  {
+    "id": "R-104",
+    "title": "Dead adapters (SCIELO, OPENNEURO, ENA) registered in ADAPTERS array inflate partial coverage",
+    "shared_module": null,
+    "client_users": ["adapters.extensions.scielo", "adapters.extensions.openNeuro", "adapters.extensions.ena"],
+    "server_users": ["adapters.extensions.scielo", "adapters.extensions.openNeuro", "adapters.extensions.ena"],
+    "opportunity": "divergent-duplicate",
+    "detail": "SCIELO, OPENNEURO, and ENA are in the ADAPTERS array (index.js:69,87,88) but always return 0 results. Every search through /api/search counts them as failing sources, causing the coverage engine to report partial coverage and apply a billing discount on every query. Remove from ADAPTERS array; keep the source files. Effort: 5 min + coverage test verification.",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#dead-adapter-impact"
+  },
+  {
+    "id": "R-105",
+    "title": "proxiedFetch spoof headers duplicated between proxy.js and api/proxy.js",
+    "shared_module": "adapters.shared.proxy",
+    "client_users": [],
+    "server_users": ["api.search"],
+    "opportunity": "divergent-duplicate",
+    "detail": "proxy.js:19-24 and api/proxy.js:69-73 define the same browser-spoof header set (User-Agent, Accept, Accept-Language, Referer). Constraint is documented: src/ and api/ cannot cross-import. Same fix as R-100: shared package. Until then, any change to the spoof headers must be applied in both files.",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs"
+  }
+]

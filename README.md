@@ -16,6 +16,39 @@ Built for citizen scientists, citizen scholars, independent researchers, and any
 
 ---
 
+## Documentation
+
+OpenCITE's engineering reference is a **single source-of-truth wiki**, kept in the repo in parallel forms:
+
+| Form | Where | For |
+|---|---|---|
+| **GitHub-readable mirror** | [`docs/wiki-gh/`](./docs/wiki-gh/README.md) | Reading/navigating on github.com — clickable relative links + anchors. **Start here on GitHub.** |
+| **Obsidian source** (canonical) | [`docs/wiki/`](./docs/wiki/home.md) | Authoring — open the folder as an Obsidian vault for `[[wikilinks]]`, backlinks, graph view. **Edit here.** |
+| **Machine-native twin** | [`docs/wiki/_machine/`](./docs/wiki/_machine/schema.md) | Tooling/agents — module registry, dependency graph, findings + reuse registries (JSON). |
+
+The honest health audit (bugs, security, duplication, tech debt) lives in **[09-Audit/Health-Dashboard](./docs/wiki-gh/09-Audit/Health-Dashboard.md)**.
+
+### How the wiki works in git
+- **`docs/wiki/` is canonical** and Obsidian-native (`[[wikilinks]]`; frontmatter binds each note to its `_machine/` record). This is the only place you hand-edit.
+- **`docs/wiki-gh/` is generated** — a mirror where `[[wikilinks]]` are rewritten to standard relative `[text](path.md#anchor)` links, because GitHub's markdown viewer does **not** resolve `[[ ]]`. Never edit it by hand.
+- **`_machine/*.json` is generated** from the source plus a static import scan.
+
+**Maintaining the dual structure** — after editing anything in `docs/wiki/`, regenerate and commit both outputs:
+
+```bash
+node scripts/wiki/build-machine-map.mjs   # rebuild the machine twin  (--check to lint cross-refs)
+node scripts/wiki/to-github.mjs           # regenerate the GitHub mirror (docs/wiki-gh/)
+```
+
+Commit `docs/wiki/`, `docs/wiki/_machine/*.json`, and `docs/wiki-gh/` together. The per-version
+`architecture_report_*.md` / `sprint_log_*.md` files are historical and superseded by the wiki
+(catalogued in [`99-Archive/Index`](./docs/wiki-gh/99-Archive/Index.md)).
+
+> Note: sections below this point are the original project README and may lag the wiki (e.g. source
+> counts). Treat the wiki as authoritative.
+
+---
+
 ## Sources
 
 ### Core (always on)

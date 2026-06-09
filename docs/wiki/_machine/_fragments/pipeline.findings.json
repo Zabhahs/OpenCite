@@ -1,0 +1,144 @@
+[
+  {
+    "id": "F-200",
+    "type": "debt",
+    "severity": "med",
+    "title": "BM25F IDF is degenerate on micro-pool (14–45 docs) — mitigated by RRF fusion, not eliminated",
+    "detail": "scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
+    "path": "src/lib/scoring.js:160-171",
+    "modules": [
+      "lib.scoring",
+      "lib.rrf"
+    ],
+    "status": "confirmed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d3",
+    "fix_hint": "Accepted residual. To fully eliminate: replace micro-pool IDF with corpus-level IDF (would require a background statistics endpoint) or rely entirely on native+semantic ranks when available. Not a priority given current RRF weighting."
+  },
+  {
+    "id": "F-201",
+    "type": "ux",
+    "severity": "low",
+    "title": "Display-side score normalisation (0–100 per query) not implemented",
+    "detail": "D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
+    "path": "src/lib/scoring.js:13-15",
+    "modules": [
+      "lib.scoring"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d4",
+    "fix_hint": "Normalise _score to 0-100 relative to top hit in the admin debug card renderer, or hide raw _score and show only _fused rank."
+  },
+  {
+    "id": "F-202",
+    "type": "bug",
+    "severity": "high",
+    "title": "Internet Archive download counts used as citedBy rank signal — FIXED in v0.35",
+    "detail": "D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
+    "path": "src/adapters/extensions/internetArchive.js:100",
+    "modules": [
+      "adapters.extensions.internetArchive",
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d1",
+    "fix_hint": "Already fixed. Verify: run probe.mjs on surname queries (shaikh, ali, khan) — IA items should no longer lead."
+  },
+  {
+    "id": "F-203",
+    "type": "bug",
+    "severity": "high",
+    "title": "Internet Archive retrieval sorted by downloads (popularity) not relevance — FIXED in v0.35",
+    "detail": "D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
+    "path": "src/adapters/extensions/internetArchive.js:184",
+    "modules": [
+      "adapters.extensions.internetArchive"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d2",
+    "fix_hint": "Already fixed."
+  },
+  {
+    "id": "F-204",
+    "type": "bug",
+    "severity": "med",
+    "title": "Diacritic and transliteration fragmentation — FIXED in v0.35",
+    "detail": "D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
+    "path": "src/lib/scoring.js:124-144",
+    "modules": [
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d5",
+    "fix_hint": "Already fixed. ALIAS_CLUSTERS is conservative — extend with documented rationale if new domains need folding."
+  },
+  {
+    "id": "F-205",
+    "type": "perf",
+    "severity": "med",
+    "title": "Semantic rerank is client-only — API consumers and MCP endpoint receive no semantic signal",
+    "detail": "computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
+    "path": "src/lib/semantic.js",
+    "modules": [
+      "lib.semantic",
+      "workers.embed.worker"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment",
+    "fix_hint": "Not easily fixable without a separate embedding service or switching to a smaller synchronous model. Acceptable architectural constraint. Document clearly for API consumers."
+  },
+  {
+    "id": "F-206",
+    "type": "perf",
+    "severity": "low",
+    "title": "dedupHighestScore uses O(n) indexOf scan for duplicate replacement",
+    "detail": "When a higher-scored duplicate is found, out.indexOf(existing) scans the output array linearly. At pool sizes ≤50 this is negligible. If pools grow (e.g. load-more accumulation), this becomes O(n²) in the worst case. A Map from key to array index would make it O(1).",
+    "path": "src/lib/dedup.js:44",
+    "modules": [
+      "lib.dedup"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md#correctness-notes",
+    "fix_hint": "Replace the indexOf scan with a second Map<key, outIndex>. Low priority at current pool sizes."
+  },
+  {
+    "id": "F-207",
+    "type": "perf",
+    "severity": "low",
+    "title": "Moby Thesaurus shard JSON.parse is synchronous — large shards may cause main-thread jank",
+    "detail": "loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
+    "path": "src/lib/synonyms.js:48-61",
+    "modules": [
+      "lib.synonyms"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes",
+    "fix_hint": "Move shard loading to a Web Worker, or use a streaming JSON parser. Low priority — synonym expansion is optional and jank is one-time (shards are cached)."
+  },
+  {
+    "id": "F-208",
+    "type": "bug",
+    "severity": "med",
+    "title": "Always-dead adapters (SCIELO/OPENNEURO/ENA) drag every query to partial coverage, causing systematic billing discounts",
+    "detail": "SCIELO/OPENNEURO/ENA throw on every query so failedCount>0 always → coverage.js bandFor() can never return \"full\" (line 36). BUT their corpusSize is tiny (1M/500K/1K) vs OpenAlex/Crossref (hundreds of millions), so attrition is ~0.3% → band is \"near-full\" (coverage>=0.99), NOT \"partial\". Real impact: every query billed at coverageMultiplier(\"near-full\")=0.99 instead of 1.0 — a guaranteed ~1% systematic UNDERCHARGE + a permanently non-full coverage signal. The freeBelowBand free-waiver does NOT fire (plans set freeBelowBand:\"limited\"; isAtOrBelow waives only the \"limited\" band, coverage<0.5). Earlier \"partial coverage → billing discount/free\" framing was an overstatement. Fix (remove + circuit-breaker) still valid: restores \"full\" on queries where no OTHER adapter errors. [VERIFIED ON-BRANCH 2026-06-08]",
+    "path": "src/adapters/extensions/",
+    "modules": [],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
+    "fix_hint": "Quarantine done (v0.38 T0). Add a chronic-failure circuit-breaker so failedCount can reach 0 → band \"full\" (1.0x). Verify empirically via probe (v0.38 T2): measure full vs near-full split + 0.99x→1.0x charge delta."
+  },
+  {
+    "id": "F-209",
+    "type": "perf",
+    "severity": "low",
+    "title": "Server RRF fusion is two-input (native+lexical) only — no semantic arm unlike the client UI path",
+    "detail": "api/search.js uses buildNativeRanks + rrfScores with a two-input fusion (native weight = nativeWeight(pool); lexical = 1-wNative). This correctly eliminates D4 cross-query incomparability on the server path. The client UI path adds a third semantic (MiniLM embedding) input via useSemanticRerank. The semantic gap on the server is an accepted architectural constraint (Web Worker + 23MB model cannot run in Vercel Functions) — not a bug. Previously recorded as an open gap; verified FIXED as of the current sprint.",
+    "path": "api/search.js:349-364",
+    "modules": [
+      "lib.rrf",
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
+    "fix_hint": "Server RRF is already in place. The only missing signal vs the client is semantic embeddings — acceptable limitation. Document for API consumers."
+  }
+]

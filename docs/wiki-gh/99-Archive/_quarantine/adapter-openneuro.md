@@ -1,3 +1,30 @@
+---
+machine_ids: [adapters.extensions.openNeuro]
+findings: [F-107, F-208]
+runtime: both
+status: quarantined
+tags: [archive, quarantine, adapter, openneuro]
+---
+<!-- AUTO-GENERATED from docs/wiki/99-Archive/_quarantine/adapter-openneuro.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
+
+
+# 🔒 Quarantined: OpenNeuro adapter
+
+> **Removed from build in v0.38.** Original path: `src/adapters/extensions/openNeuro.js`. Full source below.
+
+## Why removed
+`openNeuro.js:22` fetches only the **100 newest** datasets (`datasets(first: 100, orderBy: {created: descending})`)
+then client-filters by substring — so any query outside those 100 returns nothing. The GraphQL endpoint
+also errors in practice. **0 results for real queries**, `serverSafe:true` → forced `partial` coverage.
+See [Bugs](../../09-Audit/Bugs.md#f-107), [Bugs](../../09-Audit/Bugs.md#f-208).
+
+## Revival checklist
+- [ ] Replace the "newest 100 + client filter" with a **real search** — OpenNeuro GraphQL needs a search mutation/argument, or use a REST search endpoint if one exists.
+- [ ] Confirm the GraphQL endpoint (`https://openneuro.org/crn/graphql`) responds without errors server-side.
+- [ ] Re-add export + registry entry; verify live results; flip `status`.
+
+## Verbatim source (as of v0.37)
+```js
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { proxiedFetch } from "../_shared/proxy.js";
@@ -60,3 +87,7 @@ export const OPENNEURO_ADAPTER = {
     return { results, hasMore: offset + slice.length < matched.length };
   }
 };
+```
+
+## See also
+[Quarantine register](../../01-Frontend/Components/_index.md) · [Extension-Adapters](../../02-Adapters/Extension-Adapters.md#openneuro) · [v0.38 sprint](../../10-Sprints/Index.md)

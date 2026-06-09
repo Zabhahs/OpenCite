@@ -1,0 +1,52 @@
+[
+  {
+    "id": "R-400",
+    "title": "api/_shared/log.js duplicates src/lib/log.js — same structured format, two implementations",
+    "shared_module": null,
+    "client_users": ["hooks.useSearch"],
+    "server_users": ["api.shared.kv", "api.proxy", "api.checkout", "api.stripe.webhook", "api.route.bl", "api.route.gallica", "api.route.bdh", "api.route.mexicana", "api.route.opencontext", "api.route.openedition"],
+    "opportunity": "divergent-duplicate",
+    "detail": "Both files implement the same log format ([opencite:<adapter>:<event>] k=v) and the same three severity levels (log, log.warn, log.err). The server version (api/_shared/log.js) is 26 lines and says 'Same format as src/lib/log.js — console only, no buffer'. They cannot share a single file because client bundle and serverless runtime have different import paths, but they could share a source file symlinked or published as a workspace package. Minimal effort: document the format contract in one place and add a linting rule that catches drift. Medium effort: move to a shared package in a monorepo workspace.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-400"
+  },
+  {
+    "id": "R-401",
+    "title": "Six heritage per-source routes re-implement normalization logic that overlaps with client adapters",
+    "shared_module": null,
+    "client_users": ["adapters.extensions.bl", "adapters.extensions.gallica", "adapters.extensions.bdh", "adapters.extensions.mexicana", "adapters.extensions.opencontext", "adapters.extensions.openedition"],
+    "server_users": ["api.route.bl", "api.route.gallica", "api.route.bdh", "api.route.mexicana", "api.route.opencontext", "api.route.openedition"],
+    "opportunity": "divergent-duplicate",
+    "detail": "Each of the six non-keyed per-source routes (bl, gallica, bdh, mexicana, opencontext, openedition) duplicates the fetch-and-normalize logic that already exists in the corresponding client adapter. The keyed routes (europeana, dpla, smithsonian) avoided this by calling the adapter directly (EUROPEANA_ADAPTER.search()). The heritage routes were written inline, likely because the client adapters depend on DOMParser or the proxy and couldn't be cleanly called server-side. Opportunity: refactor the normalization step of each client adapter into a shared pure function (no DOM dependency) that both the client adapter and the server route can import. Estimated effort: medium per adapter; high in aggregate for all six.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-401"
+  },
+  {
+    "id": "R-402",
+    "title": "src/lib/scoring.js, dedup.js, rrf.js run identically on server and client — already shared, keep it that way",
+    "shared_module": "lib.scoring",
+    "client_users": ["hooks.useSearch"],
+    "server_users": ["api.search"],
+    "opportunity": "already-shared",
+    "detail": "api/search.js imports scoreResults, meaningfulTerms, applyConfidenceGate from src/lib/scoring.js; dedupFirstWins, dedupHighestScore, doiKey, titleFingerprint from src/lib/dedup.js; and buildNativeRanks, nativeWeight, rrfScores from src/lib/rrf.js. These modules run without modification in both the browser (useSearch.js) and the Vercel Node.js serverless function. No action needed — this is the desired pattern. Maintain by never adding browser-only or Node-only dependencies to these files.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-402"
+  },
+  {
+    "id": "R-403",
+    "title": "parseBody vs Vercel body parser — inconsistent body reading strategy across routes",
+    "shared_module": "api.shared.parseBody",
+    "client_users": [],
+    "server_users": ["api.history", "api.library", "api.checkout", "api.settings"],
+    "opportunity": "extract-shared",
+    "detail": "api/settings.js reads req.body directly (Vercel auto-parses JSON for Node functions) while api/history.js, api/library.js, and api/checkout.js use parseBody() for stream-based reading. This inconsistency means settings.js would silently break if the route ever gains bodyParser:false config (e.g. for raw-body access like the Stripe webhook). All POST routes should use the same body-reading strategy. Low effort to fix: replace req.body in settings.js with await parseBody(req).",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-403"
+  },
+  {
+    "id": "R-404",
+    "title": "serverInjectedKeys pattern is DRY for keyed routes but hardcodes the key names in two places",
+    "shared_module": "api.shared.serverKeys",
+    "client_users": [],
+    "server_users": ["api.search", "api.route.europeana", "api.route.dpla", "api.route.smithsonian"],
+    "opportunity": "extract-shared",
+    "detail": "api/search.js:196 defines KEYED_ENV = { EUROPEANA: 'europeanaKey', DPLA: 'dplaKey', SMITHSONIAN: 'smithsonianKey' } which maps adapter IDs to the key names returned by serverInjectedKeys(). serverKeys.js defines the same mapping implicitly (env var name → object key). If a new keyed source is added, three places need updating: serverKeys.js (env read), api/search.js KEYED_ENV (presence guard), and a new per-source route. Low effort: export the KEYED_ENV map from serverKeys.js so api/search.js imports it rather than redeclaring it.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-404"
+  }
+]

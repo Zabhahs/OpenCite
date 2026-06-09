@@ -1,0 +1,385 @@
+[
+  {
+    "id": "R-100",
+    "title": "xmlUtils helpers duplicated in api/search/mexicana.js Edge route",
+    "shared_module": "adapters.shared.xmlUtils",
+    "client_users": [
+      "adapters.extensions.onb",
+      "adapters.extensions.bnfApi"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "src/adapters/_shared/xmlUtils.js cannot be imported by api/search/mexicana.js (Vercel Edge route, cross-import constraint). The DC/OAI helpers are inlined in mexicana.js. Fix: move xmlUtils.js to a packages/shared-utils workspace package importable by both sides. Estimated effort: 2h (extract, add package.json, update imports). Risk: low (pure functions, no side effects).",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs"
+  },
+  {
+    "id": "R-101",
+    "title": "parseOpenAlexWork already shared between OPENALEX and CURATED adapters",
+    "shared_module": "adapters.shared.parseOpenAlex",
+    "client_users": [
+      "adapters.core.openalex",
+      "adapters.core.curatedJournals"
+    ],
+    "server_users": [
+      "adapters.core.openalex",
+      "adapters.core.curatedJournals"
+    ],
+    "opportunity": "already-shared",
+    "detail": "parseOpenAlexWork is correctly extracted to _shared/parseOpenAlex.js and imported by both OPENALEX and CURATED. OA_SELECT is the SSOT for the select= field list. This is the exemplary pattern to follow for future adapters that share an upstream API.",
+    "wiki": "02-Adapters/Core-Adapters.md"
+  },
+  {
+    "id": "R-102",
+    "title": "try-direct-fetch-then-proxiedFetch pattern repeated across 3 adapters",
+    "shared_module": "adapters.shared.proxy",
+    "client_users": [
+      "adapters.extensions.northwestern",
+      "adapters.extensions.onb",
+      "adapters.extensions.bnfApi"
+    ],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "Northwestern (northwestern.js:27-30), ONB (onb.js:26-29), and BnF Catalogue (bnfApi.js:28-31) all implement the same pattern: try direct fetch(), catch network error, fall back to proxiedFetch(). This produces a silent CORS network error in the browser on every call before the proxy leg succeeds. The pattern should be replaced by the proxiedFetch() branch check (typeof window === 'undefined') that already exists in proxy.js. Estimated effort: 30 min per adapter. Risk: low.",
+    "wiki": "02-Adapters/Extension-Adapters.md#f-102"
+  },
+  {
+    "id": "R-103",
+    "title": "Thin-shim adapters lack capability metadata needed by coverage engine",
+    "shared_module": null,
+    "client_users": [
+      "adapters.extensions.gallica",
+      "adapters.extensions.openContext",
+      "adapters.extensions.bdh",
+      "adapters.extensions.britishLibrary",
+      "adapters.extensions.openEdition",
+      "adapters.extensions.mexicana"
+    ],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "Six thin-shim adapters (Gallica, OpenContext, BDH, BritishLibrary, OpenEdition, Mexicana) are missing serverSafe and/or corpusSize in their capability objects. The coverage engine cannot weight their contribution and the ranker cannot include them in the server fan-out. Add serverSafe: false (they route through backend), and realistic corpusSize estimates. Effort: 15 min each.",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#serversafe-gaps"
+  },
+  {
+    "id": "R-104",
+    "title": "Dead adapters (SCIELO, OPENNEURO, ENA) registered in ADAPTERS array inflate partial coverage",
+    "shared_module": null,
+    "client_users": [
+      "adapters.extensions.scielo",
+      "adapters.extensions.openNeuro",
+      "adapters.extensions.ena"
+    ],
+    "server_users": [
+      "adapters.extensions.scielo",
+      "adapters.extensions.openNeuro",
+      "adapters.extensions.ena"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "SCIELO, OPENNEURO, and ENA are in the ADAPTERS array (index.js:69,87,88) but always return 0 results. Every search through /api/search counts them as failing sources, causing the coverage engine to report partial coverage and apply a billing discount on every query. Remove from ADAPTERS array; keep the source files. Effort: 5 min + coverage test verification.",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#dead-adapter-impact"
+  },
+  {
+    "id": "R-105",
+    "title": "proxiedFetch spoof headers duplicated between proxy.js and api/proxy.js",
+    "shared_module": "adapters.shared.proxy",
+    "client_users": [],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "proxy.js:19-24 and api/proxy.js:69-73 define the same browser-spoof header set (User-Agent, Accept, Accept-Language, Referer). Constraint is documented: src/ and api/ cannot cross-import. Same fix as R-100: shared package. Until then, any change to the spoof headers must be applied in both files.",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs"
+  },
+  {
+    "id": "R-200",
+    "title": "scoring.js is pure shared — runs identically client and server",
+    "shared_module": "lib.scoring",
+    "client_users": [
+      "hooks.useSearch"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "scoreResults, applyConfidenceGate, hasContentMatch, meaningfulTerms, normalizeForMatch are all imported by both hooks.useSearch (client) and api/search.js (server). No divergence — both paths use the same code. Maintain this: do not fork scoring logic into per-side copies.",
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md"
+  },
+  {
+    "id": "R-201",
+    "title": "lib.rrf is pure shared — already used both client (3-input) and server (2-input)",
+    "shared_module": "lib.rrf",
+    "client_users": [
+      "hooks.useSemanticRerank"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "api/search.js imports buildNativeRanks, nativeWeight, rrfScores from lib/rrf.js and uses a two-input fusion (native + lexical) at lines 349-364. hooks.useSemanticRerank uses a three-input fusion (native + lexical + semantic) at lines 111-115. The semantic arm is the only difference and is unavailable server-side (Web Worker constraint). Both paths are correctly converged on RRF. No further work needed on the sharing front.",
+    "wiki": "03-Search-Pipeline/RRF-Fusion.md"
+  },
+  {
+    "id": "R-202",
+    "title": "Semantic rerank is inherently client-only — document the capability gap for API consumers",
+    "shared_module": "lib.semantic",
+    "client_users": [
+      "hooks.useSemanticRerank"
+    ],
+    "server_users": [],
+    "opportunity": "already-shared",
+    "detail": "computeSemanticRanks uses the Web Worker API, which is unavailable in Vercel serverless Functions. The ~23MB MiniLM model also cannot be loaded synchronously in a serverless cold-start context. This is an accepted architectural constraint. No server reuse is possible without a separate embedding microservice. Document clearly in API docs: the /api/search endpoint does not apply semantic reranking.",
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md"
+  },
+  {
+    "id": "R-203",
+    "title": "lib.dedup is pure shared — already used both client and server",
+    "shared_module": "lib.dedup",
+    "client_users": [
+      "hooks.useSearch"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "Both dedupFirstWins (streaming / client) and dedupHighestScore (pooled / server) are imported and used on their respective sides. lib.groupResults (book-chapter clustering) is client-render-only and correctly has no server use. Keep the existing split.",
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md"
+  },
+  {
+    "id": "R-204",
+    "title": "lib.goldSetMetrics is NOT orphaned — used by GoldSetHarness admin component",
+    "shared_module": "lib.goldSetMetrics",
+    "client_users": [
+      "components.admin.GoldSetHarness"
+    ],
+    "server_users": [],
+    "opportunity": "already-shared",
+    "detail": "goldSetMetrics is imported by src/components/admin/GoldSetHarness.jsx (F2 admin console feature). It is not orphaned. The regression harness is admin-gated (only visible to the email allowlist). Unit tests live in goldSetMetrics.test.js and are the only test file in the lib/ directory — they cover nDCG, MRR, recall, computeMetrics, aggregateMetrics with deterministic fixtures.",
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md"
+  },
+  {
+    "id": "R-300",
+    "title": "useHistory / useLibrary / useSettings share identical localStorage+DB-sync pattern — extract useSyncedStore",
+    "shared_module": null,
+    "client_users": [
+      "hooks.useHistory",
+      "hooks.useLibrary",
+      "hooks.useSettings"
+    ],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "All three hooks implement the same 4-step pattern: (1) load from localStorage on mount, (2) syncFromDB on sign-in via useEffect([user?.id, loaded]), (3) DB-wins merge strategy, (4) write localStorage + fire-and-forget API POST/DELETE on mutation. The pattern is ~40–50 lines per hook, replicated three times. Extracting a useSyncedStore(key, apiPath, defaultValue, validate) factory hook would reduce each hook to ~10 lines of mutation-specific logic. Estimated effort: 1–2 hours. Risk: low (pure refactor, no behaviour change).",
+    "wiki": "01-Frontend/Hooks.md"
+  },
+  {
+    "id": "R-301",
+    "title": "BookGroupHeader JSX duplicated across SourceSection and UnifiedResultList",
+    "shared_module": null,
+    "client_users": [
+      "components.SourceSection",
+      "components.UnifiedResultList"
+    ],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "~30 lines of parent-work header JSX (chapter count, year, title, editors, publisher) is copy-pasted verbatim in both result-view components. A BookGroupHeader component would be 30 lines once, reused twice. See F-314. Estimated effort: 30 minutes. Risk: zero.",
+    "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist"
+  },
+  {
+    "id": "R-302",
+    "title": "isAdmin() called in both App.jsx and AdminConsole.jsx — double gate, not duplication",
+    "shared_module": "lib.admin",
+    "client_users": [
+      "App",
+      "components.AdminConsole"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "isAdmin(user) from lib/admin.js is called in App.jsx (to compute showAdminConsole and admin prop) and again inside AdminConsole.jsx (self-gate). This is intentional defense-in-depth — the component self-gates so it cannot be rendered unsafely if the prop is ever missing. Server-side admin gate uses process.env (resolveSessionAdmin in api/_shared/log.js), which is the same email list but read server-side. No action needed.",
+    "wiki": "01-Frontend/App-Shell.md#admin-console-routing"
+  },
+  {
+    "id": "R-303",
+    "title": "src/lib/log.js (client) and api/_shared/log.js (server) serve different roles — not duplicates",
+    "shared_module": null,
+    "client_users": [
+      "lib.log"
+    ],
+    "server_users": [
+      "api.shared.log"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "Both are named log.js and emit structured [opencite:adapter:event] lines, but they diverge: client log.js maintains a 500-entry ring buffer for admin debug copy/download; server log.js writes to Vercel's edge log stream and gating functions. The FORMAT is shared (tag + key=value pairs) but the implementation is independent. No opportunity to share code — different runtimes with different concerns. Document the format as a convention, not a reuse point.",
+    "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory"
+  },
+  {
+    "id": "R-304",
+    "title": "copyText() inline in App.jsx should move to lib/helpers.js",
+    "shared_module": "lib.helpers",
+    "client_users": [
+      "App"
+    ],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "App.jsx:203–207 defines copyText(text, id, style) inline — a navigator.clipboard.writeText wrapper that sets copied state and clears after 1.5s. The clipboard write part is a general utility; the state management part is inherently local. The clipboard utility could be extracted to lib/helpers.js as copyToClipboard(text). Low priority — only one call site. Estimated effort: 5 minutes.",
+    "wiki": "01-Frontend/App-Shell.md"
+  },
+  {
+    "id": "R-305",
+    "title": "DEFAULT_THEME in themes.js unused by useTheme — dead constant",
+    "shared_module": "constant.themes",
+    "client_users": [
+      "hooks.useTheme"
+    ],
+    "server_users": [],
+    "opportunity": "client-can-reuse-server",
+    "detail": "The DEFAULT_THEME = 'tan' constant was presumably meant for useTheme to import, but the hook hardcodes the same string. Fix: import DEFAULT_THEME in useTheme.js and replace the hardcoded LIGHT_DEFAULT. See F-309. Estimated effort: 2 minutes.",
+    "wiki": "01-Frontend/Hooks.md#usetheme"
+  },
+  {
+    "id": "R-400",
+    "title": "api/_shared/log.js duplicates src/lib/log.js — same structured format, two implementations",
+    "shared_module": null,
+    "client_users": [
+      "hooks.useSearch"
+    ],
+    "server_users": [
+      "api.shared.kv",
+      "api.proxy",
+      "api.checkout",
+      "api.stripe.webhook",
+      "api.route.bl",
+      "api.route.gallica",
+      "api.route.bdh",
+      "api.route.mexicana",
+      "api.route.opencontext",
+      "api.route.openedition"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "Both files implement the same log format ([opencite:<adapter>:<event>] k=v) and the same three severity levels (log, log.warn, log.err). The server version (api/_shared/log.js) is 26 lines and says 'Same format as src/lib/log.js — console only, no buffer'. They cannot share a single file because client bundle and serverless runtime have different import paths, but they could share a source file symlinked or published as a workspace package. Minimal effort: document the format contract in one place and add a linting rule that catches drift. Medium effort: move to a shared package in a monorepo workspace.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-400"
+  },
+  {
+    "id": "R-401",
+    "title": "Six heritage per-source routes re-implement normalization logic that overlaps with client adapters",
+    "shared_module": null,
+    "client_users": [
+      "adapters.extensions.bl",
+      "adapters.extensions.gallica",
+      "adapters.extensions.bdh",
+      "adapters.extensions.mexicana",
+      "adapters.extensions.opencontext",
+      "adapters.extensions.openedition"
+    ],
+    "server_users": [
+      "api.route.bl",
+      "api.route.gallica",
+      "api.route.bdh",
+      "api.route.mexicana",
+      "api.route.opencontext",
+      "api.route.openedition"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "Each of the six non-keyed per-source routes (bl, gallica, bdh, mexicana, opencontext, openedition) duplicates the fetch-and-normalize logic that already exists in the corresponding client adapter. The keyed routes (europeana, dpla, smithsonian) avoided this by calling the adapter directly (EUROPEANA_ADAPTER.search()). The heritage routes were written inline, likely because the client adapters depend on DOMParser or the proxy and couldn't be cleanly called server-side. Opportunity: refactor the normalization step of each client adapter into a shared pure function (no DOM dependency) that both the client adapter and the server route can import. Estimated effort: medium per adapter; high in aggregate for all six.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-401"
+  },
+  {
+    "id": "R-402",
+    "title": "src/lib/scoring.js, dedup.js, rrf.js run identically on server and client — already shared, keep it that way",
+    "shared_module": "lib.scoring",
+    "client_users": [
+      "hooks.useSearch"
+    ],
+    "server_users": [
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "api/search.js imports scoreResults, meaningfulTerms, applyConfidenceGate from src/lib/scoring.js; dedupFirstWins, dedupHighestScore, doiKey, titleFingerprint from src/lib/dedup.js; and buildNativeRanks, nativeWeight, rrfScores from src/lib/rrf.js. These modules run without modification in both the browser (useSearch.js) and the Vercel Node.js serverless function. No action needed — this is the desired pattern. Maintain by never adding browser-only or Node-only dependencies to these files.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-402"
+  },
+  {
+    "id": "R-403",
+    "title": "parseBody vs Vercel body parser — inconsistent body reading strategy across routes",
+    "shared_module": "api.shared.parseBody",
+    "client_users": [],
+    "server_users": [
+      "api.history",
+      "api.library",
+      "api.checkout",
+      "api.settings"
+    ],
+    "opportunity": "extract-shared",
+    "detail": "api/settings.js reads req.body directly (Vercel auto-parses JSON for Node functions) while api/history.js, api/library.js, and api/checkout.js use parseBody() for stream-based reading. This inconsistency means settings.js would silently break if the route ever gains bodyParser:false config (e.g. for raw-body access like the Stripe webhook). All POST routes should use the same body-reading strategy. Low effort to fix: replace req.body in settings.js with await parseBody(req).",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-403"
+  },
+  {
+    "id": "R-404",
+    "title": "serverInjectedKeys pattern is DRY for keyed routes but hardcodes the key names in two places",
+    "shared_module": "api.shared.serverKeys",
+    "client_users": [],
+    "server_users": [
+      "api.search",
+      "api.route.europeana",
+      "api.route.dpla",
+      "api.route.smithsonian"
+    ],
+    "opportunity": "extract-shared",
+    "detail": "api/search.js:196 defines KEYED_ENV = { EUROPEANA: 'europeanaKey', DPLA: 'dplaKey', SMITHSONIAN: 'smithsonianKey' } which maps adapter IDs to the key names returned by serverInjectedKeys(). serverKeys.js defines the same mapping implicitly (env var name → object key). If a new keyed source is added, three places need updating: serverKeys.js (env read), api/search.js KEYED_ENV (presence guard), and a new per-source route. Low effort: export the KEYED_ENV map from serverKeys.js so api/search.js imports it rather than redeclaring it.",
+    "wiki": "09-Audit/Duplication-and-Reuse.md#r-404"
+  },
+  {
+    "id": "R-500",
+    "title": "MCP contract is genuinely DRY — api/_shared/apiContract.js is the single SSOT",
+    "shared_module": "api.shared.apiContract",
+    "client_users": [],
+    "server_users": [
+      "mcp.contract",
+      "mcp.schema",
+      "api.search"
+    ],
+    "opportunity": "already-shared",
+    "detail": "mcp/src/contract.js imports and re-exports from api/_shared/apiContract.js via relative path. mcp/src/schema.js derives all JSON Schema artifacts (MCP inputSchema, OpenAI/Anthropic function defs, OpenAPI 3.1 spec) from the same SSOT. No copy-paste. Change the contract once, all three surfaces follow. TOOL_PARAM_MAP in contract.js is the only hand-maintained mapping (3 lines) — acceptable.",
+    "wiki": "06-MCP-Server/MCP-Server.md#-health-audit"
+  },
+  {
+    "id": "R-501",
+    "title": "Two parallel client-key storage patterns: encrypted DB blob vs. backend env injection",
+    "shared_module": null,
+    "client_users": [
+      "hooks.useSettings"
+    ],
+    "server_users": [
+      "api.shared.serverKeys"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "User-managed third-party keys (openAlexKey, s2Key, crossrefEmail) live in the users.settings encrypted JSON blob (AES-256-GCM, written via api/_shared/crypto.js). CC0 source keys (EUROPEANA_API_KEY, DPLA_API_KEY, SMITHSONIAN_API_KEY) are backend env vars injected by api/_shared/serverKeys.js via serverInjectedKeys(). These are two different patterns for the same problem (getting a key to an adapter at request time). The blob pattern requires a DB round-trip and encryption; the env pattern is zero-cost but requires Vercel dashboard access. As more sources move to backend keys (v0.34 trend), the blob could shrink. No immediate action needed — document the two patterns so new keys land in the right place.",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit"
+  },
+  {
+    "id": "R-502",
+    "title": "VITE_ADMIN_EMAILS is duplicated as ADMIN_EMAILS for server-side fallback",
+    "shared_module": null,
+    "client_users": [
+      "lib.admin"
+    ],
+    "server_users": [
+      "api.shared.apiAuth"
+    ],
+    "opportunity": "divergent-duplicate",
+    "detail": "The admin email allowlist is read as VITE_ADMIN_EMAILS (baked into client bundle at build time by Vite) and as process.env.VITE_ADMIN_EMAILS || process.env.ADMIN_EMAILS on the server (api/_shared/apiAuth.js:29). Two env vars for the same value. The ADMIN_EMAILS fallback was added to allow server-side gating without the VITE_ prefix. This is correct but creates a maintenance footprint: the Vercel dashboard needs both vars set (or just VITE_ADMIN_EMAILS, which the server also reads). Document in .env.example.",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#api--admin"
+  },
+  {
+    "id": "R-503",
+    "title": "Admin gold queries stored only in localStorage — not synced to relevance_labels table",
+    "shared_module": null,
+    "client_users": [
+      "components.admin.GoldSetHarness"
+    ],
+    "server_users": [],
+    "opportunity": "server-can-reuse-client",
+    "detail": "The F2 Gold-Set Harness stores the admin-created query list and test run history entirely in localStorage (opencite_gold_queries, opencite_test_runs). The relevance_labels Postgres table stores only individual result grades (doi + grade). This means gold queries are device-local and lost on browser clear. Persisting the query set to Postgres (a simple text[] column or a separate queries table) would make the harness multi-device and more durable. Low effort, high value for a solo admin workflow.",
+    "wiki": "07-Data-Layer/Data-Layer.md#admin-harness-data"
+  }
+]

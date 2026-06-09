@@ -10,8 +10,8 @@ import { CROSSREF_ADAPTER } from "./core/crossref.js";
 import { CURATED_JOURNALS_ADAPTER } from "./core/curatedJournals.js";
 
 // Extension adapters
-// SEMANTIC_SCHOLAR_ADAPTER — deprecated/deregistered v0.27 (kept in extensions/ but
-// no longer registered; gated behind an approval-only key with poor cost/benefit).
+// SEMANTIC_SCHOLAR_ADAPTER — QUARANTINED v0.42 (was deregistered v0.27). File removed from the
+// build; full source preserved at docs/wiki/99-Archive/_quarantine/adapter-semanticscholar.md. F-105.
 import {
   EUROPEANA_ADAPTER,
   MET_ADAPTER,
@@ -26,10 +26,9 @@ import {
   NORTHWESTERN_ADAPTER,
   PRINCETON_DPUL_ADAPTER,
   PANGAEA_ADAPTER,
-  OPENNEURO_ADAPTER,
-  ENA_ADAPTER,
-  // v.22B — Latin American replacements
-  SCIELO_ADAPTER,
+  // OPENNEURO_ADAPTER, ENA_ADAPTER, SCIELO_ADAPTER — QUARANTINED v0.38: always-dead
+  // (0 results every query → false `partial` coverage → billing discount). Source preserved at
+  // docs/wiki/99-Archive/_quarantine/. Findings F-107/F-109/F-110/F-208.
   // v.29 — humanities worldwide-coverage adapters
   LA_REFERENCIA_ADAPTER,
   OAPEN_ADAPTER,
@@ -66,7 +65,7 @@ export const ADAPTERS = [
   // Extensions — sciences
   NCBI_ADAPTER,
   OPENCONTEXT_ADAPTER,
-  SCIELO_ADAPTER,
+  // SCIELO_ADAPTER — QUARANTINED v0.38 (see import note above)
   // Extensions — v.29 humanities worldwide-coverage
   LA_REFERENCIA_ADAPTER,
   OAPEN_ADAPTER,
@@ -83,8 +82,7 @@ export const ADAPTERS = [
   NORTHWESTERN_ADAPTER,
   PRINCETON_DPUL_ADAPTER,
   PANGAEA_ADAPTER,
-  OPENNEURO_ADAPTER,
-  ENA_ADAPTER,
+  // OPENNEURO_ADAPTER, ENA_ADAPTER — QUARANTINED v0.38 (see import note above)
   // Extensions — v.18 SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,

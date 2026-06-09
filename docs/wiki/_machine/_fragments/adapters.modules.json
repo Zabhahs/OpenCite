@@ -1,0 +1,1117 @@
+[
+  {
+    "id": "adapters.index",
+    "path": "src/adapters/index.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 146,
+    "purpose": "Registry: ADAPTERS array (34 adapters), runSearch() orchestration wrapper (sanitize+normalize+log), isAdapterDefaultEnabled predicate.",
+    "exports": [
+      "ADAPTERS",
+      "runSearch",
+      "isAdapterDefaultEnabled",
+      "ADAPTER_CATEGORY"
+    ],
+    "deps": [
+      "adapters.shared.base",
+      "adapters.shared.normalize",
+      "adapters.core.crossref",
+      "adapters.core.doaj",
+      "adapters.core.openalex",
+      "adapters.core.curatedJournals",
+      "adapters.extensions.index",
+      "lib.log",
+      "constants.vocabulary"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md",
+    "tags": [
+      "adapter",
+      "registry",
+      "orchestration"
+    ]
+  },
+  {
+    "id": "adapters.shared.base",
+    "path": "src/adapters/_shared/base.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 124,
+    "purpose": "AbstractAdapter.sanitize() DataMappingGuard + UnifiedResult typedef + AdapterCapability typedef; coerces every result field to its expected type before normalization.",
+    "exports": [
+      "AbstractAdapter"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "base"
+    ]
+  },
+  {
+    "id": "adapters.shared.normalize",
+    "path": "src/adapters/_shared/normalize.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 187,
+    "purpose": "NCR pipeline: adds _type, _authorsParsed, _editorsParsed, _normalized to sanitized results; request-scoped dedup via dedupKey.",
+    "exports": [
+      "normalizeRecord",
+      "createDedupMap",
+      "parseAuthors",
+      "validateNCR"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "normalize"
+    ],
+    "notes": "validateNCR is a dev utility never called in production. Phase 2 KV cache hook point is a long-lived comment."
+  },
+  {
+    "id": "adapters.shared.parseOpenAlex",
+    "path": "src/adapters/_shared/parseOpenAlex.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 73,
+    "purpose": "Shared OpenAlex work parser: converts raw OpenAlex work objects to UnifiedResult; SSOT for OA_SELECT field list.",
+    "exports": [
+      "parseOpenAlexWork",
+      "OA_SELECT"
+    ],
+    "deps": [
+      "lib.helpers"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "openalex"
+    ]
+  },
+  {
+    "id": "adapters.shared.proxy",
+    "path": "src/adapters/_shared/proxy.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 69,
+    "purpose": "proxiedFetch: browser routes via /api/proxy; server does direct fetch with spoofed browser headers (User-Agent, Referer, Accept).",
+    "exports": [
+      "proxiedFetch"
+    ],
+    "deps": [
+      "lib.log"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-101"
+    ],
+    "wiki": "02-Adapters/Adapter-Architecture.md#proxiedfetch-routing",
+    "tags": [
+      "adapter",
+      "shared",
+      "proxy",
+      "cors"
+    ]
+  },
+  {
+    "id": "adapters.shared.xmlUtils",
+    "path": "src/adapters/_shared/xmlUtils.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 159,
+    "purpose": "Regex-based XML helpers for SRU/OAI-PMH/UNIMARC adapters: dcOne/dcAll, sruTotal/sruRecords, oaiRecords/oaiResumptionToken, unimarcOne/unimarcAll.",
+    "exports": [
+      "dcOne",
+      "dcAll",
+      "sruTotal",
+      "sruRecords",
+      "oaiRecords",
+      "oaiResumptionToken",
+      "unimarcOne",
+      "unimarcAll"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [
+      "F-100"
+    ],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "xml",
+      "sru",
+      "oai-pmh"
+    ]
+  },
+  {
+    "id": "adapters.extensions.index",
+    "path": "src/adapters/extensions/index.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 63,
+    "purpose": "Re-export barrel for all extension adapters; no logic. SEMANTIC_SCHOLAR is intentionally excluded.",
+    "exports": [
+      "*"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md",
+    "tags": [
+      "adapter",
+      "barrel"
+    ]
+  },
+  {
+    "id": "adapters.core.crossref",
+    "path": "src/adapters/core/crossref.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 89,
+    "purpose": "Crossref DOI authority adapter: 155M+ works, offset pagination, nativeScore (Solr score) + nativeRank, hasContentMatch post-filter for author-name pollution.",
+    "exports": [
+      "CROSSREF_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "lib.scoring"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#crossref",
+    "tags": [
+      "adapter",
+      "core",
+      "crossref"
+    ]
+  },
+  {
+    "id": "adapters.core.doaj",
+    "path": "src/adapters/core/doaj.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 68,
+    "purpose": "DOAJ open-access articles adapter: 10M+ articles, Elasticsearch query-string with field scoping, nativeRank only.",
+    "exports": [
+      "DOAJ_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#doaj",
+    "tags": [
+      "adapter",
+      "core",
+      "doaj"
+    ]
+  },
+  {
+    "id": "adapters.core.openalex",
+    "path": "src/adapters/core/openalex.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 56,
+    "purpose": "OpenAlex 250M+ works adapter: is_oa:true filter, title_and_abstract field scoping, nativeScore + nativeRank via parseOpenAlexWork.",
+    "exports": [
+      "OPENALEX_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.parseOpenAlex"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#openalex",
+    "tags": [
+      "adapter",
+      "core",
+      "openalex"
+    ]
+  },
+  {
+    "id": "adapters.core.curatedJournals",
+    "path": "src/adapters/core/curatedJournals.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 51,
+    "purpose": "User-configured ISSN-filtered OpenAlex adapter: searches only journals in the user's curated list; wraps parseOpenAlexWork.",
+    "exports": [
+      "CURATED_JOURNALS_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.parseOpenAlex"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-103"
+    ],
+    "wiki": "02-Adapters/Core-Adapters.md#curatedjournals",
+    "tags": [
+      "adapter",
+      "core",
+      "openalex",
+      "curated"
+    ]
+  },
+  {
+    "id": "adapters.extensions.internetArchive",
+    "path": "src/adapters/extensions/internetArchive.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 241,
+    "purpose": "Internet Archive dual-endpoint adapter: metadata search + FTS OCR; 40M+ texts; citedBy=downloads (display only, not ranked).",
+    "exports": [
+      "INTERNET_ARCHIVE_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "buggy",
+    "findings": [
+      "F-104"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#internetarchive",
+    "tags": [
+      "adapter",
+      "extension",
+      "internet-archive",
+      "fulltext"
+    ],
+    "notes": "citedBy is downloads not citations; rankFields.citedBy:false mitigates. v.35 popularity-sort bug fixed."
+  },
+  {
+    "id": "adapters.extensions.europeana",
+    "path": "src/adapters/extensions/europeana.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 84,
+    "purpose": "Europeana 58M cultural heritage records adapter: backend-injected API key (v.34), browser→/api/search/europeana, server→direct upstream.",
+    "exports": [
+      "EUROPEANA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#europeana",
+    "tags": [
+      "adapter",
+      "extension",
+      "cultural-heritage",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.dpla",
+    "path": "src/adapters/extensions/dpla.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 85,
+    "purpose": "DPLA 10M+ items adapter: backend-injected API key, browser→/api/search/dpla, server→proxiedFetch with key.",
+    "exports": [
+      "DPLA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#dpla",
+    "tags": [
+      "adapter",
+      "extension",
+      "cultural-heritage",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.smithsonian",
+    "path": "src/adapters/extensions/smithsonian.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 65,
+    "purpose": "Smithsonian 18M records adapter: backend-injected API key, browser→/api/search/smithsonian, server→direct fetch.",
+    "exports": [
+      "SMITHSONIAN_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#smithsonian",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.met",
+    "path": "src/adapters/extensions/met.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 59,
+    "purpose": "Metropolitan Museum of Art adapter: two-step objectIDs→per-object detail, up to 3× pageSize fan-out, client-side relevance filter.",
+    "exports": [
+      "MET_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-113"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#met",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum"
+    ]
+  },
+  {
+    "id": "adapters.extensions.rijksmuseum",
+    "path": "src/adapters/extensions/rijksmuseum.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 350,
+    "purpose": "Rijksmuseum Linked-Art adapter: three-step search→object-resolve→2-hop image resolve; opaque token pagination; most complex adapter.",
+    "exports": [
+      "RIJKSMUSEUM_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-115"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#rijksmuseum",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum",
+      "linked-art"
+    ]
+  },
+  {
+    "id": "adapters.extensions.gallica",
+    "path": "src/adapters/extensions/gallica.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 28,
+    "purpose": "BnF Gallica thin shim: delegates all work to /api/search/gallica backend route (SRU).",
+    "exports": [
+      "GALLICA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#gallica",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize. Fulltext via Gallica SRU 'all' index on server side."
+  },
+  {
+    "id": "adapters.extensions.thaqalayn",
+    "path": "src/adapters/extensions/thaqalayn.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 44,
+    "purpose": "Thaqalayn Shi'i hadith library adapter: fetches full match set, client-side slice; url always homepage (no deep link).",
+    "exports": [
+      "THAQALAYN_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-108"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "tags": [
+      "adapter",
+      "extension",
+      "islamicate"
+    ]
+  },
+  {
+    "id": "adapters.extensions.ncbi",
+    "path": "src/adapters/extensions/ncbi.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 85,
+    "purpose": "NCBI PubMed adapter: three-step esearch→esummary+efetch; MeSH keywords; [Title/Abstract] field scoping.",
+    "exports": [
+      "NCBI_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#ncbi",
+    "tags": [
+      "adapter",
+      "extension",
+      "biomedical"
+    ]
+  },
+  {
+    "id": "adapters.extensions.openContext",
+    "path": "src/adapters/extensions/openContext.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 27,
+    "purpose": "Open Context archaeological data thin shim: delegates to /api/search/opencontext backend route.",
+    "exports": [
+      "OPENCONTEXT_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#opencontext",
+    "tags": [
+      "adapter",
+      "extension",
+      "archaeological",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.northwestern",
+    "path": "src/adapters/extensions/northwestern.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 52,
+    "purpose": "Northwestern Digital Library Elasticsearch adapter: Hausa/Ajami manuscripts; try-direct-then-proxy pattern (F-102).",
+    "exports": [
+      "NORTHWESTERN_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#northwestern",
+    "tags": [
+      "adapter",
+      "extension",
+      "manuscript",
+      "heritage"
+    ]
+  },
+  {
+    "id": "adapters.extensions.princetonDpul",
+    "path": "src/adapters/extensions/princetonDpul.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 55,
+    "purpose": "Princeton Digital PUL Blacklight adapter: Islamic/Persian manuscripts; multi-field getAttr helper; no subjects mapped.",
+    "exports": [
+      "PRINCETON_DPUL_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#princetondpul",
+    "tags": [
+      "adapter",
+      "extension",
+      "manuscript",
+      "islamicate"
+    ]
+  },
+  {
+    "id": "adapters.extensions.pangaea",
+    "path": "src/adapters/extensions/pangaea.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 103,
+    "purpose": "PANGAEA earth/env data adapter: Elasticsearch + per-hit RIS fetch for abstract/DOI; pageSize fan-out.",
+    "exports": [
+      "PANGAEA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-116"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "data"
+    ]
+  },
+  {
+    "id": "adapters.extensions.openNeuro",
+    "path": "src/adapters/extensions/openNeuro.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 62,
+    "purpose": "OpenNeuro neuroimaging datasets adapter — DEAD: fetches only 100 newest datasets via GraphQL, client-side filter; always returns 0 useful results.",
+    "exports": [
+      "OPENNEURO_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-107",
+      "F-102"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-openneuro.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "dead"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.ena",
+    "path": "src/adapters/extensions/ena.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 46,
+    "purpose": "ENA European Nucleotide Archive adapter — DEAD: wildcard query syntax triggers HTTP 400 on most queries.",
+    "exports": [
+      "ENA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-109"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-ena.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "dead",
+      "genomics"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.scielo",
+    "path": "src/adapters/extensions/scielo.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 66,
+    "purpose": "SciELO Latin American journals adapter — DEAD: targets private Elasticsearch endpoint that returns 403/CORS.",
+    "exports": [
+      "SCIELO_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-110"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-scielo.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america",
+      "dead"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.laReferencia",
+    "path": "src/adapters/extensions/laReferencia.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 62,
+    "purpose": "LA Referencia federated Latin American OA repositories (VuFind v1): 3M+ records, rich subjects, no abstract.",
+    "exports": [
+      "LA_REFERENCIA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#lareferencia",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america"
+    ]
+  },
+  {
+    "id": "adapters.extensions.oapen",
+    "path": "src/adapters/extensions/oapen.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 58,
+    "purpose": "OAPEN DSpace OA scholarly books adapter: 30K books, page-full hasMore heuristic (no totalCount).",
+    "exports": [
+      "OAPEN_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#oapen",
+    "tags": [
+      "adapter",
+      "extension",
+      "books"
+    ]
+  },
+  {
+    "id": "adapters.extensions.openEdition",
+    "path": "src/adapters/extensions/openEdition.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 31,
+    "purpose": "OpenEdition French/European SSH adapter: thin shim over /api/search/openedition (JSON POST, generic proxy incompatible).",
+    "exports": [
+      "OPENEDITION_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#openedition",
+    "tags": [
+      "adapter",
+      "extension",
+      "humanities",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.openLibrary",
+    "path": "src/adapters/extensions/openLibrary.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 61,
+    "purpose": "Open Library 40M editions adapter: rich subjects, no abstract; isOA = ia[] non-empty (scanned copy on IA).",
+    "exports": [
+      "OPEN_LIBRARY_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-111"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#openlibrary",
+    "tags": [
+      "adapter",
+      "extension",
+      "books"
+    ]
+  },
+  {
+    "id": "adapters.extensions.coreAc",
+    "path": "src/adapters/extensions/coreAc.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 87,
+    "purpose": "CORE 300M OA records adapter: user-provided key (TOS D7: excluded from /api/search); proxiedFetch; rich subjects.",
+    "exports": [
+      "CORE_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#coreac",
+    "tags": [
+      "adapter",
+      "extension",
+      "aggregator",
+      "keyed",
+      "south-asia"
+    ],
+    "notes": "serverSafe intentionally absent (TOS D7). client-only per policy."
+  },
+  {
+    "id": "adapters.extensions.ndli",
+    "path": "src/adapters/extensions/ndli.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 96,
+    "purpose": "NDLI 90M Indian institutions adapter: user-provided key (TOS D8: individual credentials); DC fields defensive for string/array shapes.",
+    "exports": [
+      "NDLI_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#ndli",
+    "tags": [
+      "adapter",
+      "extension",
+      "south-asia",
+      "keyed"
+    ],
+    "notes": "serverSafe intentionally absent (TOS D8). client-only per policy."
+  },
+  {
+    "id": "adapters.extensions.base",
+    "path": "src/adapters/extensions/base.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 86,
+    "purpose": "BASE Bielefeld 300M+ OA records adapter: Solr field-scoped query (dctitle/dcdescription/dcsubject); missing serverSafe/corpusSize.",
+    "exports": [
+      "BASE_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "degraded",
+    "findings": [
+      "F-112"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "tags": [
+      "adapter",
+      "extension",
+      "aggregator",
+      "south-asia"
+    ]
+  },
+  {
+    "id": "adapters.extensions.chroniclingAmerica",
+    "path": "src/adapters/extensions/chroniclingAmerica.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 61,
+    "purpose": "Chronicling America LOC historic US newspapers adapter: v.22A loc.gov update; OCR full text; proxiedFetch.",
+    "exports": [
+      "CHRONICLING_AMERICA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "adapters.shared.proxy"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#chroniclingamerica",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "newspaper"
+    ]
+  },
+  {
+    "id": "adapters.extensions.onb",
+    "path": "src/adapters/extensions/onb.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 60,
+    "purpose": "Austrian National Library SRU/DC adapter: xmlUtils; try-direct-then-proxy; author role suffix stripping.",
+    "exports": [
+      "ONB_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy",
+      "adapters.shared.xmlUtils"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#onb",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sru"
+    ]
+  },
+  {
+    "id": "adapters.extensions.bdh",
+    "path": "src/adapters/extensions/bdh.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 28,
+    "purpose": "Biblioteca Digital Hispánica thin shim: delegates to /api/search/bdh backend route.",
+    "exports": [
+      "BDH_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#bdh",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.bnfApi",
+    "path": "src/adapters/extensions/bnfApi.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 68,
+    "purpose": "BnF Catalogue SRU/UNIMARC adapter: xmlUtils UNIMARC helpers; try-direct-then-proxy; isOA hardcoded true (bug).",
+    "exports": [
+      "BNF_API_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "adapters.shared.proxy",
+      "adapters.shared.xmlUtils"
+    ],
+    "status": "buggy",
+    "findings": [
+      "F-114",
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#bnfapi",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sru",
+      "unimarc"
+    ]
+  },
+  {
+    "id": "adapters.extensions.britishLibrary",
+    "path": "src/adapters/extensions/britishLibrary.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 29,
+    "purpose": "British Library BNB SPARQL thin shim: delegates to /api/search/bl backend route; no totalCount.",
+    "exports": [
+      "BRITISH_LIBRARY_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#britishlibrary",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sparql",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.lcDatasets",
+    "path": "src/adapters/extensions/lcDatasets.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 54,
+    "purpose": "Library of Congress fo=json adapter: 5M+ digitized items; direct fetch; subject/type normalization.",
+    "exports": [
+      "LC_DATASETS_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#lcdatasets",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "library"
+    ]
+  },
+  {
+    "id": "adapters.extensions.mexicana",
+    "path": "src/adapters/extensions/mexicana.js",
+    "kind": "adapter",
+    "runtime": "client",
+    "loc": 32,
+    "purpose": "Mexicana OAI-PMH thin shim: delegates to /api/search/mexicana; nextToken non-standard (bug).",
+    "exports": [
+      "MEXICANA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "degraded",
+    "findings": [
+      "F-106"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#mexicana",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america",
+      "oai-pmh",
+      "thin-shim"
+    ]
+  },
+  {
+    "id": "adapters.extensions.wikidata",
+    "path": "src/adapters/extensions/wikidata.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 149,
+    "purpose": "Wikidata scholarly articles adapter: 3-step CirrusSearch→entities→label resolution; P2093 author string preferred over P50 item IDs.",
+    "exports": [
+      "WIKIDATA_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#wikidata",
+    "tags": [
+      "adapter",
+      "extension",
+      "linked-data"
+    ]
+  },
+  {
+    "id": "adapters.extensions.semanticScholar",
+    "path": "src/adapters/extensions/semanticScholar.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "loc": 83,
+    "purpose": "Semantic Scholar adapter — DEREGISTERED v0.27; file kept for reference; approval-gated key; protocol field incorrect.",
+    "exports": [
+      "SEMANTIC_SCHOLAR_ADAPTER"
+    ],
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-105"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-semanticscholar.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "deprecated"
+    ],
+    "notes": "Removed from build v0.42 (was deregistered v0.27); full source preserved in the wiki quarantine."
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "R-500",
+    "title": "MCP contract is genuinely DRY — api/_shared/apiContract.js is the single SSOT",
+    "shared_module": "api.shared.apiContract",
+    "client_users": [],
+    "server_users": ["mcp.contract", "mcp.schema", "api.search"],
+    "opportunity": "already-shared",
+    "detail": "mcp/src/contract.js imports and re-exports from api/_shared/apiContract.js via relative path. mcp/src/schema.js derives all JSON Schema artifacts (MCP inputSchema, OpenAI/Anthropic function defs, OpenAPI 3.1 spec) from the same SSOT. No copy-paste. Change the contract once, all three surfaces follow. TOOL_PARAM_MAP in contract.js is the only hand-maintained mapping (3 lines) — acceptable.",
+    "wiki": "06-MCP-Server/MCP-Server.md#-health-audit"
+  },
+  {
+    "id": "R-501",
+    "title": "Two parallel client-key storage patterns: encrypted DB blob vs. backend env injection",
+    "shared_module": null,
+    "client_users": ["hooks.useSettings"],
+    "server_users": ["api.shared.serverKeys"],
+    "opportunity": "divergent-duplicate",
+    "detail": "User-managed third-party keys (openAlexKey, s2Key, crossrefEmail) live in the users.settings encrypted JSON blob (AES-256-GCM, written via api/_shared/crypto.js). CC0 source keys (EUROPEANA_API_KEY, DPLA_API_KEY, SMITHSONIAN_API_KEY) are backend env vars injected by api/_shared/serverKeys.js via serverInjectedKeys(). These are two different patterns for the same problem (getting a key to an adapter at request time). The blob pattern requires a DB round-trip and encryption; the env pattern is zero-cost but requires Vercel dashboard access. As more sources move to backend keys (v0.34 trend), the blob could shrink. No immediate action needed — document the two patterns so new keys land in the right place.",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit"
+  },
+  {
+    "id": "R-502",
+    "title": "VITE_ADMIN_EMAILS is duplicated as ADMIN_EMAILS for server-side fallback",
+    "shared_module": null,
+    "client_users": ["lib.admin"],
+    "server_users": ["api.shared.apiAuth"],
+    "opportunity": "divergent-duplicate",
+    "detail": "The admin email allowlist is read as VITE_ADMIN_EMAILS (baked into client bundle at build time by Vite) and as process.env.VITE_ADMIN_EMAILS || process.env.ADMIN_EMAILS on the server (api/_shared/apiAuth.js:29). Two env vars for the same value. The ADMIN_EMAILS fallback was added to allow server-side gating without the VITE_ prefix. This is correct but creates a maintenance footprint: the Vercel dashboard needs both vars set (or just VITE_ADMIN_EMAILS, which the server also reads). Document in .env.example.",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#api--admin"
+  },
+  {
+    "id": "R-503",
+    "title": "Admin gold queries stored only in localStorage — not synced to relevance_labels table",
+    "shared_module": null,
+    "client_users": ["components.admin.GoldSetHarness"],
+    "server_users": [],
+    "opportunity": "server-can-reuse-client",
+    "detail": "The F2 Gold-Set Harness stores the admin-created query list and test run history entirely in localStorage (opencite_gold_queries, opencite_test_runs). The relevance_labels Postgres table stores only individual result grades (doi + grade). This means gold queries are device-local and lost on browser clear. Persisting the query set to Postgres (a simple text[] column or a separate queries table) would make the harness multi-device and more durable. Low effort, high value for a solo admin workflow.",
+    "wiki": "07-Data-Layer/Data-Layer.md#admin-harness-data"
+  }
+]

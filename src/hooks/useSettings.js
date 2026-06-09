@@ -20,7 +20,7 @@ const apiFetch = (method, body) => apiCall("/api/settings", method, body);
 
 const LEGACY_KEYS = [
   "europeanaKey", "openAlexKey", "openAlexEmail", "crossrefEmail",
-  "s2Key", "smithsonianKey", "dplaKey",
+  "s2Key", "smithsonianKey", "dplaKey",   // kept ONLY to purge stale bare localStorage entries (not migrated)
   "curatedJournals", "enabledSources", "viewMode",
 ];
 
@@ -30,7 +30,6 @@ function migrateLegacyKeys() {
     const openAlexKey   = localStorage.getItem("openAlexKey")    || "";
     const legacyEmail   = localStorage.getItem("openAlexEmail")  || "";
     const crossrefEmail = localStorage.getItem("crossrefEmail")  || legacyEmail || "";
-    const s2Key          = localStorage.getItem("s2Key")          || "";
     // v0.34: DPLA/Smithsonian are backend-keyed (env via serverKeys.js) — their user
     // keys are no longer read client-side, so they're not migrated into namespaced
     // settings. They stay in LEGACY_KEYS only so any stale bare localStorage entry is
@@ -53,7 +52,7 @@ function migrateLegacyKeys() {
 
     const viewMode = localStorage.getItem("viewMode") || "unified";
 
-    const migrated = { europeanaKey: eu, openAlexKey, crossrefEmail, s2Key, curatedJournals, enabledSources, viewMode };
+    const migrated = { europeanaKey: eu, openAlexKey, crossrefEmail, curatedJournals, enabledSources, viewMode };
     storage.set("settings", migrated);
 
     for (const key of LEGACY_KEYS) {

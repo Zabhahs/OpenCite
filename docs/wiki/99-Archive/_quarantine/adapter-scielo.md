@@ -1,3 +1,29 @@
+---
+machine_ids: [adapters.extensions.scielo]
+findings: [F-110, F-208]
+runtime: both
+status: quarantined
+tags: [archive, quarantine, adapter, scielo]
+---
+
+# 🔒 Quarantined: SciELO adapter
+
+> **Removed from build in v0.38.** Original path: `src/adapters/extensions/scielo.js`. Full source below.
+
+## Why removed
+`scielo.js:22` targets `https://search.scielo.org/api/v2/search` — an **internal Elasticsearch endpoint
+not intended for public use**. Returns CORS errors / 403 / 404 in all environments → **0 results every
+query**. Because it was `serverSafe:true` it dragged `/api/search` coverage to `partial`. See
+[[09-Audit/Bugs#f-110]], [[09-Audit/Bugs#f-208]].
+
+## Revival checklist
+- [ ] Find a *public* SciELO search API (no public JSON search endpoint exists at the ES path).
+- [ ] Candidate: SciELO **OAI-PMH** (harvest-only — the Mexicana anti-pattern, weigh carefully) or rely on **DOAJ** (already indexes many SciELO journals) for Latin-American coverage.
+- [ ] Re-add `export { SCIELO_ADAPTER } from "./scielo.js";` to `extensions/index.js` + the registry entry in `index.js`.
+- [ ] Verify a live query returns results; flip machine record `status` → `degraded`/`healthy`.
+
+## Verbatim source (as of v0.37)
+```js
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { proxiedFetch } from "../_shared/proxy.js";
@@ -64,3 +90,7 @@ export const SCIELO_ADAPTER = {
     return { results, hasMore: offset + results.length < total };
   }
 };
+```
+
+## See also
+[[_index|Quarantine register]] · [[02-Adapters/Extension-Adapters#scielo]] · [[10-Sprints/Index|v0.38 sprint]]

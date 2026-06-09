@@ -25,11 +25,9 @@ export { OPENCONTEXT_ADAPTER }      from "./openContext.js";
 export { NORTHWESTERN_ADAPTER }     from "./northwestern.js";
 export { PRINCETON_DPUL_ADAPTER }   from "./princetonDpul.js";
 export { PANGAEA_ADAPTER }          from "./pangaea.js";
-export { OPENNEURO_ADAPTER }        from "./openNeuro.js";
-export { ENA_ADAPTER }              from "./ena.js";
-
-// v.22B — Latin American replacements for BDPI/MEXICANA
-export { SCIELO_ADAPTER }              from "./scielo.js";
+// OPENNEURO_ADAPTER (openNeuro.js), ENA_ADAPTER (ena.js), SCIELO_ADAPTER (scielo.js) —
+// QUARANTINED v0.38: always-dead (0 results every query → false `partial` coverage → billing
+// discount). Full source preserved at docs/wiki/99-Archive/_quarantine/. Findings F-107/F-109/F-110/F-208.
 
 // v.29 — humanities worldwide-coverage adapters (verified contracts)
 export { LA_REFERENCIA_ADAPTER }       from "./laReferencia.js";

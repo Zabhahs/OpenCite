@@ -1,0 +1,3715 @@
+[
+  {
+    "id": "adapters.core.crossref",
+    "path": "src/adapters/core/crossref.js",
+    "loc": 85,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers",
+      "lib.scoring"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Crossref DOI authority adapter: 155M+ works, offset pagination, nativeScore (Solr score) + nativeRank, hasContentMatch post-filter for author-name pollution.",
+    "exports": [
+      "CROSSREF_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#crossref",
+    "tags": [
+      "adapter",
+      "core",
+      "crossref"
+    ]
+  },
+  {
+    "id": "adapters.core.curatedJournals",
+    "path": "src/adapters/core/curatedJournals.js",
+    "loc": 52,
+    "deps": [
+      "adapters.shared.parseOpenAlex",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "User-configured ISSN-filtered OpenAlex adapter: searches only journals in the user's curated list; wraps parseOpenAlexWork.",
+    "exports": [
+      "CURATED_JOURNALS_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-103"
+    ],
+    "wiki": "02-Adapters/Core-Adapters.md#curatedjournals",
+    "tags": [
+      "adapter",
+      "core",
+      "openalex",
+      "curated"
+    ]
+  },
+  {
+    "id": "adapters.core.doaj",
+    "path": "src/adapters/core/doaj.js",
+    "loc": 66,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "DOAJ open-access articles adapter: 10M+ articles, Elasticsearch query-string with field scoping, nativeRank only.",
+    "exports": [
+      "DOAJ_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#doaj",
+    "tags": [
+      "adapter",
+      "core",
+      "doaj"
+    ]
+  },
+  {
+    "id": "adapters.core.openalex",
+    "path": "src/adapters/core/openalex.js",
+    "loc": 57,
+    "deps": [
+      "adapters.shared.parseOpenAlex",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "OpenAlex 250M+ works adapter: is_oa:true filter, title_and_abstract field scoping, nativeScore + nativeRank via parseOpenAlexWork.",
+    "exports": [
+      "OPENALEX_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Core-Adapters.md#openalex",
+    "tags": [
+      "adapter",
+      "core",
+      "openalex"
+    ]
+  },
+  {
+    "id": "adapters.extensions.base",
+    "path": "src/adapters/extensions/base.js",
+    "loc": 87,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "BASE Bielefeld 300M+ OA records adapter: Solr field-scoped query (dctitle/dcdescription/dcsubject); missing serverSafe/corpusSize.",
+    "exports": [
+      "BASE_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [
+      "F-112"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "tags": [
+      "adapter",
+      "extension",
+      "aggregator",
+      "south-asia"
+    ]
+  },
+  {
+    "id": "adapters.extensions.bdh",
+    "path": "src/adapters/extensions/bdh.js",
+    "loc": 29,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "Biblioteca Digital Hispánica thin shim: delegates to /api/search/bdh backend route.",
+    "exports": [
+      "BDH_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#bdh",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.bnfApi",
+    "path": "src/adapters/extensions/bnfApi.js",
+    "loc": 69,
+    "deps": [
+      "adapters.shared.proxy",
+      "adapters.shared.xmlUtils",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "BnF Catalogue SRU/UNIMARC adapter: xmlUtils UNIMARC helpers; try-direct-then-proxy; isOA hardcoded true (bug).",
+    "exports": [
+      "BNF_API_ADAPTER"
+    ],
+    "status": "buggy",
+    "findings": [
+      "F-114",
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#bnfapi",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sru",
+      "unimarc"
+    ]
+  },
+  {
+    "id": "adapters.extensions.britishLibrary",
+    "path": "src/adapters/extensions/britishLibrary.js",
+    "loc": 30,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "British Library BNB SPARQL thin shim: delegates to /api/search/bl backend route; no totalCount.",
+    "exports": [
+      "BRITISH_LIBRARY_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#britishlibrary",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sparql",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.chroniclingAmerica",
+    "path": "src/adapters/extensions/chroniclingAmerica.js",
+    "loc": 62,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Chronicling America LOC historic US newspapers adapter: v.22A loc.gov update; OCR full text; proxiedFetch.",
+    "exports": [
+      "CHRONICLING_AMERICA_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#chroniclingamerica",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "newspaper"
+    ]
+  },
+  {
+    "id": "adapters.extensions.coreAc",
+    "path": "src/adapters/extensions/coreAc.js",
+    "loc": 88,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "CORE 300M OA records adapter: user-provided key (TOS D7: excluded from /api/search); proxiedFetch; rich subjects.",
+    "exports": [
+      "CORE_ADAPTER"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#coreac",
+    "tags": [
+      "adapter",
+      "extension",
+      "aggregator",
+      "keyed",
+      "south-asia"
+    ],
+    "notes": "serverSafe intentionally absent (TOS D7). client-only per policy."
+  },
+  {
+    "id": "adapters.extensions.dpla",
+    "path": "src/adapters/extensions/dpla.js",
+    "loc": 86,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "DPLA 10M+ items adapter: backend-injected API key, browser→/api/search/dpla, server→proxiedFetch with key.",
+    "exports": [
+      "DPLA_ADAPTER"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#dpla",
+    "tags": [
+      "adapter",
+      "extension",
+      "cultural-heritage",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.ena",
+    "path": "src/adapters/extensions/ena.js",
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "ENA European Nucleotide Archive adapter — DEAD: wildcard query syntax triggers HTTP 400 on most queries.",
+    "exports": [
+      "ENA_ADAPTER"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-109"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-ena.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "dead",
+      "genomics"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.europeana",
+    "path": "src/adapters/extensions/europeana.js",
+    "loc": 85,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Europeana 58M cultural heritage records adapter: backend-injected API key (v.34), browser→/api/search/europeana, server→direct upstream.",
+    "exports": [
+      "EUROPEANA_ADAPTER"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#europeana",
+    "tags": [
+      "adapter",
+      "extension",
+      "cultural-heritage",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.gallica",
+    "path": "src/adapters/extensions/gallica.js",
+    "loc": 29,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "BnF Gallica thin shim: delegates all work to /api/search/gallica backend route (SRU).",
+    "exports": [
+      "GALLICA_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#gallica",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize. Fulltext via Gallica SRU 'all' index on server side."
+  },
+  {
+    "id": "adapters.extensions.index",
+    "path": "src/adapters/extensions/index.js",
+    "loc": 61,
+    "deps": [
+      "adapters.extensions.base",
+      "adapters.extensions.bdh",
+      "adapters.extensions.bnfApi",
+      "adapters.extensions.britishLibrary",
+      "adapters.extensions.chroniclingAmerica",
+      "adapters.extensions.coreAc",
+      "adapters.extensions.dpla",
+      "adapters.extensions.europeana",
+      "adapters.extensions.gallica",
+      "adapters.extensions.internetArchive",
+      "adapters.extensions.laReferencia",
+      "adapters.extensions.lcDatasets",
+      "adapters.extensions.met",
+      "adapters.extensions.mexicana",
+      "adapters.extensions.ncbi",
+      "adapters.extensions.ndli",
+      "adapters.extensions.northwestern",
+      "adapters.extensions.oapen",
+      "adapters.extensions.onb",
+      "adapters.extensions.openContext",
+      "adapters.extensions.openEdition",
+      "adapters.extensions.openLibrary",
+      "adapters.extensions.pangaea",
+      "adapters.extensions.princetonDpul",
+      "adapters.extensions.rijksmuseum",
+      "adapters.extensions.smithsonian",
+      "adapters.extensions.thaqalayn",
+      "adapters.extensions.wikidata"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Re-export barrel for all extension adapters; no logic. SEMANTIC_SCHOLAR is intentionally excluded.",
+    "exports": [
+      "*"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md",
+    "tags": [
+      "adapter",
+      "barrel"
+    ]
+  },
+  {
+    "id": "adapters.extensions.internetArchive",
+    "path": "src/adapters/extensions/internetArchive.js",
+    "loc": 233,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Internet Archive dual-endpoint adapter: metadata search + FTS OCR; 40M+ texts; citedBy=downloads (display only, not ranked).",
+    "exports": [
+      "INTERNET_ARCHIVE_ADAPTER"
+    ],
+    "status": "buggy",
+    "findings": [
+      "F-104"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#internetarchive",
+    "tags": [
+      "adapter",
+      "extension",
+      "internet-archive",
+      "fulltext"
+    ],
+    "notes": "citedBy is downloads not citations; rankFields.citedBy:false mitigates. v.35 popularity-sort bug fixed."
+  },
+  {
+    "id": "adapters.extensions.laReferencia",
+    "path": "src/adapters/extensions/laReferencia.js",
+    "loc": 63,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "LA Referencia federated Latin American OA repositories (VuFind v1): 3M+ records, rich subjects, no abstract.",
+    "exports": [
+      "LA_REFERENCIA_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#lareferencia",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america"
+    ]
+  },
+  {
+    "id": "adapters.extensions.lcDatasets",
+    "path": "src/adapters/extensions/lcDatasets.js",
+    "loc": 55,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Library of Congress fo=json adapter: 5M+ digitized items; direct fetch; subject/type normalization.",
+    "exports": [
+      "LC_DATASETS_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#lcdatasets",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "library"
+    ]
+  },
+  {
+    "id": "adapters.extensions.met",
+    "path": "src/adapters/extensions/met.js",
+    "loc": 60,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Metropolitan Museum of Art adapter: two-step objectIDs→per-object detail, up to 3× pageSize fan-out, client-side relevance filter.",
+    "exports": [
+      "MET_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-113"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#met",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum"
+    ]
+  },
+  {
+    "id": "adapters.extensions.mexicana",
+    "path": "src/adapters/extensions/mexicana.js",
+    "loc": 33,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "Mexicana OAI-PMH thin shim: delegates to /api/search/mexicana; nextToken non-standard (bug).",
+    "exports": [
+      "MEXICANA_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [
+      "F-106"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#mexicana",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america",
+      "oai-pmh",
+      "thin-shim"
+    ]
+  },
+  {
+    "id": "adapters.extensions.ncbi",
+    "path": "src/adapters/extensions/ncbi.js",
+    "loc": 86,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "NCBI PubMed adapter: three-step esearch→esummary+efetch; MeSH keywords; [Title/Abstract] field scoping.",
+    "exports": [
+      "NCBI_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#ncbi",
+    "tags": [
+      "adapter",
+      "extension",
+      "biomedical"
+    ]
+  },
+  {
+    "id": "adapters.extensions.ndli",
+    "path": "src/adapters/extensions/ndli.js",
+    "loc": 97,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "NDLI 90M Indian institutions adapter: user-provided key (TOS D8: individual credentials); DC fields defensive for string/array shapes.",
+    "exports": [
+      "NDLI_ADAPTER"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#ndli",
+    "tags": [
+      "adapter",
+      "extension",
+      "south-asia",
+      "keyed"
+    ],
+    "notes": "serverSafe intentionally absent (TOS D8). client-only per policy."
+  },
+  {
+    "id": "adapters.extensions.northwestern",
+    "path": "src/adapters/extensions/northwestern.js",
+    "loc": 53,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Northwestern Digital Library Elasticsearch adapter: Hausa/Ajami manuscripts; try-direct-then-proxy pattern (F-102).",
+    "exports": [
+      "NORTHWESTERN_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#northwestern",
+    "tags": [
+      "adapter",
+      "extension",
+      "manuscript",
+      "heritage"
+    ]
+  },
+  {
+    "id": "adapters.extensions.oapen",
+    "path": "src/adapters/extensions/oapen.js",
+    "loc": 59,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "OAPEN DSpace OA scholarly books adapter: 30K books, page-full hasMore heuristic (no totalCount).",
+    "exports": [
+      "OAPEN_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#oapen",
+    "tags": [
+      "adapter",
+      "extension",
+      "books"
+    ]
+  },
+  {
+    "id": "adapters.extensions.onb",
+    "path": "src/adapters/extensions/onb.js",
+    "loc": 61,
+    "deps": [
+      "adapters.shared.proxy",
+      "adapters.shared.xmlUtils",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Austrian National Library SRU/DC adapter: xmlUtils; try-direct-then-proxy; author role suffix stripping.",
+    "exports": [
+      "ONB_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-102"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#onb",
+    "tags": [
+      "adapter",
+      "extension",
+      "heritage",
+      "sru"
+    ]
+  },
+  {
+    "id": "adapters.extensions.openContext",
+    "path": "src/adapters/extensions/openContext.js",
+    "loc": 28,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "Open Context archaeological data thin shim: delegates to /api/search/opencontext backend route.",
+    "exports": [
+      "OPENCONTEXT_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#opencontext",
+    "tags": [
+      "adapter",
+      "extension",
+      "archaeological",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.openEdition",
+    "path": "src/adapters/extensions/openEdition.js",
+    "loc": 32,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "client",
+    "purpose": "OpenEdition French/European SSH adapter: thin shim over /api/search/openedition (JSON POST, generic proxy incompatible).",
+    "exports": [
+      "OPENEDITION_ADAPTER"
+    ],
+    "status": "degraded",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#openedition",
+    "tags": [
+      "adapter",
+      "extension",
+      "humanities",
+      "thin-shim"
+    ],
+    "notes": "Missing serverSafe and corpusSize."
+  },
+  {
+    "id": "adapters.extensions.openLibrary",
+    "path": "src/adapters/extensions/openLibrary.js",
+    "loc": 62,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Open Library 40M editions adapter: rich subjects, no abstract; isOA = ia[] non-empty (scanned copy on IA).",
+    "exports": [
+      "OPEN_LIBRARY_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-111"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#openlibrary",
+    "tags": [
+      "adapter",
+      "extension",
+      "books"
+    ]
+  },
+  {
+    "id": "adapters.extensions.openNeuro",
+    "path": "src/adapters/extensions/openNeuro.js",
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "OpenNeuro neuroimaging datasets adapter — DEAD: fetches only 100 newest datasets via GraphQL, client-side filter; always returns 0 useful results.",
+    "exports": [
+      "OPENNEURO_ADAPTER"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-107",
+      "F-102"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-openneuro.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "dead"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.pangaea",
+    "path": "src/adapters/extensions/pangaea.js",
+    "loc": 104,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "PANGAEA earth/env data adapter: Elasticsearch + per-hit RIS fetch for abstract/DOI; pageSize fan-out.",
+    "exports": [
+      "PANGAEA_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-116"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "tags": [
+      "adapter",
+      "extension",
+      "science",
+      "data"
+    ]
+  },
+  {
+    "id": "adapters.extensions.princetonDpul",
+    "path": "src/adapters/extensions/princetonDpul.js",
+    "loc": 56,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Princeton Digital PUL Blacklight adapter: Islamic/Persian manuscripts; multi-field getAttr helper; no subjects mapped.",
+    "exports": [
+      "PRINCETON_DPUL_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#princetondpul",
+    "tags": [
+      "adapter",
+      "extension",
+      "manuscript",
+      "islamicate"
+    ]
+  },
+  {
+    "id": "adapters.extensions.rijksmuseum",
+    "path": "src/adapters/extensions/rijksmuseum.js",
+    "loc": 351,
+    "deps": [
+      "adapters.shared.proxy",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Rijksmuseum Linked-Art adapter: three-step search→object-resolve→2-hop image resolve; opaque token pagination; most complex adapter.",
+    "exports": [
+      "RIJKSMUSEUM_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-115"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#rijksmuseum",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum",
+      "linked-art"
+    ]
+  },
+  {
+    "id": "adapters.extensions.scielo",
+    "path": "src/adapters/extensions/scielo.js",
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "SciELO Latin American journals adapter — DEAD: targets private Elasticsearch endpoint that returns 403/CORS.",
+    "exports": [
+      "SCIELO_ADAPTER"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-110"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-scielo.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "latin-america",
+      "dead"
+    ],
+    "notes": "Removed from build v0.38; full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.semanticScholar",
+    "path": "src/adapters/extensions/semanticScholar.js",
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Semantic Scholar adapter — DEREGISTERED v0.27; file kept for reference; approval-gated key; protocol field incorrect.",
+    "exports": [
+      "SEMANTIC_SCHOLAR_ADAPTER"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-105"
+    ],
+    "wiki": "99-Archive/_quarantine/adapter-semanticscholar.md",
+    "tags": [
+      "adapter",
+      "extension",
+      "deprecated"
+    ],
+    "notes": "Removed from build v0.42 (was deregistered v0.27); full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.extensions.smithsonian",
+    "path": "src/adapters/extensions/smithsonian.js",
+    "loc": 66,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Smithsonian 18M records adapter: backend-injected API key, browser→/api/search/smithsonian, server→direct fetch.",
+    "exports": [
+      "SMITHSONIAN_ADAPTER"
+    ],
+    "status": "keyed",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#smithsonian",
+    "tags": [
+      "adapter",
+      "extension",
+      "museum",
+      "keyed"
+    ]
+  },
+  {
+    "id": "adapters.extensions.thaqalayn",
+    "path": "src/adapters/extensions/thaqalayn.js",
+    "loc": 45,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary",
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Thaqalayn Shi'i hadith library adapter: fetches full match set, client-side slice; url always homepage (no deep link).",
+    "exports": [
+      "THAQALAYN_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-108"
+    ],
+    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "tags": [
+      "adapter",
+      "extension",
+      "islamicate"
+    ]
+  },
+  {
+    "id": "adapters.extensions.wikidata",
+    "path": "src/adapters/extensions/wikidata.js",
+    "loc": 150,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Wikidata scholarly articles adapter: 3-step CirrusSearch→entities→label resolution; P2093 author string preferred over P50 item IDs.",
+    "exports": [
+      "WIKIDATA_ADAPTER"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Extension-Adapters.md#wikidata",
+    "tags": [
+      "adapter",
+      "extension",
+      "linked-data"
+    ]
+  },
+  {
+    "id": "adapters.index",
+    "path": "src/adapters/index.js",
+    "loc": 144,
+    "deps": [
+      "adapters.core.crossref",
+      "adapters.core.curatedJournals",
+      "adapters.core.doaj",
+      "adapters.core.openalex",
+      "adapters.extensions.index",
+      "adapters.shared.base",
+      "adapters.shared.normalize",
+      "constants.vocabulary",
+      "lib.log"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Registry: ADAPTERS array (34 adapters), runSearch() orchestration wrapper (sanitize+normalize+log), isAdapterDefaultEnabled predicate.",
+    "exports": [
+      "ADAPTERS",
+      "runSearch",
+      "isAdapterDefaultEnabled",
+      "ADAPTER_CATEGORY"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md",
+    "tags": [
+      "adapter",
+      "registry",
+      "orchestration"
+    ]
+  },
+  {
+    "id": "adapters.shared.base",
+    "path": "src/adapters/_shared/base.js",
+    "loc": 108,
+    "deps": [],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "AbstractAdapter.sanitize() DataMappingGuard + UnifiedResult typedef + AdapterCapability typedef; coerces every result field to its expected type before normalization.",
+    "exports": [
+      "AbstractAdapter"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "base"
+    ]
+  },
+  {
+    "id": "adapters.shared.normalize",
+    "path": "src/adapters/_shared/normalize.js",
+    "loc": 187,
+    "deps": [],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "NCR pipeline: adds _type, _authorsParsed, _editorsParsed, _normalized to sanitized results; request-scoped dedup via dedupKey.",
+    "exports": [
+      "normalizeRecord",
+      "createDedupMap",
+      "parseAuthors",
+      "validateNCR"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "normalize"
+    ],
+    "notes": "validateNCR is a dev utility never called in production. Phase 2 KV cache hook point is a long-lived comment."
+  },
+  {
+    "id": "adapters.shared.parseOpenAlex",
+    "path": "src/adapters/_shared/parseOpenAlex.js",
+    "loc": 63,
+    "deps": [
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Shared OpenAlex work parser: converts raw OpenAlex work objects to UnifiedResult; SSOT for OA_SELECT field list.",
+    "exports": [
+      "parseOpenAlexWork",
+      "OA_SELECT"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "openalex"
+    ]
+  },
+  {
+    "id": "adapters.shared.proxy",
+    "path": "src/adapters/_shared/proxy.js",
+    "loc": 70,
+    "deps": [
+      "lib.log"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "proxiedFetch: browser routes via /api/proxy; server does direct fetch with spoofed browser headers (User-Agent, Referer, Accept).",
+    "exports": [
+      "proxiedFetch"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-101"
+    ],
+    "wiki": "02-Adapters/Adapter-Architecture.md#proxiedfetch-routing",
+    "tags": [
+      "adapter",
+      "shared",
+      "proxy",
+      "cors"
+    ]
+  },
+  {
+    "id": "adapters.shared.xmlUtils",
+    "path": "src/adapters/_shared/xmlUtils.js",
+    "loc": 159,
+    "deps": [],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "Regex-based XML helpers for SRU/OAI-PMH/UNIMARC adapters: dcOne/dcAll, sruTotal/sruRecords, oaiRecords/oaiResumptionToken, unimarcOne/unimarcAll.",
+    "exports": [
+      "dcOne",
+      "dcAll",
+      "sruTotal",
+      "sruRecords",
+      "oaiRecords",
+      "oaiResumptionToken",
+      "unimarcOne",
+      "unimarcAll"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-100"
+    ],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "adapter",
+      "shared",
+      "xml",
+      "sru",
+      "oai-pmh"
+    ]
+  },
+  {
+    "id": "api.auth.handler",
+    "path": "api/auth/handler.js",
+    "loc": 136,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Auth.js v5 Google OAuth handler mounted at /api/auth/*; Node↔Web API bridge, PrismaAdapter for session storage.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-414"
+    ],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "auth",
+      "oauth",
+      "google",
+      "session"
+    ],
+    "notes": "AUTH_SECRET env not validated at startup. Apple/Microsoft providers are stubbed out. PHASE 4 SIWE hook point marked."
+  },
+  {
+    "id": "api.checkout",
+    "path": "api/checkout.js",
+    "loc": 118,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.log",
+      "api.shared.parseBody",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Creates Stripe Checkout sessions for subscription plans or PAYG credit packs; requires human session; returns {url} for browser redirect.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-415"
+    ],
+    "wiki": "05-Billing/Billing-Credits.md#stripe-checkout",
+    "tags": [
+      "stripe",
+      "checkout",
+      "billing"
+    ],
+    "notes": "Stripe SDK dynamically imported so its absence can't break other routes. baseUrl accepts *.vercel.app — broad redirect origin pattern."
+  },
+  {
+    "id": "api.history",
+    "path": "api/history.js",
+    "loc": 84,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.parseBody",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Search history CRUD (GET/POST/DELETE /api/history); session-authenticated; trims to 50 entries.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "history",
+      "crud"
+    ],
+    "notes": "Overflow trim is fire-and-forget (no await). BigInt ts converted to Number for JSON serialization."
+  },
+  {
+    "id": "api.keys",
+    "path": "api/keys.js",
+    "loc": 76,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.crypto",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "API key issuance (GET/POST/DELETE /api/keys): list prefixes, mint a new key (plaintext returned once), revoke.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-413"
+    ],
+    "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",
+    "tags": [
+      "api-key",
+      "issuance",
+      "keys"
+    ],
+    "notes": "No per-user key count limit. Plaintext returned exactly once in POST response — not stored, not logged."
+  },
+  {
+    "id": "api.library",
+    "path": "api/library.js",
+    "loc": 93,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.parseBody",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Saved library CRUD (GET/POST/DELETE /api/library); session-authenticated; stores trimmed result blobs keyed by DOI or source:id.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "library",
+      "crud"
+    ],
+    "notes": "RESULT_FIELDS includes source — library stores origin-aware records (not subject to origin-blind invariant since it's user-owned data, not API response data)."
+  },
+  {
+    "id": "api.proxy",
+    "path": "api/proxy.js",
+    "loc": 108,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge CORS proxy with 21-domain allowlist; forwards browser requests to CORS-restricted heritage upstreams.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-410",
+      "F-411",
+      "F-412"
+    ],
+    "wiki": "04-Backend-API/Proxy.md",
+    "tags": [
+      "proxy",
+      "cors",
+      "edge",
+      "ssrf"
+    ],
+    "notes": "No auth. redirect:follow without re-validating destination hostname. No https: scheme enforcement."
+  },
+  {
+    "id": "api.route.bdh",
+    "path": "api/search/bdh.js",
+    "loc": 90,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for Biblioteca Digital Hispánica (datos.bne.es) JSON REST API.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "cors"
+    ],
+    "notes": null
+  },
+  {
+    "id": "api.route.bl",
+    "path": "api/search/bl.js",
+    "loc": 127,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for British Library SPARQL endpoint (bnb.data.bl.uk/sparql); CORS workaround + response normalization.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-408"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "sparql",
+      "cors"
+    ],
+    "notes": "Query injected into SPARQL template with only double-quote stripping — minimal sanitization."
+  },
+  {
+    "id": "api.route.dpla",
+    "path": "api/search/dpla.js",
+    "loc": 23,
+    "deps": [
+      "adapters.extensions.dpla",
+      "api.shared.serverKeys"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Browser-shim: proxies DPLA queries from the client adapter, injecting the backend API key from env.",
+    "exports": [
+      "default"
+    ],
+    "status": "keyed",
+    "findings": [
+      "F-407"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "browser-shim",
+      "keyed"
+    ],
+    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn DPLA API quota."
+  },
+  {
+    "id": "api.route.europeana",
+    "path": "api/search/europeana.js",
+    "loc": 23,
+    "deps": [
+      "adapters.extensions.europeana",
+      "api.shared.serverKeys"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Browser-shim: proxies Europeana queries from the client adapter, injecting the backend API key from env.",
+    "exports": [
+      "default"
+    ],
+    "status": "keyed",
+    "findings": [
+      "F-407"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "browser-shim",
+      "keyed"
+    ],
+    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Europeana API quota."
+  },
+  {
+    "id": "api.route.gallica",
+    "path": "api/search/gallica.js",
+    "loc": 130,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for Gallica SRU/XML; parses DC metadata via DOMParser with graceful fallback when unavailable in Edge.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "sru",
+      "xml",
+      "cors"
+    ],
+    "notes": "DOMParser may not exist in V8 Edge runtime — explicit catch with graceful empty-results return."
+  },
+  {
+    "id": "api.route.mexicana",
+    "path": "api/search/mexicana.js",
+    "loc": 138,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for Mexicana OAI-PMH (cultura.gob.mx); fetches full page, client-side filters by query match.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-409"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "oai-pmh",
+      "cors"
+    ],
+    "notes": "resumptionToken from query param passed directly to OAI URL without validation."
+  },
+  {
+    "id": "api.route.opencontext",
+    "path": "api/search/opencontext.js",
+    "loc": 119,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for Open Context JSON-LD API; filters out region items and unlabeled records.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "json-ld",
+      "cors"
+    ],
+    "notes": null
+  },
+  {
+    "id": "api.route.openedition",
+    "path": "api/search/openedition.js",
+    "loc": 120,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Edge proxy for OpenEdition search API (POST with Content-Type:application/json — not feasible via generic proxy).",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "edge",
+      "post",
+      "cors"
+    ],
+    "notes": "Contract reverse-engineered from OpenEdition SPA bundle."
+  },
+  {
+    "id": "api.route.smithsonian",
+    "path": "api/search/smithsonian.js",
+    "loc": 23,
+    "deps": [
+      "adapters.extensions.smithsonian",
+      "api.shared.serverKeys"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Browser-shim: proxies Smithsonian queries from the client adapter, injecting the backend API key from env.",
+    "exports": [
+      "default"
+    ],
+    "status": "keyed",
+    "findings": [
+      "F-407"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "browser-shim",
+      "keyed"
+    ],
+    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Smithsonian API quota."
+  },
+  {
+    "id": "api.search",
+    "path": "api/search.js",
+    "loc": 405,
+    "deps": [
+      "adapters.index",
+      "api.shared.apiAuth",
+      "api.shared.apiContract",
+      "api.shared.billing",
+      "api.shared.cache",
+      "api.shared.coverage",
+      "api.shared.debugResult",
+      "api.shared.plans",
+      "api.shared.publicResult",
+      "api.shared.ratelimit",
+      "api.shared.serverKeys",
+      "constants.defaults",
+      "lib.citations",
+      "lib.dedup",
+      "lib.scoring"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Origin-blind metered scholarly search endpoint: resolves identity, gates credits, fans out to server-safe adapters, scores/deduplicates/fuses with RRF, and returns public or admin-debug cards.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-402",
+      "F-403"
+    ],
+    "wiki": "04-Backend-API/Search-Endpoint.md",
+    "tags": [
+      "api",
+      "search",
+      "billing",
+      "origin-blind",
+      "rrf"
+    ],
+    "notes": "Admin cost-0 path: preAuthorize/settle are no-ops. debug=1 and simple=1 are server-derived admin-only; non-admin ?debug=1 is a silent no-op. Cache stores only the public body (no per-caller meta)."
+  },
+  {
+    "id": "api.settings",
+    "path": "api/settings.js",
+    "loc": 70,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.crypto",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "User settings GET/POST: AES-256-GCM encrypted blob persisted in users.settings (JSONB).",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-405"
+    ],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "settings",
+      "crypto",
+      "encryption"
+    ],
+    "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
+  },
+  {
+    "id": "api.shared.apiAuth",
+    "path": "api/_shared/apiAuth.js",
+    "loc": 93,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.crypto",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Resolves an incoming request to a billing identity via master-key, hashed API-key DB lookup, or session-admin allowlist; server-derives the admin flag.",
+    "exports": [
+      "presentedKey",
+      "resolveApiKey",
+      "resolveSessionAdmin"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-401",
+      "F-402"
+    ],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "auth",
+      "api-key",
+      "admin",
+      "identity"
+    ],
+    "notes": "Master key compared with === (not timingSafeEqual). ADMIN_EMAILS read from VITE_ADMIN_EMAILS|ADMIN_EMAILS env. last_used_at stamp is fire-and-forget."
+  },
+  {
+    "id": "api.shared.apiContract",
+    "path": "api/_shared/apiContract.js",
+    "loc": 143,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Single definition of /api/search request parameters, response envelope, coverage bands, and formats; consumed by the search handler and future MCP/OpenAPI generators.",
+    "exports": [
+      "DEFAULT_LIMIT",
+      "MAX_LIMIT",
+      "FORMATS",
+      "CITE_FORMATS",
+      "COVERAGE_BANDS",
+      "PARAMS",
+      "RESULT_FIELDS",
+      "RESPONSE_SHAPE",
+      "API_CONTRACT",
+      "buildUsage"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md#request-contract",
+    "tags": [
+      "contract",
+      "api",
+      "origin-blind"
+    ],
+    "notes": "Origin-blind by design — RESULT_FIELDS omits source. DRY-4 SSOT for MCP tool schema (WS4, deferred)."
+  },
+  {
+    "id": "api.shared.auth",
+    "path": "api/_shared/auth.js",
+    "loc": 49,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "TRUSTED_ORIGINS SSOT, origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
+    "exports": [
+      "TRUSTED_ORIGINS",
+      "setCorsHeaders",
+      "getSession"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-401"
+    ],
+    "wiki": "04-Backend-API/Auth-Sessions.md#getSession",
+    "tags": [
+      "auth",
+      "cors",
+      "session"
+    ],
+    "notes": "getSession constructs loopback URL from x-forwarded-host without domain validation — safe on Vercel managed infra only."
+  },
+  {
+    "id": "api.shared.billing",
+    "path": "api/_shared/billing.js",
+    "loc": 126,
+    "deps": [
+      "api.shared.coverage",
+      "api.shared.prisma"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Two-phase credit ledger: preAuthorize (atomic compare-and-decrement), settle (coverage-prorated refund), refund, grantCredits, applyMonthlyGrant (idempotent per-month top-up).",
+    "exports": [
+      "preAuthorize",
+      "refund",
+      "settle",
+      "getBalance",
+      "grantCredits",
+      "applyMonthlyGrant"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#credit-lifecycle",
+    "tags": [
+      "billing",
+      "credits",
+      "atomic",
+      "ledger"
+    ],
+    "notes": "preAuthorize uses updateMany with gte guard — atomic compare-and-decrement, no overspend. applyMonthlyGrant accepts {client:tx} for webhook transactional use."
+  },
+  {
+    "id": "api.shared.cache",
+    "path": "api/_shared/cache.js",
+    "loc": 59,
+    "deps": [
+      "api.shared.kv"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Caches the final origin-blind /api/search JSON payload in KV (Upstash/Vercel KV), keyed by SHA-256 of result-affecting inputs; fail-open.",
+    "exports": [
+      "cacheKey",
+      "readCache",
+      "writeCache",
+      "isConfigured",
+      "DEFAULT_TTL_SECONDS"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#kv",
+    "tags": [
+      "cache",
+      "kv",
+      "origin-blind"
+    ],
+    "notes": "Cache key prefix oc:cache:v1:. TTL 6h. mailto excluded from key (polite-pool only). Debug/simple modes never read or write cache."
+  },
+  {
+    "id": "api.shared.coverage",
+    "path": "api/_shared/coverage.js",
+    "loc": 74,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Corpus-weighted coverage ratio bucketed into a coarse band; single SSOT for both the API response band and the billing multiplier.",
+    "exports": [
+      "computeCoverage",
+      "bandFor",
+      "coverageMultiplier"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#coverage-prorated-billing",
+    "tags": [
+      "coverage",
+      "billing",
+      "origin-blind"
+    ],
+    "notes": "Only the band string is safe to emit externally — raw %, failedCount, and adapter names are internal only."
+  },
+  {
+    "id": "api.shared.crypto",
+    "path": "api/_shared/crypto.js",
+    "loc": 72,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Two strictly separated crypto families: AES-256-GCM for the settings blob, SHA-256+pepper for API key hashing and generation.",
+    "exports": [
+      "encrypt",
+      "decrypt",
+      "generateApiKey",
+      "hashApiKey",
+      "API_KEY_LIVE_PREFIX",
+      "KEY_DISPLAY_PREFIX_LEN"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-404"
+    ],
+    "wiki": "04-Backend-API/Shared-Modules.md#cryptojs",
+    "tags": [
+      "crypto",
+      "aes",
+      "sha256",
+      "api-key"
+    ],
+    "notes": "API_KEY_PEPPER is optional — if unset, hashes are unpepped (offline brute-force risk on DB leak). getSettingsKey() throws on missing/wrong-length env — fail-closed."
+  },
+  {
+    "id": "api.shared.debugResult",
+    "path": "api/_shared/debugResult.js",
+    "loc": 42,
+    "deps": [
+      "api.shared.publicResult"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Admin-only origin-revealing card: composes toPublicResult and appends source, _score, _fused, _native, _scoreBreakdown.",
+    "exports": [
+      "toDebugResult"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md#publicresultjs--debugresultjs",
+    "tags": [
+      "debug",
+      "admin",
+      "origin-revealing"
+    ],
+    "notes": "HARD INVARIANT: only callable when identity.admin === true. source is the single field that breaks origin-blindness."
+  },
+  {
+    "id": "api.shared.kv",
+    "path": "api/_shared/kv.js",
+    "loc": 91,
+    "deps": [
+      "api.shared.log"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Dependency-free Upstash REST client for rate limiting and result caching; fail-open by contract.",
+    "exports": [
+      "isConfigured",
+      "get",
+      "set",
+      "incrWithTtl",
+      "ttl",
+      "claimOnce"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#kv",
+    "tags": [
+      "kv",
+      "redis",
+      "upstash",
+      "cache",
+      "ratelimit"
+    ],
+    "notes": "Config priority: KV_REST_API_URL+KV_REST_API_TOKEN then UPSTASH_REDIS_REST_URL+UPSTASH_REDIS_REST_TOKEN. claimOnce is the idempotency primitive (INCR-based, unambiguous vs SET NX)."
+  },
+  {
+    "id": "api.shared.log",
+    "path": "api/_shared/log.js",
+    "loc": 26,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Structured console logger for server-side routes; format [opencite:<adapter>:<event>] k=v.",
+    "exports": [
+      "log"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#logjs",
+    "tags": [
+      "log",
+      "structured"
+    ],
+    "notes": "Duplicate of src/lib/log.js format — see R-400."
+  },
+  {
+    "id": "api.shared.parseBody",
+    "path": "api/_shared/parseBody.js",
+    "loc": 10,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Reads Node.js IncomingMessage body stream and JSON-parses it; returns {} on parse error.",
+    "exports": [
+      "parseBody"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-400"
+    ],
+    "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
+    "tags": [
+      "body",
+      "parse",
+      "input-validation"
+    ],
+    "notes": "No maximum body size — Vercel's 4.5MB platform limit is the only bound."
+  },
+  {
+    "id": "api.shared.plans",
+    "path": "api/_shared/plans.js",
+    "loc": 141,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Single definition of billing plans, credit packs, and plan-derived queries (tier source IDs, Stripe Price IDs, monthly grants); server-authoritative.",
+    "exports": [
+      "CORE_SOURCE_IDS",
+      "FREE_MONTHLY_GRANT",
+      "PLANS",
+      "CREDIT_PACKS",
+      "DEFAULT_PLAN_ID",
+      "getPlan",
+      "getPack",
+      "monthlyGrantFor",
+      "allowedSourceIds",
+      "stripePriceId",
+      "planIdForPriceId"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#plans",
+    "tags": [
+      "plans",
+      "billing",
+      "tier",
+      "stripe"
+    ],
+    "notes": "Admin plan has creditCost:0, rateLimit.max:0 — both meter and burst cap are no-ops. Never client-controlled."
+  },
+  {
+    "id": "api.shared.prisma",
+    "path": "api/_shared/prisma.js",
+    "loc": 10,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "PrismaClient singleton cached on globalThis for serverless warm-start reuse.",
+    "exports": [
+      "prisma"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#prismajs",
+    "tags": [
+      "prisma",
+      "db",
+      "singleton"
+    ],
+    "notes": "globalThis caching only active in non-production (NODE_ENV check). Production cold-starts always get a fresh client."
+  },
+  {
+    "id": "api.shared.publicResult",
+    "path": "api/_shared/publicResult.js",
+    "loc": 56,
+    "deps": [
+      "lib.citations"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Maps an internal normalized record to the origin-blind public card: drops source, replaces id with anonymizeId, rounds score.",
+    "exports": [
+      "anonymizeId",
+      "toPublicResult"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md#publicresultjs--debugresultjs",
+    "tags": [
+      "public",
+      "origin-blind",
+      "card"
+    ],
+    "notes": "anonymizeId: SHA-1(doi|url|title|year) → oc_<16chars base64url>. _scoreNorm (0-100 relative) takes precedence over raw BM25F float."
+  },
+  {
+    "id": "api.shared.ratelimit",
+    "path": "api/_shared/ratelimit.js",
+    "loc": 36,
+    "deps": [
+      "api.shared.kv"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Fixed-window KV rate limiter: burst cap per (identity, epoch), separate from the durable credit ledger; fail-open.",
+    "exports": [
+      "checkRateLimit"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-403"
+    ],
+    "wiki": "05-Billing/Billing-Credits.md#rate-limiting",
+    "tags": [
+      "ratelimit",
+      "kv",
+      "burst"
+    ],
+    "notes": "Admin plan.rateLimit.max===0 bypasses check without KV access. KV unavailable → fail-open (allow)."
+  },
+  {
+    "id": "api.shared.serverKeys",
+    "path": "api/_shared/serverKeys.js",
+    "loc": 15,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Only place EUROPEANA_API_KEY, DPLA_API_KEY, SMITHSONIAN_API_KEY are read from env; returns only keys that are set.",
+    "exports": [
+      "serverInjectedKeys"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#serverkeysjs",
+    "tags": [
+      "server-keys",
+      "env",
+      "secret-boundary"
+    ],
+    "notes": "Missing env var yields undefined (not empty string) so presence-guard in search.js correctly drops unconfigured sources."
+  },
+  {
+    "id": "api.stripe.webhook",
+    "path": "api/stripe/webhook.js",
+    "loc": 192,
+    "deps": [
+      "api.shared.billing",
+      "api.shared.log",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Stripe webhook handler: verifies signature, claims events in processedEvent (idempotent), grants credits/sets plan in a single atomic transaction.",
+    "exports": [
+      "default",
+      "config"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-416",
+      "F-417"
+    ],
+    "wiki": "05-Billing/Billing-Credits.md#stripe-webhook",
+    "tags": [
+      "stripe",
+      "webhook",
+      "billing",
+      "idempotent"
+    ],
+    "notes": "bodyParser:false required for raw body signature verification. P2002 collision = duplicate event, acknowledge without re-apply."
+  },
+  {
+    "id": "App",
+    "path": "src/App.jsx",
+    "loc": 472,
+    "deps": [
+      "adapters.index",
+      "components.AdminConsole",
+      "components.FilterBar",
+      "components.LauncherBlock",
+      "components.Layout",
+      "components.Panels",
+      "components.SearchControls",
+      "components.SearchInput",
+      "components.SearchStatusBar",
+      "components.SourceSection",
+      "components.UnifiedResultList",
+      "constants.defaults",
+      "contexts.AuthContext",
+      "hooks.useFilters",
+      "hooks.useHistory",
+      "hooks.useLibrary",
+      "hooks.useSearch",
+      "hooks.useSemanticRerank",
+      "hooks.useSettings",
+      "hooks.useTheme",
+      "launchers.index",
+      "lib.admin",
+      "lib.log",
+      "lib.platform"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Root orchestrator — owns all top-level state, calls every hook, and renders the full UI tree; wraps with AuthProvider + Vercel analytics.",
+    "exports": [
+      "default (App)",
+      "OpenCITE (internal)"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-300",
+      "F-301",
+      "F-302"
+    ],
+    "wiki": "01-Frontend/App-Shell.md",
+    "tags": [
+      "orchestrator",
+      "shell",
+      "state"
+    ],
+    "notes": "BillingProvider never mounted here. SettingsContext never mounted here. resultsReady gate is the anti-reshuffle guard (v.31)."
+  },
+  {
+    "id": "components.admin.GoldSetHarness",
+    "path": "src/components/admin/GoldSetHarness.jsx",
+    "loc": 398,
+    "deps": [
+      "lib.goldSetMetrics"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "F2 admin tool — localStorage-backed gold-set regression harness computing nDCG@10/MRR/Recall metrics with run-to-run diff.",
+    "exports": [
+      "GoldSetHarness"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-310"
+    ],
+    "wiki": "01-Frontend/Components/_index.md#adminconsole",
+    "tags": [
+      "admin",
+      "testing",
+      "metrics"
+    ],
+    "notes": "Stores data in bare localStorage keys outside the opencite: namespace."
+  },
+  {
+    "id": "components.admin.ScoreExplainer",
+    "path": "src/components/admin/ScoreExplainer.jsx",
+    "loc": 213,
+    "deps": [],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "F1 admin tool — debug-mode search showing ranked results with expandable BM25F/RRF score breakdowns and gate dispositions.",
+    "exports": [
+      "ScoreExplainer"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md#adminconsole",
+    "tags": [
+      "admin",
+      "debug",
+      "scoring"
+    ]
+  },
+  {
+    "id": "components.AdminConsole",
+    "path": "src/components/AdminConsole.jsx",
+    "loc": 59,
+    "deps": [
+      "components.admin.GoldSetHarness",
+      "components.admin.ScoreExplainer",
+      "contexts.AuthContext",
+      "lib.admin"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Admin console shell with two tabs — F1 Score Explainer and F2 Gold-Set Harness — gated by isAdmin().",
+    "exports": [
+      "AdminConsole"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md#adminconsole",
+    "tags": [
+      "admin",
+      "debug",
+      "relevance"
+    ]
+  },
+  {
+    "id": "components.EagleTooltip",
+    "path": "src/components/EagleTooltip.jsx",
+    "loc": 72,
+    "deps": [],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Inline brand tooltip — eagle image + speech bubble, auto-dismisses after 4s or on any click.",
+    "exports": [
+      "EagleTooltip"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md",
+    "tags": [
+      "ui",
+      "tooltip",
+      "brand"
+    ]
+  },
+  {
+    "id": "components.FilterBar",
+    "path": "src/components/FilterBar.jsx",
+    "loc": 282,
+    "deps": [
+      "lib.langNormalize"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Client-side facet filter bar — sort, type, language (dropdown with counts), topics, year range, OA-only, derived from live sectionStates.",
+    "exports": [
+      "FilterBar"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-303"
+    ],
+    "wiki": "01-Frontend/UI-Map.md#filterbar",
+    "tags": [
+      "filter",
+      "facets",
+      "sort"
+    ]
+  },
+  {
+    "id": "components.LauncherBlock",
+    "path": "src/components/LauncherBlock.jsx",
+    "loc": 61,
+    "deps": [
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "External archive launcher panel — groups 23 launchers by region into collapsible details elements with pre-filled search links.",
+    "exports": [
+      "LauncherBlock"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#launcherblock",
+    "tags": [
+      "launchers",
+      "external"
+    ]
+  },
+  {
+    "id": "components.Layout",
+    "path": "src/components/Layout.jsx",
+    "loc": 390,
+    "deps": [
+      "constants.app",
+      "constants.themes",
+      "contexts.AuthContext"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Top-level layout sub-components: Header (nav + logo + ticker), ThemeStrip, Footer, KofiOverlay, AuthModal, ConnectCard, AuthButton.",
+    "exports": [
+      "Header",
+      "Footer",
+      "ThemeStrip",
+      "KofiOverlay",
+      "AuthModal",
+      "ConnectCard"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-303",
+      "F-305",
+      "F-312"
+    ],
+    "wiki": "01-Frontend/UI-Map.md#header",
+    "tags": [
+      "layout",
+      "header",
+      "auth",
+      "theme"
+    ],
+    "notes": "Apple + Microsoft OAuth providers in AuthButton are dead UI (rendered as disabled). AuthModal has no focus trap."
+  },
+  {
+    "id": "components.Panels",
+    "path": "src/components/Panels.jsx",
+    "loc": 563,
+    "deps": [
+      "adapters.shared.base",
+      "adapters.shared.normalize",
+      "components.ResultCard",
+      "constants.defaults",
+      "constants.pricing",
+      "constants.vocabulary",
+      "lib.checkout",
+      "lib.citations",
+      "lib.library",
+      "lib.log",
+      "lib.platform"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Four side panels (Settings, History, Library, Pricing) + AddJournalForm + SourcesPanel sub-components; LibraryPanel supports multi-format export.",
+    "exports": [
+      "SettingsPanel",
+      "HistoryPanel",
+      "LibraryPanel",
+      "PricingPanel",
+      "AddJournalForm",
+      "SourcesPanel"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-304",
+      "F-313",
+      "F-315"
+    ],
+    "wiki": "01-Frontend/UI-Map.md#panels",
+    "tags": [
+      "panels",
+      "settings",
+      "library",
+      "history",
+      "pricing"
+    ],
+    "notes": "currentPlan hardcoded 'free' in PricingPanel. confirm() used for destructive action. Stale comment re: slider/search-toggles location."
+  },
+  {
+    "id": "components.ResultCard",
+    "path": "src/components/ResultCard.jsx",
+    "loc": 239,
+    "deps": [
+      "components.EagleTooltip",
+      "hooks.useEagleTooltip",
+      "lib.citations",
+      "lib.helpers"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Single search result display — title/authors/abstract, enrichment metadata, citation accordion (MLA 9 + APA 7), ★ save, EagleTooltip on first save.",
+    "exports": [
+      "ResultCard"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-314"
+    ],
+    "wiki": "01-Frontend/Components/_index.md#resultcard",
+    "tags": [
+      "result",
+      "card",
+      "citation"
+    ]
+  },
+  {
+    "id": "components.SearchControls",
+    "path": "src/components/SearchControls.jsx",
+    "loc": 142,
+    "deps": [],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Always-visible relevance controls under the search bar: Lexical↔Semantic RRF slider + 'Search settings' disclosure (layout toggle, semantic/synonym/author/simpleSearch toggles).",
+    "exports": [
+      "SearchControls"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#searchcontrols",
+    "tags": [
+      "search",
+      "relevance",
+      "settings",
+      "slider"
+    ]
+  },
+  {
+    "id": "components.SearchInput",
+    "path": "src/components/SearchInput.jsx",
+    "loc": 58,
+    "deps": [
+      "constants.app"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Sticky search bar with cycling placeholder (3.5s), Enter-to-search, and 'Search →' button — blurred backdrop, bleeds to viewport edges.",
+    "exports": [
+      "SearchInput"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#searchinput",
+    "tags": [
+      "search",
+      "input",
+      "sticky"
+    ]
+  },
+  {
+    "id": "components.SearchStatusBar",
+    "path": "src/components/SearchStatusBar.jsx",
+    "loc": 44,
+    "deps": [],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Compact in-progress/done status bar for unified view — shows loading source count, auto-hides 2s after all settle.",
+    "exports": [
+      "SearchStatusBar"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#searchstatusbar",
+    "tags": [
+      "search",
+      "status",
+      "progress"
+    ]
+  },
+  {
+    "id": "components.SourceSection",
+    "path": "src/components/SourceSection.jsx",
+    "loc": 143,
+    "deps": [
+      "components.ResultCard",
+      "lib.groupResults"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Per-adapter result section (source view) with book-chapter grouping, 'loose match' badge, and per-adapter load-more.",
+    "exports": [
+      "SourceSection"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-314"
+    ],
+    "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
+    "tags": [
+      "result",
+      "source-view",
+      "adapter"
+    ]
+  },
+  {
+    "id": "components.UnifiedResultList",
+    "path": "src/components/UnifiedResultList.jsx",
+    "loc": 230,
+    "deps": [
+      "adapters.index",
+      "components.ResultCard",
+      "lib.groupResults"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Cross-adapter ranked result list (unified view) — pools all sections, sorts by _score, paginates by group (20+10), triggers remote load-more when local pool exhausted.",
+    "exports": [
+      "UnifiedResultList"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-314"
+    ],
+    "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
+    "tags": [
+      "result",
+      "unified-view",
+      "pagination"
+    ]
+  },
+  {
+    "id": "constants.app",
+    "path": "src/constants/app.js",
+    "loc": 27,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "client",
+    "purpose": "App identity constants — APP_VERSION (v.35), APP_NAME (OpenCITE), SEARCH_PLACEHOLDER_ITEMS (9 cycling placeholder strings).",
+    "exports": [
+      "APP_VERSION",
+      "APP_NAME",
+      "SEARCH_PLACEHOLDER_ITEMS"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md",
+    "tags": [
+      "constant",
+      "identity"
+    ]
+  },
+  {
+    "id": "constants.defaults",
+    "path": "src/constants/defaults.js",
+    "loc": 59,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "client",
+    "purpose": "App-wide defaults — STORAGE_NS, HISTORY_MAX, page sizes, REGION_ORDER, DEFAULT_CURATED_JOURNALS, DEFAULT_SETTINGS (all search/source/key defaults).",
+    "exports": [
+      "STORAGE_NS",
+      "HISTORY_MAX",
+      "INITIAL_PAGE_SIZE",
+      "LOAD_MORE_PAGE_SIZE",
+      "REGION_ORDER",
+      "DEFAULT_CURATED_JOURNALS",
+      "DEFAULT_SETTINGS"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md",
+    "tags": [
+      "constant",
+      "defaults"
+    ]
+  },
+  {
+    "id": "constants.pricing",
+    "path": "src/constants/pricing.js",
+    "loc": 83,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "client",
+    "purpose": "Display-only pricing constants — SUBSCRIPTION_PLANS (Free/Student/Pro), CREDIT_PACKS (10k/60k/300k), SOURCE_COUNT, COVERAGE_NOTE.",
+    "exports": [
+      "SUBSCRIPTION_PLANS",
+      "CREDIT_PACKS",
+      "SOURCE_COUNT",
+      "COVERAGE_NOTE"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
+    "tags": [
+      "constant",
+      "billing",
+      "pricing"
+    ],
+    "notes": "Presentation only — authoritative billing numbers are in api/_shared/plans.js."
+  },
+  {
+    "id": "constants.themes",
+    "path": "src/constants/themes.js",
+    "loc": 50,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "client",
+    "purpose": "Theme definitions — 3 themes (tan/blueGrey/oled) with full token sets for bg, fg, border, surface, accent, eagle blend, sticky-bg, title color.",
+    "exports": [
+      "THEMES",
+      "DEFAULT_THEME"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-309"
+    ],
+    "wiki": "01-Frontend/Hooks.md#usetheme",
+    "tags": [
+      "theme",
+      "constant"
+    ],
+    "notes": "DEFAULT_THEME exported but never imported by useTheme.js."
+  },
+  {
+    "id": "constants.vocabulary",
+    "path": "src/constants/vocabulary.js",
+    "loc": 47,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "shared",
+    "purpose": "Controlled-vocabulary enumerations: ADAPTER_CATEGORY (core/extension) and TAG_VOCAB (region/archiveType/contentType display labels).",
+    "exports": [
+      "ADAPTER_CATEGORY",
+      "TAG_VOCAB"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "tags": [
+      "constants",
+      "vocabulary"
+    ],
+    "notes": "Not part of the scoring pipeline — used by adapters and UI tag system."
+  },
+  {
+    "id": "contexts.AuthContext",
+    "path": "src/contexts/AuthContext.jsx",
+    "loc": 61,
+    "deps": [
+      "lib.auth-client"
+    ],
+    "kind": "context",
+    "runtime": "client",
+    "purpose": "Live auth context — resolves Auth.js v5 session on mount, exposes user/status/signIn/signOut; Phase 4 hook point for SIWE wallet auth.",
+    "exports": [
+      "AuthProvider",
+      "useAuth"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Contexts.md#authcontext",
+    "tags": [
+      "auth",
+      "context",
+      "live"
+    ]
+  },
+  {
+    "id": "contexts.BillingContext",
+    "path": "src/contexts/BillingContext.jsx",
+    "loc": 38,
+    "deps": [],
+    "kind": "context",
+    "runtime": "client",
+    "purpose": "Stub billing context — Infinity credits, 'free' tier, no-op deduct(). Phase 2/3/4 hook point for credit metering. Never mounted.",
+    "exports": [
+      "BillingProvider",
+      "useBilling"
+    ],
+    "status": "stub",
+    "findings": [
+      "F-300"
+    ],
+    "wiki": "01-Frontend/Contexts.md#billingcontext",
+    "tags": [
+      "billing",
+      "context",
+      "stub",
+      "dead"
+    ],
+    "notes": "BillingProvider is never mounted in App.jsx. Real credit gating is server-side (api/_shared/billing.js)."
+  },
+  {
+    "id": "contexts.SettingsContext",
+    "path": "src/contexts/SettingsContext.jsx",
+    "loc": 16,
+    "deps": [
+      "hooks.useSettings"
+    ],
+    "kind": "context",
+    "runtime": "client",
+    "purpose": "Thin wrapper context for useSettings — provides SettingsProvider and useSettingsContext, but neither is mounted or consumed anywhere.",
+    "exports": [
+      "SettingsProvider",
+      "useSettingsContext"
+    ],
+    "status": "dead",
+    "findings": [
+      "F-308"
+    ],
+    "wiki": "01-Frontend/Contexts.md#settingscontext",
+    "tags": [
+      "settings",
+      "context",
+      "dead"
+    ],
+    "notes": "Fully dead — never mounted, never consumed. Should be deleted or activated."
+  },
+  {
+    "id": "hooks.useEagleTooltip",
+    "path": "src/hooks/useEagleTooltip.js",
+    "loc": 40,
+    "deps": [],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Eagle tooltip lifecycle — show (with optional one-time localStorage flag), dismiss, and props bundle for EagleTooltip component.",
+    "exports": [
+      "useEagleTooltip"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#useeagletooltip",
+    "tags": [
+      "tooltip",
+      "hook"
+    ]
+  },
+  {
+    "id": "hooks.useFilters",
+    "path": "src/hooks/useFilters.js",
+    "loc": 60,
+    "deps": [
+      "lib.langNormalize"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Pure memoized derivation of filteredSections from sectionStates — applies global low-confidence gate, all facet filters, and sort.",
+    "exports": [
+      "useFilters"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usefilters",
+    "tags": [
+      "filter",
+      "memoized",
+      "hook"
+    ]
+  },
+  {
+    "id": "hooks.useHistory",
+    "path": "src/hooks/useHistory.js",
+    "loc": 89,
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api",
+      "lib.history"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Auth-aware search history — localStorage + DB sync on sign-in; add (dedup+cap at 50), remove, clear.",
+    "exports": [
+      "useHistory"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usehistory",
+    "tags": [
+      "history",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ]
+  },
+  {
+    "id": "hooks.useLibrary",
+    "path": "src/hooks/useLibrary.js",
+    "loc": 90,
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api",
+      "lib.library"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Auth-aware saved library — localStorage + DB sync on sign-in; toggle (add/remove), clear, isInLibrary check.",
+    "exports": [
+      "useLibrary"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#uselibrary",
+    "tags": [
+      "library",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ]
+  },
+  {
+    "id": "hooks.useSearch",
+    "path": "src/hooks/useSearch.js",
+    "loc": 160,
+    "deps": [
+      "adapters.index",
+      "lib.dedup",
+      "lib.scoring",
+      "lib.synonyms"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Fan-out search engine — fires all enabled adapters in parallel, runs cross-adapter dedup + BM25F scoring + confidence gate, manages sectionStates.",
+    "exports": [
+      "useSearch"
+    ],
+    "status": "buggy",
+    "findings": [
+      "F-307"
+    ],
+    "wiki": "01-Frontend/Hooks.md#usesearch",
+    "tags": [
+      "search",
+      "dedup",
+      "scoring",
+      "hook"
+    ],
+    "notes": "No AbortController — stale adapter responses from a superseded search can land in state."
+  },
+  {
+    "id": "hooks.useSemanticRerank",
+    "path": "src/hooks/useSemanticRerank.js",
+    "loc": 112,
+    "deps": [
+      "lib.rrf",
+      "lib.semantic"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Two-phase React hook: expensive pass embeds query+corpus once per result set (builds lexical/semantic/native rank maps); cheap pass re-fuses on semanticWeight slider change without re-embedding.",
+    "exports": [
+      "useSemanticRerank"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "tags": [
+      "hook",
+      "rerank",
+      "rrf",
+      "pipeline"
+    ],
+    "notes": "CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
+  },
+  {
+    "id": "hooks.useSettings",
+    "path": "src/hooks/useSettings.js",
+    "loc": 154,
+    "deps": [
+      "adapters.index",
+      "constants.defaults",
+      "constants.vocabulary",
+      "contexts.AuthContext",
+      "lib.api",
+      "lib.storage"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Auth-aware settings — localStorage read/write + DB sync on sign-in; manages adapter enable/disable; one-time v.31 migration.",
+    "exports": [
+      "useSettings"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-308"
+    ],
+    "wiki": "01-Frontend/Hooks.md#usesettings",
+    "tags": [
+      "settings",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ]
+  },
+  {
+    "id": "hooks.useTheme",
+    "path": "src/hooks/useTheme.js",
+    "loc": 44,
+    "deps": [
+      "constants.themes"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Theme state — reads localStorage + OS preference, follows system dark-mode changes when no manual override is stored.",
+    "exports": [
+      "useTheme"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-309"
+    ],
+    "wiki": "01-Frontend/Hooks.md#usetheme",
+    "tags": [
+      "theme",
+      "localStorage",
+      "hook"
+    ],
+    "notes": "DEFAULT_THEME from themes.js imported but never used by this hook — hardcodes 'tan' and 'oled' directly."
+  },
+  {
+    "id": "index",
+    "path": "index.html",
+    "loc": 38,
+    "deps": []
+  },
+  {
+    "id": "input",
+    "path": "src/input.css",
+    "loc": 76,
+    "deps": []
+  },
+  {
+    "id": "launchers._factory",
+    "path": "src/launchers/_factory.js",
+    "loc": 11,
+    "deps": [],
+    "kind": "launcher",
+    "runtime": "client",
+    "purpose": "Factory function createLauncher() — enforces the launcher object shape (id, name, tagline, region, archiveType, contentType, buildUrl).",
+    "exports": [
+      "createLauncher"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#launcherblock",
+    "tags": [
+      "launcher",
+      "factory"
+    ]
+  },
+  {
+    "id": "launchers.index",
+    "path": "src/launchers/index.js",
+    "loc": 29,
+    "deps": [
+      "launchers._factory"
+    ],
+    "kind": "launcher",
+    "runtime": "client",
+    "purpose": "Registry of 23 external archive launchers (no queryable API — opens pre-filled search in new tab), grouped by region.",
+    "exports": [
+      "LAUNCHERS"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#launcherblock",
+    "tags": [
+      "launcher",
+      "external",
+      "registry"
+    ]
+  },
+  {
+    "id": "lib.admin",
+    "path": "src/lib/admin.js",
+    "loc": 10,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Client-side admin gate — isAdmin(user) checks user.email against VITE_ADMIN_EMAILS env var (comma-separated).",
+    "exports": [
+      "isAdmin"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/App-Shell.md#admin-console-routing",
+    "tags": [
+      "admin",
+      "auth"
+    ]
+  },
+  {
+    "id": "lib.api",
+    "path": "src/lib/api.js",
+    "loc": 9,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Thin generic fetch wrapper with credentials:include and Content-Type:application/json for all API routes.",
+    "exports": [
+      "apiCall"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "client",
+      "fetch",
+      "api"
+    ],
+    "notes": null
+  },
+  {
+    "id": "lib.auth-client",
+    "path": "src/lib/auth-client.js",
+    "loc": 79,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Browser Auth.js client: getSession, signIn (CSRF form submit), signOut, getCsrfToken for /api/auth/* endpoints.",
+    "exports": [
+      "getSession",
+      "signIn",
+      "signOut",
+      "getCsrfToken"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "auth",
+      "client",
+      "oauth",
+      "csrf"
+    ],
+    "notes": "signIn uses postForm (hidden form submit) not fetch() — required for Auth.js v5 CSRF + cross-origin OAuth redirect. getCsrfToken exported for Phase 4 SIWE."
+  },
+  {
+    "id": "lib.checkout",
+    "path": "src/lib/checkout.js",
+    "loc": 22,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Client-side wrapper for POST /api/checkout; returns {url} for Stripe redirect or {error, code} on failure.",
+    "exports": [
+      "createCheckoutSession"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#stripe-checkout",
+    "tags": [
+      "billing",
+      "stripe",
+      "client"
+    ],
+    "notes": "credentials:include ensures session cookie is sent. Never constructs Stripe objects on the client side."
+  },
+  {
+    "id": "lib.citations",
+    "path": "src/lib/citations.js",
+    "loc": 386,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "Generates MLA 9, APA 7, CSL-JSON, BibTeX, and RIS citation strings from NCR records; returns segment arrays for MLA/APA to enable inline italic rendering without an HTML parser.",
+    "exports": [
+      "buildMLA",
+      "buildAPA",
+      "buildCSL",
+      "buildBibTeX",
+      "buildRIS",
+      "segmentsToPlain",
+      "exportAs",
+      "isBookChapter"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Citations.md",
+    "tags": [
+      "citations",
+      "formatting",
+      "render"
+    ],
+    "notes": "Never called at search time — only on render (MLA/APA display) and user action (export dispatcher)."
+  },
+  {
+    "id": "lib.dedup",
+    "path": "src/lib/dedup.js",
+    "loc": 50,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "Result identity and deduplication: doiKey (strongest), titleFingerprint (fuzzy same-paper); dedupFirstWins for streaming (first-occurrence wins), dedupHighestScore for pooled (highest _score wins).",
+    "exports": [
+      "doiKey",
+      "titleFingerprint",
+      "dedupFirstWins",
+      "dedupHighestScore"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-206"
+    ],
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
+    "tags": [
+      "dedup",
+      "identity",
+      "pipeline"
+    ],
+    "notes": "Confirmed sound by v0.36 diagnostic. The dedupHighestScore indexOf is O(n) per replacement — acceptable at pool sizes ≤50."
+  },
+  {
+    "id": "lib.goldSetMetrics",
+    "path": "src/lib/goldSetMetrics.js",
+    "loc": 146,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "nDCG@10, MRR, and Recall@N metrics engine for the F2 Gold-Set Regression Harness in the admin console; grades results against a DOI/title → relevance-grade label map.",
+    "exports": [
+      "nDCG",
+      "MRR",
+      "recall",
+      "computeMetrics",
+      "aggregateMetrics"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md#gold-set-metrics",
+    "tags": [
+      "metrics",
+      "testing",
+      "admin"
+    ],
+    "notes": "Unit-tested in goldSetMetrics.test.js. Imported by components/admin/GoldSetHarness.jsx — NOT orphaned. Not called during live search."
+  },
+  {
+    "id": "lib.goldSetMetrics.test",
+    "path": "src/lib/goldSetMetrics.test.js",
+    "loc": 198,
+    "deps": [
+      "lib.goldSetMetrics"
+    ]
+  },
+  {
+    "id": "lib.groupResults",
+    "path": "src/lib/groupResults.js",
+    "loc": 38,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Clusters book-chapter results under their container/book title for the source-view layout; non-chapter results pass through as single-item groups.",
+    "exports": [
+      "groupByParentWork"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
+    "tags": [
+      "grouping",
+      "render"
+    ],
+    "notes": "Render-time only — not called during scoring or dedup."
+  },
+  {
+    "id": "lib.helpers",
+    "path": "src/lib/helpers.js",
+    "loc": 18,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "Utility functions: reconstructAbstract (OpenAlex inverted index), truncate (word-boundary safe), stripHtml.",
+    "exports": [
+      "reconstructAbstract",
+      "truncate",
+      "stripHtml"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md",
+    "tags": [
+      "util",
+      "shared"
+    ]
+  },
+  {
+    "id": "lib.history",
+    "path": "src/lib/history.js",
+    "loc": 28,
+    "deps": [
+      "constants.defaults",
+      "lib.storage"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "localStorage-backed search history CRUD — add (dedup+cap at HISTORY_MAX=50), remove, load, clear.",
+    "exports": [
+      "history"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usehistory",
+    "tags": [
+      "history",
+      "localStorage"
+    ]
+  },
+  {
+    "id": "lib.langNormalize",
+    "path": "src/lib/langNormalize.js",
+    "loc": 96,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "Maps ISO 639-1, ISO 639-2, and full English language names to a canonical {code, display} pair; returns null for undetermined/undifferentiated codes.",
+    "exports": [
+      "normalizeLanguage"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Citations.md",
+    "tags": [
+      "language",
+      "normalisation"
+    ],
+    "notes": "Used by adapters to normalise language codes from API responses."
+  },
+  {
+    "id": "lib.library",
+    "path": "src/lib/library.js",
+    "loc": 36,
+    "deps": [
+      "lib.storage"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "localStorage-backed library CRUD — add/remove/has/load/clear, keyed by DOI or source:id.",
+    "exports": [
+      "library",
+      "libraryKey"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#uselibrary",
+    "tags": [
+      "library",
+      "localStorage"
+    ]
+  },
+  {
+    "id": "lib.log",
+    "path": "src/lib/log.js",
+    "loc": 64,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Client-side ring buffer logger (500 entries) — structured [opencite:adapter:event] format; installDebugLog() activates buffering + global error handlers for admins.",
+    "exports": [
+      "log",
+      "installDebugLog",
+      "getDebugLog",
+      "clearDebugLog",
+      "downloadDebugLog"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#settingspanel",
+    "tags": [
+      "log",
+      "debug",
+      "admin"
+    ],
+    "notes": "Buffer only active when installDebugLog() is called (admin sign-in). Distinct from api/_shared/log.js (server-side)."
+  },
+  {
+    "id": "lib.platform",
+    "path": "src/lib/platform.js",
+    "loc": 33,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Runtime platform detection (web/ios/android) — routes subscription checkout to Stripe or IAP; reads window.__OPENCITE_PLATFORM__ or Capacitor.",
+    "exports": [
+      "getPlatform",
+      "isNativeMobile",
+      "subscriptionRail",
+      "storeName"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
+    "tags": [
+      "platform",
+      "billing"
+    ]
+  },
+  {
+    "id": "lib.rrf",
+    "path": "src/lib/rrf.js",
+    "loc": 14,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "Weighted Reciprocal Rank Fusion: scale-free merger of native, lexical, and semantic rank lists; also provides buildNativeRanks (per-source dense rank map) and nativeWeight (pool-size-aware native share).",
+    "exports": [
+      "rrfScores",
+      "fuseRanks",
+      "buildNativeRanks",
+      "nativeWeight"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-200",
+      "F-201"
+    ],
+    "wiki": "03-Search-Pipeline/RRF-Fusion.md",
+    "tags": [
+      "rrf",
+      "fusion",
+      "ranking",
+      "pipeline"
+    ],
+    "notes": "Used by hooks.useSemanticRerank (client). Not yet called by api.search (server) — F-209 open gap."
+  },
+  {
+    "id": "lib.scoring",
+    "path": "src/lib/scoring.js",
+    "loc": 278,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "shared",
+    "purpose": "BM25F content-relevance scorer (SSOT): tokenises title/abstract/keywords with NFKD normalisation, computes per-pool IDF, applies phrase/proximity boosts, capability-gated citation tiebreak and thin-source prior; also exports hasContentMatch and applyConfidenceGate.",
+    "exports": [
+      "scoreResults",
+      "applyConfidenceGate",
+      "hasContentMatch",
+      "meaningfulTerms",
+      "normalizeForMatch"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-200",
+      "F-201",
+      "F-202",
+      "F-203",
+      "F-204"
+    ],
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md",
+    "tags": [
+      "scoring",
+      "bm25f",
+      "relevance",
+      "pipeline"
+    ],
+    "notes": "D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
+  },
+  {
+    "id": "lib.semantic",
+    "path": "src/lib/semantic.js",
+    "loc": 68,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Manages the embed.worker singleton, dispatches embedding jobs via a promise Map keyed by msgId, constructs the title+abstract+keywords input string within a 512-char budget, returns a cosine-similarity rank Map.",
+    "exports": [
+      "computeSemanticRanks"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "tags": [
+      "semantic",
+      "embeddings",
+      "pipeline"
+    ],
+    "notes": "Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
+  },
+  {
+    "id": "lib.storage",
+    "path": "src/lib/storage.js",
+    "loc": 23,
+    "deps": [
+      "constants.defaults"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Namespaced localStorage wrapper — prefixes all keys with 'opencite:'; get/set/remove with JSON serialization and try/catch.",
+    "exports": [
+      "storage"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory",
+    "tags": [
+      "storage",
+      "localStorage"
+    ]
+  },
+  {
+    "id": "lib.synonyms",
+    "path": "src/lib/synonyms.js",
+    "loc": 94,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Score-side term expansion (original query to APIs unchanged): 16 hand-curated academic clusters (synchronous) + Moby Thesaurus II letter-keyed shards (async, CDN-fetched, shard-cached).",
+    "exports": [
+      "expandTerms"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-207"
+    ],
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "tags": [
+      "synonyms",
+      "expansion",
+      "pipeline"
+    ],
+    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON) — first-load parse is synchronous on main thread."
+  },
+  {
+    "id": "main",
+    "path": "src/main.jsx",
+    "loc": 10,
+    "deps": [
+      "App"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Vite entry point — mounts the React tree via ReactDOM.createRoot with StrictMode.",
+    "exports": [
+      "default (App)"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/App-Shell.md",
+    "tags": [
+      "entry",
+      "mount"
+    ]
+  },
+  {
+    "id": "mcp.bin.opencite-mcp",
+    "path": "mcp/bin/opencite-mcp.js",
+    "loc": 9,
+    "deps": [
+      "mcp.server"
+    ],
+    "kind": "launcher",
+    "runtime": "server",
+    "purpose": "Shebang stdio entrypoint for the MCP server; calls startStdioServer() and exits 1 on failure.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "entrypoint"
+    ]
+  },
+  {
+    "id": "mcp.client",
+    "path": "mcp/src/client.js",
+    "loc": 74,
+    "deps": [
+      "mcp.contract"
+    ],
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "REST client for /api/search: enforces TLS, 30s timeout, forwards x-api-key, never logs headers.",
+    "exports": [
+      "searchScholarlySources",
+      "resolveBaseUrl",
+      "DEFAULT_BASE_URL"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "http-client"
+    ]
+  },
+  {
+    "id": "mcp.contract",
+    "path": "mcp/src/contract.js",
+    "loc": 57,
+    "deps": [
+      "api.shared.apiContract"
+    ],
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "DRY-4 bridge: re-exports API_CONTRACT/PARAMS/RESULT_FIELDS/RESPONSE_SHAPE/COVERAGE_BANDS from apiContract.js; defines TOOL_PARAM_MAP (query→q, limit, format) and toRestQuery().",
+    "exports": [
+      "API_CONTRACT",
+      "PARAMS",
+      "RESULT_FIELDS",
+      "RESPONSE_SHAPE",
+      "COVERAGE_BANDS",
+      "TOOL_NAME",
+      "TOOL_PARAM_MAP",
+      "toolParamDefs",
+      "toRestQuery"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-501"
+    ],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "contract",
+      "dry"
+    ]
+  },
+  {
+    "id": "mcp.schema",
+    "path": "mcp/src/schema.js",
+    "loc": 182,
+    "deps": [
+      "mcp.contract"
+    ],
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "Schema generators driven from contract.js: mcpInputSchema(), functionSchemas() (OpenAI + Anthropic), openApiSpec() — single source produces all agent-integration artifacts.",
+    "exports": [
+      "mcpInputSchema",
+      "mcpToolDefinition",
+      "functionSchemas",
+      "openApiSpec",
+      "TOOL_DESCRIPTION"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "schema",
+      "openapi"
+    ]
+  },
+  {
+    "id": "mcp.server",
+    "path": "mcp/src/server.js",
+    "loc": 66,
+    "deps": [
+      "mcp.client",
+      "mcp.contract",
+      "mcp.schema"
+    ],
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "Creates the MCP Server object; registers ListTools and CallTool handlers; reads OPENCITE_API_KEY and OPENCITE_API_BASE_URL from env.",
+    "exports": [
+      "createServer",
+      "startStdioServer"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "server"
+    ]
+  },
+  {
+    "id": "package",
+    "path": "package.json",
+    "loc": 30,
+    "deps": [],
+    "kind": "config",
+    "runtime": "build",
+    "purpose": "Root package: defines build chain (migrate.mjs → tailwindcss → vite build), postinstall prisma generate, and all runtime/dev deps.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [
+      "F-507"
+    ],
+    "wiki": "08-Build-Deploy/Build-Deploy.md",
+    "tags": [
+      "build",
+      "config",
+      "npm"
+    ]
+  },
+  {
+    "id": "prisma.migrations.20260530120000_billing.migration",
+    "path": "prisma/migrations/20260530120000_billing/migration.sql",
+    "loc": 54,
+    "deps": []
+  },
+  {
+    "id": "prisma.schema",
+    "path": "prisma/schema.prisma",
+    "loc": 195,
+    "deps": [],
+    "kind": "schema",
+    "runtime": "infra",
+    "purpose": "Prisma schema: User, Account, Session, VerificationToken, search_history, library_items, ApiKey, ApiUsage, ProcessedEvent, relevance_labels — all models for auth, billing, history, and gold-set.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [
+      "F-502",
+      "F-503",
+      "F-505"
+    ],
+    "wiki": "07-Data-Layer/Data-Layer.md",
+    "tags": [
+      "database",
+      "prisma",
+      "schema"
+    ]
+  },
+  {
+    "id": "scripts.admin.probe",
+    "path": "scripts/admin/probe.mjs",
+    "loc": 215,
+    "deps": [],
+    "kind": "script",
+    "runtime": "infra",
+    "purpose": "Admin debug probe: drives /api/search with admin key + debug=1; prints origin-revealing envelope (per-adapter table, dedup trace, coverage, ranked results with source). --assert-admin CI mode.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsadminprobemjs",
+    "tags": [
+      "scripts",
+      "admin",
+      "debug"
+    ]
+  },
+  {
+    "id": "scripts.admin.probe-blind-check",
+    "path": "scripts/admin/probe-blind-check.mjs",
+    "loc": 139,
+    "deps": [],
+    "kind": "script",
+    "runtime": "infra",
+    "purpose": "Origin-blind regression guardrail: sends debug=1 with a non-admin key; asserts meta.debug absent and no result.source field. Exit 0=PASS, 1=FAIL.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsadminprobe-blind-checkmjs",
+    "tags": [
+      "scripts",
+      "admin",
+      "security",
+      "regression"
+    ]
+  },
+  {
+    "id": "scripts.migrate",
+    "path": "scripts/migrate.mjs",
+    "loc": 69,
+    "deps": [],
+    "kind": "script",
+    "runtime": "build",
+    "purpose": "P3005-safe migration runner: tries prisma migrate deploy; falls back to direct SQL apply + baseline; always exits 0 to never block deploys.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Data-Layer.md#migratejs----p3005-safe-runner",
+    "tags": [
+      "migrations",
+      "build",
+      "prisma"
+    ]
+  },
+  {
+    "id": "scripts.stress.probe",
+    "path": "scripts/stress/probe.mjs",
+    "loc": 63,
+    "deps": [],
+    "kind": "script",
+    "runtime": "infra",
+    "purpose": "Public endpoint stress/quality probe (no auth); outputs compact JSON per query for relevance QA. Infers origin heuristically from public fields.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsstressprobemjs",
+    "tags": [
+      "scripts",
+      "stress",
+      "quality"
+    ]
+  },
+  {
+    "id": "scripts.stress.simple_smoke",
+    "path": "scripts/stress/simple_smoke.mjs",
+    "loc": 75,
+    "deps": [],
+    "kind": "script",
+    "runtime": "infra",
+    "purpose": "In-process smoke test for ?simple=1 diagnostic mode (v0.36): imports api/search.js handler directly with mock req/res; asserts T1.3 invariants (simpleMode, source visible, no score).",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsstresssimple_smokemjs",
+    "tags": [
+      "scripts",
+      "stress",
+      "diagnostic"
+    ]
+  },
+  {
+    "id": "scripts.wiki.build-machine-map",
+    "path": "scripts/wiki/build-machine-map.mjs",
+    "loc": 239,
+    "deps": []
+  },
+  {
+    "id": "scripts.wiki.to-github",
+    "path": "scripts/wiki/to-github.mjs",
+    "loc": 140,
+    "deps": []
+  },
+  {
+    "id": "tailwind.config",
+    "path": "tailwind.config.js",
+    "loc": 11,
+    "deps": [],
+    "kind": "config",
+    "runtime": "build",
+    "purpose": "Tailwind config: standard content scan over index.html + src/**. No custom plugins or theme extensions.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#tailwind-config-tailwindconfigjs",
+    "tags": [
+      "build",
+      "css",
+      "tailwind"
+    ]
+  },
+  {
+    "id": "vercel",
+    "path": "vercel.json",
+    "loc": 13,
+    "deps": [],
+    "kind": "config",
+    "runtime": "infra",
+    "purpose": "Vercel deploy config: /api/auth/* → handler rewrite, SPA fallback for all non-API paths. Serverless functions auto-detected from api/*.js.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#vercel-deploy-model-verceljson",
+    "tags": [
+      "deploy",
+      "vercel",
+      "routing"
+    ]
+  },
+  {
+    "id": "vite.config",
+    "path": "vite.config.js",
+    "loc": 7,
+    "deps": [],
+    "kind": "config",
+    "runtime": "build",
+    "purpose": "Minimal Vite config: React plugin only. No aliases, chunks, proxy, or SSR.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "08-Build-Deploy/Build-Deploy.md#vite-config-viteconfigjs",
+    "tags": [
+      "build",
+      "vite"
+    ]
+  },
+  {
+    "id": "workers.embed.worker",
+    "path": "src/workers/embed.worker.js",
+    "loc": 30,
+    "deps": [],
+    "kind": "worker",
+    "runtime": "client",
+    "purpose": "Loads and runs all-MiniLM-L6-v2 via @xenova/transformers@2.17.2 from jsDelivr CDN; handles embed messages, returns L2-normalised embedding arrays.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "tags": [
+      "worker",
+      "embeddings",
+      "pipeline"
+    ],
+    "notes": "Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
+  }
+]

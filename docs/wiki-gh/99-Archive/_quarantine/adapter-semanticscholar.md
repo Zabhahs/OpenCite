@@ -1,3 +1,37 @@
+---
+machine_ids: [adapters.extensions.semanticScholar]
+findings: [F-105]
+runtime: both
+status: quarantined
+tags: [archive, quarantine, adapter, semanticscholar, s2]
+---
+<!-- AUTO-GENERATED from docs/wiki/99-Archive/_quarantine/adapter-semanticscholar.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
+
+
+# 🔒 Quarantined: Semantic Scholar (S2) adapter
+
+> **Removed from build in v0.42.** Original path: `src/adapters/extensions/semanticScholar.js`.
+> Already deregistered from the `ADAPTERS` array since v0.27; the orphan descriptor file and its
+> `index.js` comment are now removed too. Full source below.
+
+## Why removed (deprecated for good)
+- **Deregistered v0.27** — never in the live `ADAPTERS` array; the file sat unused.
+- **Approval-gated key** (`needsKey: true`, `keyName: "s2Key"`): the free S2 key requires manual
+  approval that can take days — poor cost/benefit for a meta-search that prizes zero-friction use.
+- **Heavily rate-limited** even with a key (HTTP 429) — unreliable.
+- **F-105**: descriptor had `protocol: "graphql"` but the S2 Paper Search endpoint
+  (`/graph/v1/paper/search`) is REST/JSON — stale/misleading metadata.
+
+## Revival checklist (if ever resurrected)
+- [ ] Confirm S2 API access model (key approval turnaround, rate limits) is acceptable.
+- [ ] Fix `capability.protocol` → `"rest-json"` (it is NOT GraphQL).
+- [ ] Re-add `export { SEMANTIC_SCHOLAR_ADAPTER } from "./semanticScholar.js";` to `extensions/index.js`,
+      import + add to the `ADAPTERS` array in `index.js`, and re-add the `s2Key` settings field.
+- [ ] Verify coverage/billing impact (keyed source auto-drops when `s2Key` absent).
+- [ ] Flip the machine record `status` back to `degraded`/`healthy`.
+
+## Verbatim source (as of v0.41)
+```js
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 
@@ -80,3 +114,7 @@ export const SEMANTIC_SCHOLAR_ADAPTER = {
     return { results, hasMore: offset + results.length < (data.total || 0) };
   }
 };
+```
+
+## See also
+[Quarantine register](../../01-Frontend/Components/_index.md) · [Extension-Adapters](../../02-Adapters/Extension-Adapters.md#semanticscholar-deregistered) · [Tech-Debt-Overengineering](../../09-Audit/Tech-Debt-Overengineering.md#f-105)

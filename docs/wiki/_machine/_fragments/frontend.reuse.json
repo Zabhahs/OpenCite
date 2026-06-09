@@ -1,0 +1,62 @@
+[
+  {
+    "id": "R-300",
+    "title": "useHistory / useLibrary / useSettings share identical localStorage+DB-sync pattern — extract useSyncedStore",
+    "shared_module": null,
+    "client_users": ["hooks.useHistory", "hooks.useLibrary", "hooks.useSettings"],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "All three hooks implement the same 4-step pattern: (1) load from localStorage on mount, (2) syncFromDB on sign-in via useEffect([user?.id, loaded]), (3) DB-wins merge strategy, (4) write localStorage + fire-and-forget API POST/DELETE on mutation. The pattern is ~40–50 lines per hook, replicated three times. Extracting a useSyncedStore(key, apiPath, defaultValue, validate) factory hook would reduce each hook to ~10 lines of mutation-specific logic. Estimated effort: 1–2 hours. Risk: low (pure refactor, no behaviour change).",
+    "wiki": "01-Frontend/Hooks.md"
+  },
+  {
+    "id": "R-301",
+    "title": "BookGroupHeader JSX duplicated across SourceSection and UnifiedResultList",
+    "shared_module": null,
+    "client_users": ["components.SourceSection", "components.UnifiedResultList"],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "~30 lines of parent-work header JSX (chapter count, year, title, editors, publisher) is copy-pasted verbatim in both result-view components. A BookGroupHeader component would be 30 lines once, reused twice. See F-314. Estimated effort: 30 minutes. Risk: zero.",
+    "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist"
+  },
+  {
+    "id": "R-302",
+    "title": "isAdmin() called in both App.jsx and AdminConsole.jsx — double gate, not duplication",
+    "shared_module": "lib.admin",
+    "client_users": ["App", "components.AdminConsole"],
+    "server_users": ["api.search"],
+    "opportunity": "already-shared",
+    "detail": "isAdmin(user) from lib/admin.js is called in App.jsx (to compute showAdminConsole and admin prop) and again inside AdminConsole.jsx (self-gate). This is intentional defense-in-depth — the component self-gates so it cannot be rendered unsafely if the prop is ever missing. Server-side admin gate uses process.env (resolveSessionAdmin in api/_shared/log.js), which is the same email list but read server-side. No action needed.",
+    "wiki": "01-Frontend/App-Shell.md#admin-console-routing"
+  },
+  {
+    "id": "R-303",
+    "title": "src/lib/log.js (client) and api/_shared/log.js (server) serve different roles — not duplicates",
+    "shared_module": null,
+    "client_users": ["lib.log"],
+    "server_users": ["api.shared.log"],
+    "opportunity": "divergent-duplicate",
+    "detail": "Both are named log.js and emit structured [opencite:adapter:event] lines, but they diverge: client log.js maintains a 500-entry ring buffer for admin debug copy/download; server log.js writes to Vercel's edge log stream and gating functions. The FORMAT is shared (tag + key=value pairs) but the implementation is independent. No opportunity to share code — different runtimes with different concerns. Document the format as a convention, not a reuse point.",
+    "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory"
+  },
+  {
+    "id": "R-304",
+    "title": "copyText() inline in App.jsx should move to lib/helpers.js",
+    "shared_module": "lib.helpers",
+    "client_users": ["App"],
+    "server_users": [],
+    "opportunity": "extract-shared",
+    "detail": "App.jsx:203–207 defines copyText(text, id, style) inline — a navigator.clipboard.writeText wrapper that sets copied state and clears after 1.5s. The clipboard write part is a general utility; the state management part is inherently local. The clipboard utility could be extracted to lib/helpers.js as copyToClipboard(text). Low priority — only one call site. Estimated effort: 5 minutes.",
+    "wiki": "01-Frontend/App-Shell.md"
+  },
+  {
+    "id": "R-305",
+    "title": "DEFAULT_THEME in themes.js unused by useTheme — dead constant",
+    "shared_module": "constant.themes",
+    "client_users": ["hooks.useTheme"],
+    "server_users": [],
+    "opportunity": "client-can-reuse-server",
+    "detail": "The DEFAULT_THEME = 'tan' constant was presumably meant for useTheme to import, but the hook hardcodes the same string. Fix: import DEFAULT_THEME in useTheme.js and replace the hardcoded LIGHT_DEFAULT. See F-309. Estimated effort: 2 minutes.",
+    "wiki": "01-Frontend/Hooks.md#usetheme"
+  }
+]

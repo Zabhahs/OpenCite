@@ -1,0 +1,19 @@
+#!/bin/sh
+# OpenCITE — keep the wiki's machine twin + GitHub mirror in sync with the Obsidian source.
+#
+# When a commit touches the wiki source (docs/wiki/) or its tooling (scripts/wiki/), this
+# regenerates docs/wiki/_machine/*.json + docs/wiki-gh/ and re-stages them, and BLOCKS the
+# commit if the machine layer has dangling cross-refs. So the dual structure can never drift.
+# Bypass (rarely needed): git commit --no-verify
+set -e
+
+if git diff --cached --name-only | grep -qE '^docs/wiki/|^scripts/wiki/'; then
+  echo "[pre-commit] wiki source changed — regenerating machine twin + GitHub mirror…"
+  node scripts/wiki/build-machine-map.mjs        || { echo "[pre-commit] build-machine-map failed"; exit 1; }
+  node scripts/wiki/build-machine-map.mjs --check || { echo "[pre-commit] machine layer inconsistent (dangling cross-refs) — fix before committing"; exit 1; }
+  node scripts/wiki/to-github.mjs                || { echo "[pre-commit] to-github (mirror) failed"; exit 1; }
+  git add docs/wiki/_machine/modules.json docs/wiki/_machine/graph.json \
+          docs/wiki/_machine/findings.json docs/wiki/_machine/reuse.json \
+          docs/wiki/_machine/manifest.json docs/wiki-gh
+  echo "[pre-commit] machine twin + mirror regenerated and staged."
+fi

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "node scripts/migrate.mjs; npx tailwindcss -i ./src/input.css -o ./public/output.css --minify && vite build",
     "preview": "vite preview",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx prisma generate",
+    "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks')}catch(e){}\""
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

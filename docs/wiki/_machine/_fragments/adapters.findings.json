@@ -1,0 +1,242 @@
+[
+  {
+    "id": "F-100",
+    "type": "dup",
+    "severity": "low",
+    "title": "xmlUtils helpers duplicated into api/search/mexicana.js",
+    "detail": "src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
+    "path": "src/adapters/_shared/xmlUtils.js:13",
+    "modules": [
+      "adapters.shared.xmlUtils"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
+    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/."
+  },
+  {
+    "id": "F-101",
+    "type": "dup",
+    "severity": "low",
+    "title": "proxiedFetch spoof headers duplicated with api/proxy.js",
+    "detail": "src/adapters/_shared/proxy.js:19-24 duplicates the browser-spoof User-Agent/Accept/Referer headers from api/proxy.js:69-73. Same cross-import constraint as F-100. Documented in proxy.js as an accepted duplication.",
+    "path": "src/adapters/_shared/proxy.js:19",
+    "modules": [
+      "adapters.shared.proxy"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs",
+    "fix_hint": "Same as F-100: shared package. Or accept and add lint comment."
+  },
+  {
+    "id": "F-102",
+    "type": "bug",
+    "severity": "low",
+    "title": "OpenNeuro/Northwestern/ONB try raw fetch before proxy, causing silent CORS errors in browser",
+    "detail": "openNeuro.js:26-29, northwestern.js:27-30, onb.js:26-29 all attempt a direct fetch() first and fall back to proxiedFetch on network error. In the browser, the direct fetch throws a CORS network error (caught silently) before the proxy runs. This adds one failed RTT and pollutes the network error log on every browser call.",
+    "path": "src/adapters/extensions/openNeuro.js:26",
+    "modules": [
+      "adapters.extensions.openNeuro",
+      "adapters.extensions.northwestern",
+      "adapters.extensions.onb"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-102--openneuro-raw-fetch-before-proxy-fallback-causes-silent-cors-error-in-browser",
+    "fix_hint": "Check typeof window === 'undefined' first (as proxiedFetch does) and skip the direct fetch in the browser."
+  },
+  {
+    "id": "F-103",
+    "type": "debt",
+    "severity": "low",
+    "title": "CuratedJournals per_page hardcoded to 5",
+    "detail": "src/adapters/core/curatedJournals.js:27 uses `const pageSize = 5` instead of INITIAL_PAGE_SIZE/LOAD_MORE_PAGE_SIZE. The page math Math.floor(offset/pageSize)+1 will compute wrong page numbers if the offset was advanced by a different page size. Minor inconsistency.",
+    "path": "src/adapters/core/curatedJournals.js:27",
+    "modules": [
+      "adapters.core.curatedJournals"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Core-Adapters.md#f-103--curatedjournals-per_page-hardcoded-to-5",
+    "fix_hint": "Use const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE; (constants already imported)."
+  },
+  {
+    "id": "F-104",
+    "type": "bug",
+    "severity": "med",
+    "title": "Internet Archive citedBy populated from download count, not citation count",
+    "detail": "internetArchive.js:100 (metadata path) and internetArchive.js:141 (FTS path): citedBy = downloads > 0 ? downloads : null. IA exposes no citation data; downloads is a cumulative download counter. This inflates citedBy for popular non-scholarly items (e.g. Project Gutenberg novels) relative to actual scholarly citations. Mitigated by rankFields.citedBy:false (ranker ignores it). Value is emitted for display only. The popularity-sort bug (v.35 D2, sort=downloads+desc) is separately fixed. [VERIFIED ON-BRANCH 2026-06-08: NOT shown as \"citations\" — ResultCard.jsx:153 renders source-aware label `{citedBy} {source===\"IA\" ? \"downloaded\" : \"cited\"}`, so IA shows \"N downloaded\". This is a PRODUCT DECISION (keep the honest downloaded badge vs hide), not a mislabelling bug. Recommend keep + close wontfix.]",
+    "path": "src/adapters/extensions/internetArchive.js:100",
+    "modules": [
+      "adapters.extensions.internetArchive"
+    ],
+    "status": "confirmed",
+    "wiki": "02-Adapters/Extension-Adapters.md#internetarchive",
+    "fix_hint": "Product call: keep \"N downloaded\" badge (accurate) OR set citedBy:null at internetArchive.js:100/141 to hide. Not a correctness bug."
+  },
+  {
+    "id": "F-105",
+    "type": "debt",
+    "severity": "low",
+    "title": "Deregistered Semantic Scholar adapter has wrong protocol field",
+    "detail": "src/adapters/extensions/semanticScholar.js:39 sets protocol: 'graphql' but the S2 Paper Search endpoint is a REST/JSON endpoint, not GraphQL. Minor since the adapter is deregistered (v0.27) and not in the ADAPTERS array. [RESOLVED v0.42: Semantic Scholar adapter quarantined (removed from build + s2Key config cleaned); source preserved in docs/wiki/99-Archive/_quarantine/adapter-semanticscholar.md.]",
+    "path": "src/adapters/extensions/semanticScholar.js:39",
+    "modules": [
+      "adapters.extensions.semanticScholar"
+    ],
+    "status": "fixed",
+    "wiki": "99-Archive/_quarantine/adapter-semanticscholar.md",
+    "fix_hint": "Change protocol to 'rest-json' if the adapter is ever re-enabled."
+  },
+  {
+    "id": "F-106",
+    "type": "bug",
+    "severity": "low",
+    "title": "Mexicana returns nextToken instead of generic nextPageToken",
+    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination.",
+    "path": "src/adapters/extensions/mexicana.js:29",
+    "modules": [
+      "adapters.extensions.mexicana"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#f-106",
+    "fix_hint": "Change nextToken to nextPageToken in the return statement. Verify the server route at api/search/mexicana.js passes it back under the same key."
+  },
+  {
+    "id": "F-107",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "OpenNeuro adapter is dead: fetches only 100 datasets, client-side filter matches nothing for most queries",
+    "detail": "src/adapters/extensions/openNeuro.js:22 fetches exactly 100 datasets (first: 100, orderBy: {created: descending}). Client-side filter at openNeuro.js:37-43 checks if any field includes the query string. OpenNeuro has ~5000 public BIDS datasets, but only the 100 newest are fetched. The GraphQL endpoint https://openneuro.org/crn/graphql also returns errors in practice. This adapter always returns 0 results for scientific queries and drags coverage to partial on every search. Memory (v.36 diagnostic) confirms this. [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/openNeuro.js:22",
+    "modules": [
+      "adapters.extensions.openNeuro"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#openneuro",
+    "fix_hint": "Remove OPENNEURO_ADAPTER from the ADAPTERS array in src/adapters/index.js. Keep the file. The GraphQL API either needs a proper search mutation or must be replaced with the OpenNeuro REST search API if one exists."
+  },
+  {
+    "id": "F-108",
+    "type": "ux",
+    "severity": "low",
+    "title": "Thaqalayn url always points to homepage, not item-level deep link",
+    "detail": "src/adapters/extensions/thaqalayn.js:38: url: 'https://thaqalayn.net/' — hardcoded to the homepage for every result. The API response does not include item-level URLs. Users cannot navigate to the specific hadith from the result card.",
+    "path": "src/adapters/extensions/thaqalayn.js:38",
+    "modules": [
+      "adapters.extensions.thaqalayn"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "fix_hint": "Check if the API returns an id or book/chapter/number that can construct a deep URL (e.g. https://thaqalayn.net/hadith/<id>)."
+  },
+  {
+    "id": "F-109",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "ENA adapter is dead: wildcard query syntax triggers 400 on most queries",
+    "detail": "src/adapters/extensions/ena.js:23 constructs the ENA Portal API query as study_title=\"*query*\" OR study_description=\"*query*\". The ENA Portal /api/search endpoint does not support wildcard-within-quotes syntax in its lucene query, and returns HTTP 400 for most free-text queries. The adapter always throws an error for standard search terms. Memory (v.36 diagnostic) confirms. Additionally, ena.js:44 uses items.length === pageSize as hasMore heuristic (no real total). [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/ena.js:23",
+    "modules": [
+      "adapters.extensions.ena"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#ena",
+    "fix_hint": "Remove ENA_ADAPTER from the ADAPTERS array. If re-enabling, use plain terms without wildcard-within-quotes: study_title=query OR study_description=query."
+  },
+  {
+    "id": "F-110",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "SciELO adapter is dead: private Elasticsearch endpoint returns 403/CORS",
+    "detail": "src/adapters/extensions/scielo.js:22 targets https://search.scielo.org/api/v2/search which is an internal Elasticsearch endpoint not intended for public API use. Returns CORS errors or 403 in all environments. No public SciELO search JSON API exists at this path. Memory (v.36 diagnostic) confirms. This adapter always returns 0 results and drags coverage to partial. [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/scielo.js:22",
+    "modules": [
+      "adapters.extensions.scielo"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#scielo",
+    "fix_hint": "Remove SCIELO_ADAPTER from the ADAPTERS array. Alternative: use SciELO's OAI-PMH endpoint or the DOAJ (which includes SciELO journals) for Latin American coverage."
+  },
+  {
+    "id": "F-111",
+    "type": "perf",
+    "severity": "low",
+    "title": "Open Library emits no abstract; BM25F scoring is title+subjects only",
+    "detail": "src/adapters/extensions/openLibrary.js:57: abstract: '' hardcoded. The Open Library search.json API returns no abstract field. rankFields.abstract: 'none'. BM25F scoring for OpenLibrary results relies entirely on title (primary signal) and subjects (rich controlled vocabulary). This is documented and correct but worth noting for ranking context.",
+    "path": "src/adapters/extensions/openLibrary.js:57",
+    "modules": [
+      "adapters.extensions.openLibrary"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#openlibrary",
+    "fix_hint": "Optionally fetch the /works/<key>.json endpoint per item for a description field, but this adds per-hit fan-out similar to PANGAEA/MET."
+  },
+  {
+    "id": "F-112",
+    "type": "debt",
+    "severity": "low",
+    "title": "BASE adapter missing serverSafe and corpusSize in capability",
+    "detail": "src/adapters/extensions/base.js capability object has no serverSafe or corpusSize fields. BASE uses proxiedFetch which works server-side, so serverSafe should be true. Corpus is ~300M records. Without these fields, the coverage engine cannot reason about BASE's contribution and the /api/search fan-out excludes it.",
+    "path": "src/adapters/extensions/base.js:24",
+    "modules": [
+      "adapters.extensions.base"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "fix_hint": "Add serverSafe: true, corpusSize: 300000000 to the capability object."
+  },
+  {
+    "id": "F-113",
+    "type": "perf",
+    "severity": "med",
+    "title": "Met adapter fan-out: up to 3× pageSize concurrent per-object requests",
+    "detail": "src/adapters/extensions/met.js:27 fetches a slice of allIds of length pageSize*3, then fires Promise.all of per-object detail fetches. For INITIAL_PAGE_SIZE=10 this is 30 concurrent requests; for LOAD_MORE_PAGE_SIZE=20 it is 60. On slow connections or under rate limiting, this can saturate the browser's connection pool. No retry or backpressure.",
+    "path": "src/adapters/extensions/met.js:27",
+    "modules": [
+      "adapters.extensions.met"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#met",
+    "fix_hint": "Reduce fetchSlice multiplier or batch requests. Alternatively, use Met's ObjectID-only endpoint and fetch details lazily."
+  },
+  {
+    "id": "F-114",
+    "type": "bug",
+    "severity": "low",
+    "title": "BnF Catalogue isOA hardcoded true (catalogue includes non-OA items)",
+    "detail": "src/adapters/extensions/bnfApi.js:62: isOA: true hardcoded. The BnF catalogue (catalogue.bnf.fr SRU) indexes all BnF holdings, the majority of which are not open access. This causes non-OA catalogue records to appear in OA-filtered views.",
+    "path": "src/adapters/extensions/bnfApi.js:62",
+    "modules": [
+      "adapters.extensions.bnfApi"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#bnfapi",
+    "fix_hint": "Set isOA: false or attempt to detect OA from UNIMARC field 856 (electronic access links) if present."
+  },
+  {
+    "id": "F-115",
+    "type": "perf",
+    "severity": "low",
+    "title": "Rijksmuseum 2-hop image resolve adds sequential fetch waves per page",
+    "detail": "src/adapters/extensions/rijksmuseum.js:141-172: resolveImage() performs 2 sequential hops (VisualItem, DigitalObject) after the object resolve. All items run concurrently, so worst-case depth is 3 sequential fetch waves (object, hop1, hop2) regardless of pageSize. This adds 2 full network RTTs to every Rijksmuseum page load. Documented in the adapter's header comment.",
+    "path": "src/adapters/extensions/rijksmuseum.js:141",
+    "modules": [
+      "adapters.extensions.rijksmuseum"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#rijksmuseum",
+    "fix_hint": "Cache resolved image URLs per object number (localStorage or server-side KV). Or accept the latency — the adapter is otherwise correct."
+  },
+  {
+    "id": "F-116",
+    "type": "perf",
+    "severity": "med",
+    "title": "PANGAEA per-hit RIS fetch: up to pageSize concurrent extra requests",
+    "detail": "src/adapters/extensions/pangaea.js:68-98: rawResults = await Promise.all(hits.map(async h => ... fetchRIS(numericId))). For each Elasticsearch hit, a separate RIS endpoint is fetched for abstract/DOI/keywords. Up to INITIAL_PAGE_SIZE (10) or LOAD_MORE_PAGE_SIZE (20) concurrent RIS fetches per search. Items missing both doi and title after RIS are filtered (pangaea.js:100-101), meaning some RIS requests are wasted.",
+    "path": "src/adapters/extensions/pangaea.js:68",
+    "modules": [
+      "adapters.extensions.pangaea"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "fix_hint": "Pre-filter by title presence from the ES hit before firing RIS fetches. Or batch RIS requests if the endpoint supports it."
+  }
+]

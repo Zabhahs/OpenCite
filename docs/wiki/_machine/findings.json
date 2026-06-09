@@ -1,0 +1,1009 @@
+[
+  {
+    "id": "F-100",
+    "type": "dup",
+    "severity": "low",
+    "title": "xmlUtils helpers duplicated into api/search/mexicana.js",
+    "detail": "src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
+    "path": "src/adapters/_shared/xmlUtils.js:13",
+    "modules": [
+      "adapters.shared.xmlUtils"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
+    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/."
+  },
+  {
+    "id": "F-101",
+    "type": "dup",
+    "severity": "low",
+    "title": "proxiedFetch spoof headers duplicated with api/proxy.js",
+    "detail": "src/adapters/_shared/proxy.js:19-24 duplicates the browser-spoof User-Agent/Accept/Referer headers from api/proxy.js:69-73. Same cross-import constraint as F-100. Documented in proxy.js as an accepted duplication.",
+    "path": "src/adapters/_shared/proxy.js:19",
+    "modules": [
+      "adapters.shared.proxy"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs",
+    "fix_hint": "Same as F-100: shared package. Or accept and add lint comment."
+  },
+  {
+    "id": "F-102",
+    "type": "bug",
+    "severity": "low",
+    "title": "OpenNeuro/Northwestern/ONB try raw fetch before proxy, causing silent CORS errors in browser",
+    "detail": "openNeuro.js:26-29, northwestern.js:27-30, onb.js:26-29 all attempt a direct fetch() first and fall back to proxiedFetch on network error. In the browser, the direct fetch throws a CORS network error (caught silently) before the proxy runs. This adds one failed RTT and pollutes the network error log on every browser call.",
+    "path": "src/adapters/extensions/openNeuro.js:26",
+    "modules": [
+      "adapters.extensions.openNeuro",
+      "adapters.extensions.northwestern",
+      "adapters.extensions.onb"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Architecture.md#f-102--openneuro-raw-fetch-before-proxy-fallback-causes-silent-cors-error-in-browser",
+    "fix_hint": "Check typeof window === 'undefined' first (as proxiedFetch does) and skip the direct fetch in the browser."
+  },
+  {
+    "id": "F-103",
+    "type": "debt",
+    "severity": "low",
+    "title": "CuratedJournals per_page hardcoded to 5",
+    "detail": "src/adapters/core/curatedJournals.js:27 uses `const pageSize = 5` instead of INITIAL_PAGE_SIZE/LOAD_MORE_PAGE_SIZE. The page math Math.floor(offset/pageSize)+1 will compute wrong page numbers if the offset was advanced by a different page size. Minor inconsistency.",
+    "path": "src/adapters/core/curatedJournals.js:27",
+    "modules": [
+      "adapters.core.curatedJournals"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Core-Adapters.md#f-103--curatedjournals-per_page-hardcoded-to-5",
+    "fix_hint": "Use const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE; (constants already imported)."
+  },
+  {
+    "id": "F-104",
+    "type": "bug",
+    "severity": "med",
+    "title": "Internet Archive citedBy populated from download count, not citation count",
+    "detail": "internetArchive.js:100 (metadata path) and internetArchive.js:141 (FTS path): citedBy = downloads > 0 ? downloads : null. IA exposes no citation data; downloads is a cumulative download counter. This inflates citedBy for popular non-scholarly items (e.g. Project Gutenberg novels) relative to actual scholarly citations. Mitigated by rankFields.citedBy:false (ranker ignores it). Value is emitted for display only. The popularity-sort bug (v.35 D2, sort=downloads+desc) is separately fixed. [VERIFIED ON-BRANCH 2026-06-08: NOT shown as \"citations\" — ResultCard.jsx:153 renders source-aware label `{citedBy} {source===\"IA\" ? \"downloaded\" : \"cited\"}`, so IA shows \"N downloaded\". This is a PRODUCT DECISION (keep the honest downloaded badge vs hide), not a mislabelling bug. Recommend keep + close wontfix.]",
+    "path": "src/adapters/extensions/internetArchive.js:100",
+    "modules": [
+      "adapters.extensions.internetArchive"
+    ],
+    "status": "confirmed",
+    "wiki": "02-Adapters/Extension-Adapters.md#internetarchive",
+    "fix_hint": "Product call: keep \"N downloaded\" badge (accurate) OR set citedBy:null at internetArchive.js:100/141 to hide. Not a correctness bug."
+  },
+  {
+    "id": "F-105",
+    "type": "debt",
+    "severity": "low",
+    "title": "Deregistered Semantic Scholar adapter has wrong protocol field",
+    "detail": "src/adapters/extensions/semanticScholar.js:39 sets protocol: 'graphql' but the S2 Paper Search endpoint is a REST/JSON endpoint, not GraphQL. Minor since the adapter is deregistered (v0.27) and not in the ADAPTERS array. [RESOLVED v0.42: Semantic Scholar adapter quarantined (removed from build + s2Key config cleaned); source preserved in docs/wiki/99-Archive/_quarantine/adapter-semanticscholar.md.]",
+    "path": "src/adapters/extensions/semanticScholar.js:39",
+    "modules": [
+      "adapters.extensions.semanticScholar"
+    ],
+    "status": "fixed",
+    "wiki": "99-Archive/_quarantine/adapter-semanticscholar.md",
+    "fix_hint": "Change protocol to 'rest-json' if the adapter is ever re-enabled."
+  },
+  {
+    "id": "F-106",
+    "type": "bug",
+    "severity": "low",
+    "title": "Mexicana returns nextToken instead of generic nextPageToken",
+    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination.",
+    "path": "src/adapters/extensions/mexicana.js:29",
+    "modules": [
+      "adapters.extensions.mexicana"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Adapter-Health-Matrix.md#f-106",
+    "fix_hint": "Change nextToken to nextPageToken in the return statement. Verify the server route at api/search/mexicana.js passes it back under the same key."
+  },
+  {
+    "id": "F-107",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "OpenNeuro adapter is dead: fetches only 100 datasets, client-side filter matches nothing for most queries",
+    "detail": "src/adapters/extensions/openNeuro.js:22 fetches exactly 100 datasets (first: 100, orderBy: {created: descending}). Client-side filter at openNeuro.js:37-43 checks if any field includes the query string. OpenNeuro has ~5000 public BIDS datasets, but only the 100 newest are fetched. The GraphQL endpoint https://openneuro.org/crn/graphql also returns errors in practice. This adapter always returns 0 results for scientific queries and drags coverage to partial on every search. Memory (v.36 diagnostic) confirms this. [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/openNeuro.js:22",
+    "modules": [
+      "adapters.extensions.openNeuro"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#openneuro",
+    "fix_hint": "Remove OPENNEURO_ADAPTER from the ADAPTERS array in src/adapters/index.js. Keep the file. The GraphQL API either needs a proper search mutation or must be replaced with the OpenNeuro REST search API if one exists."
+  },
+  {
+    "id": "F-108",
+    "type": "ux",
+    "severity": "low",
+    "title": "Thaqalayn url always points to homepage, not item-level deep link",
+    "detail": "src/adapters/extensions/thaqalayn.js:38: url: 'https://thaqalayn.net/' — hardcoded to the homepage for every result. The API response does not include item-level URLs. Users cannot navigate to the specific hadith from the result card.",
+    "path": "src/adapters/extensions/thaqalayn.js:38",
+    "modules": [
+      "adapters.extensions.thaqalayn"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "fix_hint": "Check if the API returns an id or book/chapter/number that can construct a deep URL (e.g. https://thaqalayn.net/hadith/<id>)."
+  },
+  {
+    "id": "F-109",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "ENA adapter is dead: wildcard query syntax triggers 400 on most queries",
+    "detail": "src/adapters/extensions/ena.js:23 constructs the ENA Portal API query as study_title=\"*query*\" OR study_description=\"*query*\". The ENA Portal /api/search endpoint does not support wildcard-within-quotes syntax in its lucene query, and returns HTTP 400 for most free-text queries. The adapter always throws an error for standard search terms. Memory (v.36 diagnostic) confirms. Additionally, ena.js:44 uses items.length === pageSize as hasMore heuristic (no real total). [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/ena.js:23",
+    "modules": [
+      "adapters.extensions.ena"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#ena",
+    "fix_hint": "Remove ENA_ADAPTER from the ADAPTERS array. If re-enabling, use plain terms without wildcard-within-quotes: study_title=query OR study_description=query."
+  },
+  {
+    "id": "F-110",
+    "type": "deadcode",
+    "severity": "high",
+    "title": "SciELO adapter is dead: private Elasticsearch endpoint returns 403/CORS",
+    "detail": "src/adapters/extensions/scielo.js:22 targets https://search.scielo.org/api/v2/search which is an internal Elasticsearch endpoint not intended for public API use. Returns CORS errors or 403 in all environments. No public SciELO search JSON API exists at this path. Memory (v.36 diagnostic) confirms. This adapter always returns 0 results and drags coverage to partial. [RESOLVED v0.38: quarantined — removed from build, source preserved in docs/wiki/99-Archive/_quarantine/.]",
+    "path": "src/adapters/extensions/scielo.js:22",
+    "modules": [
+      "adapters.extensions.scielo"
+    ],
+    "status": "fixed",
+    "wiki": "02-Adapters/Extension-Adapters.md#scielo",
+    "fix_hint": "Remove SCIELO_ADAPTER from the ADAPTERS array. Alternative: use SciELO's OAI-PMH endpoint or the DOAJ (which includes SciELO journals) for Latin American coverage."
+  },
+  {
+    "id": "F-111",
+    "type": "perf",
+    "severity": "low",
+    "title": "Open Library emits no abstract; BM25F scoring is title+subjects only",
+    "detail": "src/adapters/extensions/openLibrary.js:57: abstract: '' hardcoded. The Open Library search.json API returns no abstract field. rankFields.abstract: 'none'. BM25F scoring for OpenLibrary results relies entirely on title (primary signal) and subjects (rich controlled vocabulary). This is documented and correct but worth noting for ranking context.",
+    "path": "src/adapters/extensions/openLibrary.js:57",
+    "modules": [
+      "adapters.extensions.openLibrary"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#openlibrary",
+    "fix_hint": "Optionally fetch the /works/<key>.json endpoint per item for a description field, but this adds per-hit fan-out similar to PANGAEA/MET."
+  },
+  {
+    "id": "F-112",
+    "type": "debt",
+    "severity": "low",
+    "title": "BASE adapter missing serverSafe and corpusSize in capability",
+    "detail": "src/adapters/extensions/base.js capability object has no serverSafe or corpusSize fields. BASE uses proxiedFetch which works server-side, so serverSafe should be true. Corpus is ~300M records. Without these fields, the coverage engine cannot reason about BASE's contribution and the /api/search fan-out excludes it.",
+    "path": "src/adapters/extensions/base.js:24",
+    "modules": [
+      "adapters.extensions.base"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "fix_hint": "Add serverSafe: true, corpusSize: 300000000 to the capability object."
+  },
+  {
+    "id": "F-113",
+    "type": "perf",
+    "severity": "med",
+    "title": "Met adapter fan-out: up to 3× pageSize concurrent per-object requests",
+    "detail": "src/adapters/extensions/met.js:27 fetches a slice of allIds of length pageSize*3, then fires Promise.all of per-object detail fetches. For INITIAL_PAGE_SIZE=10 this is 30 concurrent requests; for LOAD_MORE_PAGE_SIZE=20 it is 60. On slow connections or under rate limiting, this can saturate the browser's connection pool. No retry or backpressure.",
+    "path": "src/adapters/extensions/met.js:27",
+    "modules": [
+      "adapters.extensions.met"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#met",
+    "fix_hint": "Reduce fetchSlice multiplier or batch requests. Alternatively, use Met's ObjectID-only endpoint and fetch details lazily."
+  },
+  {
+    "id": "F-114",
+    "type": "bug",
+    "severity": "low",
+    "title": "BnF Catalogue isOA hardcoded true (catalogue includes non-OA items)",
+    "detail": "src/adapters/extensions/bnfApi.js:62: isOA: true hardcoded. The BnF catalogue (catalogue.bnf.fr SRU) indexes all BnF holdings, the majority of which are not open access. This causes non-OA catalogue records to appear in OA-filtered views.",
+    "path": "src/adapters/extensions/bnfApi.js:62",
+    "modules": [
+      "adapters.extensions.bnfApi"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#bnfapi",
+    "fix_hint": "Set isOA: false or attempt to detect OA from UNIMARC field 856 (electronic access links) if present."
+  },
+  {
+    "id": "F-115",
+    "type": "perf",
+    "severity": "low",
+    "title": "Rijksmuseum 2-hop image resolve adds sequential fetch waves per page",
+    "detail": "src/adapters/extensions/rijksmuseum.js:141-172: resolveImage() performs 2 sequential hops (VisualItem, DigitalObject) after the object resolve. All items run concurrently, so worst-case depth is 3 sequential fetch waves (object, hop1, hop2) regardless of pageSize. This adds 2 full network RTTs to every Rijksmuseum page load. Documented in the adapter's header comment.",
+    "path": "src/adapters/extensions/rijksmuseum.js:141",
+    "modules": [
+      "adapters.extensions.rijksmuseum"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#rijksmuseum",
+    "fix_hint": "Cache resolved image URLs per object number (localStorage or server-side KV). Or accept the latency — the adapter is otherwise correct."
+  },
+  {
+    "id": "F-116",
+    "type": "perf",
+    "severity": "med",
+    "title": "PANGAEA per-hit RIS fetch: up to pageSize concurrent extra requests",
+    "detail": "src/adapters/extensions/pangaea.js:68-98: rawResults = await Promise.all(hits.map(async h => ... fetchRIS(numericId))). For each Elasticsearch hit, a separate RIS endpoint is fetched for abstract/DOI/keywords. Up to INITIAL_PAGE_SIZE (10) or LOAD_MORE_PAGE_SIZE (20) concurrent RIS fetches per search. Items missing both doi and title after RIS are filtered (pangaea.js:100-101), meaning some RIS requests are wasted.",
+    "path": "src/adapters/extensions/pangaea.js:68",
+    "modules": [
+      "adapters.extensions.pangaea"
+    ],
+    "status": "open",
+    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "fix_hint": "Pre-filter by title presence from the ES hit before firing RIS fetches. Or batch RIS requests if the endpoint supports it."
+  },
+  {
+    "id": "F-200",
+    "type": "debt",
+    "severity": "med",
+    "title": "BM25F IDF is degenerate on micro-pool (14–45 docs) — mitigated by RRF fusion, not eliminated",
+    "detail": "scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
+    "path": "src/lib/scoring.js:160-171",
+    "modules": [
+      "lib.scoring",
+      "lib.rrf"
+    ],
+    "status": "confirmed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d3",
+    "fix_hint": "Accepted residual. To fully eliminate: replace micro-pool IDF with corpus-level IDF (would require a background statistics endpoint) or rely entirely on native+semantic ranks when available. Not a priority given current RRF weighting."
+  },
+  {
+    "id": "F-201",
+    "type": "ux",
+    "severity": "low",
+    "title": "Display-side score normalisation (0–100 per query) not implemented",
+    "detail": "D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
+    "path": "src/lib/scoring.js:13-15",
+    "modules": [
+      "lib.scoring"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d4",
+    "fix_hint": "Normalise _score to 0-100 relative to top hit in the admin debug card renderer, or hide raw _score and show only _fused rank."
+  },
+  {
+    "id": "F-202",
+    "type": "bug",
+    "severity": "high",
+    "title": "Internet Archive download counts used as citedBy rank signal — FIXED in v0.35",
+    "detail": "D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
+    "path": "src/adapters/extensions/internetArchive.js:100",
+    "modules": [
+      "adapters.extensions.internetArchive",
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d1",
+    "fix_hint": "Already fixed. Verify: run probe.mjs on surname queries (shaikh, ali, khan) — IA items should no longer lead."
+  },
+  {
+    "id": "F-203",
+    "type": "bug",
+    "severity": "high",
+    "title": "Internet Archive retrieval sorted by downloads (popularity) not relevance — FIXED in v0.35",
+    "detail": "D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
+    "path": "src/adapters/extensions/internetArchive.js:184",
+    "modules": [
+      "adapters.extensions.internetArchive"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d2",
+    "fix_hint": "Already fixed."
+  },
+  {
+    "id": "F-204",
+    "type": "bug",
+    "severity": "med",
+    "title": "Diacritic and transliteration fragmentation — FIXED in v0.35",
+    "detail": "D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
+    "path": "src/lib/scoring.js:124-144",
+    "modules": [
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#d5",
+    "fix_hint": "Already fixed. ALIAS_CLUSTERS is conservative — extend with documented rationale if new domains need folding."
+  },
+  {
+    "id": "F-205",
+    "type": "perf",
+    "severity": "med",
+    "title": "Semantic rerank is client-only — API consumers and MCP endpoint receive no semantic signal",
+    "detail": "computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
+    "path": "src/lib/semantic.js",
+    "modules": [
+      "lib.semantic",
+      "workers.embed.worker"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment",
+    "fix_hint": "Not easily fixable without a separate embedding service or switching to a smaller synchronous model. Acceptable architectural constraint. Document clearly for API consumers."
+  },
+  {
+    "id": "F-206",
+    "type": "perf",
+    "severity": "low",
+    "title": "dedupHighestScore uses O(n) indexOf scan for duplicate replacement",
+    "detail": "When a higher-scored duplicate is found, out.indexOf(existing) scans the output array linearly. At pool sizes ≤50 this is negligible. If pools grow (e.g. load-more accumulation), this becomes O(n²) in the worst case. A Map from key to array index would make it O(1).",
+    "path": "src/lib/dedup.js:44",
+    "modules": [
+      "lib.dedup"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md#correctness-notes",
+    "fix_hint": "Replace the indexOf scan with a second Map<key, outIndex>. Low priority at current pool sizes."
+  },
+  {
+    "id": "F-207",
+    "type": "perf",
+    "severity": "low",
+    "title": "Moby Thesaurus shard JSON.parse is synchronous — large shards may cause main-thread jank",
+    "detail": "loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
+    "path": "src/lib/synonyms.js:48-61",
+    "modules": [
+      "lib.synonyms"
+    ],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes",
+    "fix_hint": "Move shard loading to a Web Worker, or use a streaming JSON parser. Low priority — synonym expansion is optional and jank is one-time (shards are cached)."
+  },
+  {
+    "id": "F-208",
+    "type": "bug",
+    "severity": "med",
+    "title": "Always-dead adapters (SCIELO/OPENNEURO/ENA) drag every query to partial coverage, causing systematic billing discounts",
+    "detail": "SCIELO/OPENNEURO/ENA throw on every query so failedCount>0 always → coverage.js bandFor() can never return \"full\" (line 36). BUT their corpusSize is tiny (1M/500K/1K) vs OpenAlex/Crossref (hundreds of millions), so attrition is ~0.3% → band is \"near-full\" (coverage>=0.99), NOT \"partial\". Real impact: every query billed at coverageMultiplier(\"near-full\")=0.99 instead of 1.0 — a guaranteed ~1% systematic UNDERCHARGE + a permanently non-full coverage signal. The freeBelowBand free-waiver does NOT fire (plans set freeBelowBand:\"limited\"; isAtOrBelow waives only the \"limited\" band, coverage<0.5). Earlier \"partial coverage → billing discount/free\" framing was an overstatement. Fix (remove + circuit-breaker) still valid: restores \"full\" on queries where no OTHER adapter errors. [VERIFIED ON-BRANCH 2026-06-08]",
+    "path": "src/adapters/extensions/",
+    "modules": [],
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
+    "fix_hint": "Quarantine done (v0.38 T0). Add a chronic-failure circuit-breaker so failedCount can reach 0 → band \"full\" (1.0x). Verify empirically via probe (v0.38 T2): measure full vs near-full split + 0.99x→1.0x charge delta."
+  },
+  {
+    "id": "F-209",
+    "type": "perf",
+    "severity": "low",
+    "title": "Server RRF fusion is two-input (native+lexical) only — no semantic arm unlike the client UI path",
+    "detail": "api/search.js uses buildNativeRanks + rrfScores with a two-input fusion (native weight = nativeWeight(pool); lexical = 1-wNative). This correctly eliminates D4 cross-query incomparability on the server path. The client UI path adds a third semantic (MiniLM embedding) input via useSemanticRerank. The semantic gap on the server is an accepted architectural constraint (Web Worker + 23MB model cannot run in Vercel Functions) — not a bug. Previously recorded as an open gap; verified FIXED as of the current sprint.",
+    "path": "api/search.js:349-364",
+    "modules": [
+      "lib.rrf",
+      "lib.scoring"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
+    "fix_hint": "Server RRF is already in place. The only missing signal vs the client is semantic embeddings — acceptable limitation. Document for API consumers."
+  },
+  {
+    "id": "F-300",
+    "type": "deadcode",
+    "severity": "med",
+    "title": "BillingProvider never mounted — BillingContext is an unreachable stub",
+    "detail": "src/contexts/BillingContext.jsx exports BillingProvider and useBilling, but BillingProvider is never imported or mounted anywhere in the app tree (App.jsx:462–470 confirms). The stub returns Infinity credits and a no-op deduct(). All credit gating is server-side. Client UI cannot reflect credit status or show remaining-search counts to users without wiring this up.",
+    "path": "src/contexts/BillingContext.jsx",
+    "modules": [
+      "contexts.BillingContext"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Contexts.md#billingcontext",
+    "fix_hint": "Mount BillingProvider inside AuthProvider in App.jsx once Phase 2 ships. Wire to /api/credits GET. Expose credit balance in Header nav."
+  },
+  {
+    "id": "F-301",
+    "type": "deadcode",
+    "severity": "low",
+    "title": "SettingsContext / SettingsProvider never mounted or consumed",
+    "detail": "src/contexts/SettingsContext.jsx wraps useSettings in a context and exports SettingsProvider + useSettingsContext, but neither is imported or used anywhere. All settings consumers call useSettings() directly from App.jsx with prop-drilling. The file is dead.",
+    "path": "src/contexts/SettingsContext.jsx",
+    "modules": [
+      "contexts.SettingsContext"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Contexts.md#settingscontext",
+    "fix_hint": "Either delete the file, or mount SettingsProvider in App.jsx (replacing the useSettings() call) and migrate consumers to useSettingsContext()."
+  },
+  {
+    "id": "F-302",
+    "type": "ux",
+    "severity": "low",
+    "title": "Home screen empty-state checks settings.europeanaKey — implementation detail in view",
+    "detail": "App.jsx:444 renders a 'Visit Settings to enable supplemental sources' banner conditioned on !settings.europeanaKey. This leaks key-management internal knowledge into the home-screen presentation layer. When europeanaKey is dropped (once the backend env key is provisioned, per defaults.js TODO), this check will silently show/hide incorrectly.",
+    "path": "src/App.jsx:444",
+    "modules": [
+      "App"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/App-Shell.md",
+    "fix_hint": "Derive a hasAllKeyedSources boolean from adapter state or settings, and use that instead of the raw europeanaKey check."
+  },
+  {
+    "id": "F-303",
+    "type": "ux",
+    "severity": "low",
+    "title": "ThemeStrip swatches have no text labels — color-only affordance",
+    "detail": "src/components/Layout.jsx:210–218 renders theme swatches as 20px colored squares with only a `title` attribute tooltip. Screen readers get no useful label; colorblind users cannot distinguish Cream from Blue-grey. The title is shown on hover but not persistently accessible.",
+    "path": "src/components/Layout.jsx:210",
+    "modules": [
+      "components.Layout"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/UI-Map.md#themestrip",
+    "fix_hint": "Add aria-label={t.label} to each swatch button. Optionally show the label text on focus or below the active swatch."
+  },
+  {
+    "id": "F-304",
+    "type": "debt",
+    "severity": "low",
+    "title": "Stale comment in SettingsPanel claims slider/search-toggles live there",
+    "detail": "src/components/Panels.jsx:380–382 comment says 'Synonym, Semantic, relevance slider, Author search AND Result layout all live in the always-visible SearchControls'. This is accurate — they were moved in v.31/v.36/v.37 — but reading the code without context the comment implies these existed in SettingsPanel, which is confusing. The comment is essentially a migration note that should be cleaned up.",
+    "path": "src/components/Panels.jsx:380",
+    "modules": [
+      "components.Panels"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/UI-Map.md#settingspanel",
+    "fix_hint": "Remove the migration comment. The SearchControls location is documented in the wiki."
+  },
+  {
+    "id": "F-305",
+    "type": "deadcode",
+    "severity": "low",
+    "title": "Apple and Microsoft OAuth providers rendered as disabled dead UI for all users",
+    "detail": "src/components/Layout.jsx:9–11 defines PROVIDERS array with Apple (active: false) and Microsoft (active: false). These render as greyed 'soon' items in the sign-in dropdown for every unauthenticated user. Only Google (active: true) is wired. The dead items create visual noise and false expectations.",
+    "path": "src/components/Layout.jsx:9",
+    "modules": [
+      "components.Layout"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/UI-Map.md#header",
+    "fix_hint": "Remove Apple/Microsoft from PROVIDERS array until they are implemented. Re-add when the OAuth integration ships."
+  },
+  {
+    "id": "F-306",
+    "type": "ux",
+    "severity": "low",
+    "title": "LibraryPanel uses native confirm() for destructive clear-all action",
+    "detail": "src/components/Panels.jsx:499 uses confirm(`Remove all ${items.length} items from your library?`). Native browser confirm() is unstyled, inaccessible (cannot be focused/trapped by screen readers in the same way), and inconsistent with the rest of the UI aesthetic.",
+    "path": "src/components/Panels.jsx:499",
+    "modules": [
+      "components.Panels"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Components/_index.md#panels--librarypanel",
+    "fix_hint": "Replace with an inline confirmation UI (e.g., a two-step button: 'Clear all' → 'Are you sure? Confirm') consistent with the existing design system."
+  },
+  {
+    "id": "F-307",
+    "type": "bug",
+    "severity": "med",
+    "title": "useSearch has no AbortController — stale adapter responses can land in state after a new search",
+    "detail": "src/hooks/useSearch.js:44 uses activeAdapters.forEach(async adapter => { … setSectionStates(prev => …) }). If the user fires a second search before a slow adapter from the first search resolves, that adapter's response will patch the new search's sectionStates via setSectionStates(prev => …). The prev-based merge means the stale response overwrites the correct loading:true state with stale results from the previous query.",
+    "path": "src/hooks/useSearch.js:44",
+    "modules": [
+      "hooks.useSearch"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Hooks.md#usesearch",
+    "fix_hint": "Add a searchId ref (useRef(0)), increment on each search() call, and check inside each async callback that the current searchId matches before calling setSectionStates."
+  },
+  {
+    "id": "F-308",
+    "type": "deadcode",
+    "severity": "low",
+    "title": "SettingsContext is exported but never mounted or consumed — duplicate of F-301",
+    "detail": "See F-301. Filed separately against hooks.useSettings to capture the dependency relationship: SettingsContext.jsx imports useSettings but is itself dead. Both records point to the same root cause.",
+    "path": "src/contexts/SettingsContext.jsx",
+    "modules": [
+      "contexts.SettingsContext",
+      "hooks.useSettings"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Contexts.md#settingscontext",
+    "fix_hint": "Same as F-301."
+  },
+  {
+    "id": "F-309",
+    "type": "deadcode",
+    "severity": "low",
+    "title": "DEFAULT_THEME exported from themes.js but never imported by useTheme",
+    "detail": "src/constants/themes.js:49 exports DEFAULT_THEME = 'tan'. src/hooks/useTheme.js never imports it — instead hardcodes LIGHT_DEFAULT = 'tan' and DARK_DEFAULT = 'oled' at lines 4–5. If DEFAULT_THEME is changed, useTheme will silently remain on 'tan'.",
+    "path": "src/constants/themes.js:49",
+    "modules": [
+      "constants.themes",
+      "hooks.useTheme"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Hooks.md#usetheme",
+    "fix_hint": "Import DEFAULT_THEME in useTheme.js and use it as LIGHT_DEFAULT, eliminating the duplicated constant."
+  },
+  {
+    "id": "F-310",
+    "type": "debt",
+    "severity": "low",
+    "title": "GoldSetHarness stores data in bare localStorage keys outside the opencite: namespace",
+    "detail": "src/components/admin/GoldSetHarness.jsx:16–27 uses localStorage.getItem('opencite_gold_queries') and localStorage.getItem('opencite_test_runs') directly, bypassing the namespaced storage utility (lib/storage.js). These keys use underscores (not the opencite: colon-separated namespace). This risks key collision with other apps, breaks storage.remove(), and is inconsistent with the rest of the app.",
+    "path": "src/components/admin/GoldSetHarness.jsx:16",
+    "modules": [
+      "components.admin.GoldSetHarness"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory",
+    "fix_hint": "Replace localStorage.getItem/setItem calls with storage.get/set('gold_queries') and storage.get/set('test_runs') from lib/storage.js."
+  },
+  {
+    "id": "F-311",
+    "type": "ux",
+    "severity": "med",
+    "title": "No client-visible credit balance — free users cannot see how many searches remain",
+    "detail": "BillingContext is a stub (F-300) so there is no client-side credit counter. The server gates usage at /api/search, but the UI gives no feedback before or after exhaustion. Free users (20 searches/month) have no visibility into their remaining balance until a server 402 (v0.37 plan, not yet shipped).",
+    "path": "src/contexts/BillingContext.jsx",
+    "modules": [
+      "contexts.BillingContext",
+      "components.Layout"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Contexts.md#billingcontext",
+    "fix_hint": "Wire BillingProvider to a /api/credits GET on sign-in; surface remaining credits in the Header nav (e.g., near the Plans button)."
+  },
+  {
+    "id": "F-312",
+    "type": "ux",
+    "severity": "med",
+    "title": "AuthModal has no focus trap — keyboard users can tab behind the overlay",
+    "detail": "src/components/Layout.jsx:264–325 renders AuthModal as a fixed full-screen div overlay. There is no focus trap: keyboard users can Tab behind the modal to the main page while the overlay is open. This is an accessibility failure (WCAG 2.1 SC 2.1.2).",
+    "path": "src/components/Layout.jsx:264",
+    "modules": [
+      "components.Layout"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/UI-Map.md#header",
+    "fix_hint": "Use a focus-trap library (e.g., focus-trap-react) or implement a manual focus trap: on mount, move focus to the first button inside the modal; on Tab/Shift-Tab, cycle within modal children only."
+  },
+  {
+    "id": "F-313",
+    "type": "ux",
+    "severity": "low",
+    "title": "LibraryPanel uses native confirm() for clear-all",
+    "detail": "See F-306. Filed against components.Panels for the module binding.",
+    "path": "src/components/Panels.jsx:499",
+    "modules": [
+      "components.Panels"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Components/_index.md#panels--librarypanel",
+    "fix_hint": "Same as F-306."
+  },
+  {
+    "id": "F-314",
+    "type": "dup",
+    "severity": "med",
+    "title": "Book-chapter group header JSX duplicated across SourceSection and UnifiedResultList",
+    "detail": "The parent-work header block (chapter count badge, year, title h3, editors, publisher) is reproduced nearly verbatim at SourceSection.jsx:75–103 and UnifiedResultList.jsx:136–164 — approximately 30 lines of JSX each. Any change to the visual design must be applied in both places.",
+    "path": "src/components/SourceSection.jsx:75",
+    "modules": [
+      "components.SourceSection",
+      "components.UnifiedResultList"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
+    "fix_hint": "Extract a <BookGroupHeader group={group} /> component in a shared file (e.g., components/BookGroupHeader.jsx) and import it in both SourceSection and UnifiedResultList."
+  },
+  {
+    "id": "F-315",
+    "type": "bug",
+    "severity": "low",
+    "title": "PricingPanel currentPlan hardcoded 'free' — paying subscribers always see Free as current",
+    "detail": "src/components/Panels.jsx:190 has defaultProps currentPlan='free'. App.jsx:299 passes no currentPlan prop, so it always defaults to 'free'. Paying subscribers will see the 'Current' badge on the Free card regardless of their actual subscription tier.",
+    "path": "src/components/Panels.jsx:190",
+    "modules": [
+      "components.Panels"
+    ],
+    "status": "open",
+    "wiki": "01-Frontend/Components/_index.md#panels--pricingpanel",
+    "fix_hint": "Wire currentPlan to the actual user plan from BillingContext (once live) or from the server session. Pass the resolved plan as a prop from App.jsx."
+  },
+  {
+    "id": "F-400",
+    "type": "security",
+    "severity": "med",
+    "title": "parseBody has no body size limit — memory exhaustion on large payloads",
+    "detail": "api/_shared/parseBody.js accumulates the entire request body in a string before JSON-parsing. There is no maxBytes check. Vercel's platform-level 4.5MB limit is the only bound. Routes using parseBody (history, library, settings via checkout) can be fed large payloads within that limit without route-level rejection, wasting function memory and invocation time.",
+    "path": "api/_shared/parseBody.js:3",
+    "modules": [
+      "api.shared.parseBody",
+      "api.history",
+      "api.library",
+      "api.checkout"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
+    "fix_hint": "Add a maxBytes check: reject with 413 before accumulating more than ~64KB."
+  },
+  {
+    "id": "F-401",
+    "type": "security",
+    "severity": "low",
+    "title": "getSession loopback URL constructed from unvalidated x-forwarded-host header",
+    "detail": "api/_shared/auth.js:38 builds the loopback URL as `${protocol}://${host}/api/auth/session` where host = req.headers['x-forwarded-host'] || req.headers.host. A crafted host header could redirect this internal fetch (which carries the caller's session cookies) to an arbitrary external host. On Vercel managed infrastructure x-forwarded-host is set by the platform and cannot be caller-controlled, so this is low severity in deployment but structurally unsafe for any non-Vercel deployment.",
+    "path": "api/_shared/auth.js:38",
+    "modules": [
+      "api.shared.auth",
+      "api.shared.apiAuth"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Auth-Sessions.md#getSession",
+    "fix_hint": "Validate host against TRUSTED_ORIGINS before using it in the loopback URL, or use a hardcoded base URL from an env var."
+  },
+  {
+    "id": "F-402",
+    "type": "security",
+    "severity": "low",
+    "title": "Master API key compared with === (not timing-safe)",
+    "detail": "api/_shared/apiAuth.js:47 checks `if (master && key === master)`. String equality is not timing-safe — an attacker measuring response latency differences across many requests could theoretically enumerate the key character-by-character. Practical exploitation requires many precisely timed requests, but the master key is the highest-privilege credential in the system.",
+    "path": "api/_shared/apiAuth.js:47",
+    "modules": [
+      "api.shared.apiAuth"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Auth-Sessions.md#api-key-resolution",
+    "fix_hint": "Use crypto.timingSafeEqual(Buffer.from(key), Buffer.from(master)) — both buffers must be equal length (pad/hash first to avoid length leak)."
+  },
+  {
+    "id": "F-403",
+    "type": "security",
+    "severity": "low",
+    "title": "Rate limiter is fail-open — KV outage disables burst protection",
+    "detail": "api/_shared/ratelimit.js:26 returns {ok:true} when incrWithTtl returns null (KV unavailable). This is intentional (paid searches must not fail on KV outage) but means a KV outage or an attacker-induced KV unavailability disables the burst cap. The credit ledger remains the durable quota, but burst throughput is uncapped.",
+    "path": "api/_shared/ratelimit.js:26",
+    "modules": [
+      "api.shared.ratelimit",
+      "api.shared.kv"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Shared-Modules.md#ratelimitjs",
+    "fix_hint": "Consider a in-process LRU fallback rate limiter when KV is unavailable. Or accept the risk (credits are the real quota)."
+  },
+  {
+    "id": "F-404",
+    "type": "security",
+    "severity": "low",
+    "title": "API_KEY_PEPPER is optional — unpepped key hashes are offline brute-forceable on DB leak",
+    "detail": "api/_shared/crypto.js:69 — `const pepper = process.env.API_KEY_PEPPER || ''`. If API_KEY_PEPPER is not set, all key hashes are SHA-256(key) with a known prefix (oc_live_). A DB leak + knowledge of the key format enables offline dictionary/brute-force attacks on the short random suffix (24 bytes = 32 base64url chars, but entropy is 192 bits — brute-force is not feasible). The real risk is that without a pepper, a DB dump alone is sufficient to test candidate keys without hitting the API.",
+    "path": "api/_shared/crypto.js:69",
+    "modules": [
+      "api.shared.crypto"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Shared-Modules.md#cryptojs",
+    "fix_hint": "Set API_KEY_PEPPER to a random 32-byte hex string in Vercel env and document it as required."
+  },
+  {
+    "id": "F-405",
+    "type": "debt",
+    "severity": "low",
+    "title": "api/settings.js reads req.body directly instead of parseBody — inconsistent body handling",
+    "detail": "api/settings.js:51 accesses `req.body ?? {}` directly (relying on Vercel's automatic body parsing) while all other POST routes use parseBody() for stream-based reading. This is inconsistent — if Vercel body parsing is ever disabled (e.g., per-route config), settings POST would silently receive undefined body.",
+    "path": "api/settings.js:51",
+    "modules": [
+      "api.settings",
+      "api.shared.parseBody"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
+    "fix_hint": "Replace `req.body ?? {}` with `await parseBody(req)` for consistency."
+  },
+  {
+    "id": "F-406",
+    "type": "security",
+    "severity": "med",
+    "title": "vercel.json has no security headers — no CSP, HSTS, X-Frame-Options",
+    "detail": "vercel.json contains only two rewrite rules and no `headers` block. There are no global HTTP security headers set: no Content-Security-Policy, no Strict-Transport-Security, no X-Frame-Options, no Referrer-Policy, no Permissions-Policy. The proxy route adds X-Content-Type-Options:nosniff per response but this is not applied globally. Without CSP, XSS in any page has full document access.",
+    "path": "vercel.json:1",
+    "modules": [],
+    "status": "open",
+    "wiki": "04-Backend-API/Shared-Modules.md#health-audit",
+    "fix_hint": "Add a `headers` block in vercel.json with at minimum: Strict-Transport-Security, X-Content-Type-Options:nosniff, X-Frame-Options:DENY, Referrer-Policy:strict-origin-when-cross-origin, and a Content-Security-Policy appropriate for the SPA."
+  },
+  {
+    "id": "F-407",
+    "type": "security",
+    "severity": "med",
+    "title": "Keyed per-source routes (Europeana/DPLA/Smithsonian) are unauthenticated — quota drain risk",
+    "detail": "api/search/europeana.js, dpla.js, smithsonian.js have no auth, no rate limit, and no credit charge. Any caller with network access to the Vercel function URLs can send unlimited queries, burning the project's Europeana/DPLA/Smithsonian API quota without any cost to themselves. These URLs are discoverable from the client adapter source code.",
+    "path": "api/search/europeana.js:11",
+    "modules": [
+      "api.route.europeana",
+      "api.route.dpla",
+      "api.route.smithsonian"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
+    "fix_hint": "Add a simple origin/referer check or a lightweight auth token (e.g., require a valid session cookie, or check Origin against TRUSTED_ORIGINS). Rate-limiting via IP would also help."
+  },
+  {
+    "id": "F-408",
+    "type": "security",
+    "severity": "low",
+    "title": "BL SPARQL route injects query into SPARQL template with minimal sanitization",
+    "detail": "api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser.",
+    "path": "api/search/bl.js:15",
+    "modules": [
+      "api.route.bl"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Per-Source-Routes.md#bl---british-library-sparql",
+    "fix_hint": "Use parameterized SPARQL via the Upstash or a SPARQL-safe encoding, or at minimum strip all non-alphanumeric characters from the query before injection."
+  },
+  {
+    "id": "F-409",
+    "type": "security",
+    "severity": "low",
+    "title": "Mexicana route passes resumptionToken from query param directly into OAI-PMH URL",
+    "detail": "api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens.",
+    "path": "api/search/mexicana.js:51",
+    "modules": [
+      "api.route.mexicana"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Per-Source-Routes.md#mexicanajs---mexicana-oai-pmh",
+    "fix_hint": "Validate that resumptionToken matches a known format (alphanumeric + limited punctuation) before using it."
+  },
+  {
+    "id": "F-410",
+    "type": "security",
+    "severity": "med",
+    "title": "Proxy route does not enforce https: scheme — HTTP downgrade not blocked",
+    "detail": "api/proxy.js:61 checks only the hostname against the allowlist, not the URL scheme. A caller can pass `http://gallica.bnf.fr/...` and the proxy will forward in plaintext. The platform will likely upgrade to HTTPS for most hosts but the proxy itself provides no scheme enforcement.",
+    "path": "api/proxy.js:61",
+    "modules": [
+      "api.proxy"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
+    "fix_hint": "Add `if (targetUrl.protocol !== 'https:') return new Response('Only HTTPS targets allowed', { status: 400 });` before the allowlist check."
+  },
+  {
+    "id": "F-411",
+    "type": "security",
+    "severity": "med",
+    "title": "Proxy follows redirects without re-validating the redirect destination hostname",
+    "detail": "api/proxy.js:78 sets `redirect: 'follow'`. If an allowlisted upstream host issues an HTTP redirect to a non-allowlisted or internal host (e.g. 169.254.169.254 metadata endpoint, or an internal service), the proxy follows the redirect without re-checking the destination against ALLOWED_DOMAINS. This is a classic SSRF-via-redirect vector.",
+    "path": "api/proxy.js:78",
+    "modules": [
+      "api.proxy"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
+    "fix_hint": "Set `redirect: 'manual'`, then check the Location header against ALLOWED_DOMAINS before following, or use `redirect: 'error'` and return a 302 to the client to follow directly."
+  },
+  {
+    "id": "F-412",
+    "type": "security",
+    "severity": "low",
+    "title": "Proxy 502 error body leaks upstream error.message",
+    "detail": "api/proxy.js:103 returns `{ error: 'Proxy Execution Error', details: error.message }` where error.message can include the target URL, network error details, or internal host resolution information visible to the caller.",
+    "path": "api/proxy.js:103",
+    "modules": [
+      "api.proxy"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Proxy.md#ssrf-posture",
+    "fix_hint": "Log error.message server-side and return only a generic 'Upstream unreachable' message to the caller."
+  },
+  {
+    "id": "F-413",
+    "type": "security",
+    "severity": "low",
+    "title": "No per-user API key count limit — a user can mint unbounded keys",
+    "detail": "api/keys.js:50-59 — POST creates a new key without checking how many the user already has. Each key still spends from the user's own credit pool, so the financial impact is self-limiting. The risk is that a large number of keys creates noise in the api_keys table and makes key management harder.",
+    "path": "api/keys.js:50",
+    "modules": [
+      "api.keys"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",
+    "fix_hint": "Reject POST when the user already has N (e.g. 10) non-revoked keys."
+  },
+  {
+    "id": "F-414",
+    "type": "security",
+    "severity": "med",
+    "title": "AUTH_SECRET env var not validated at startup — absent/weak secret allows session forgery",
+    "detail": "api/auth/handler.js passes AUTH_SECRET from process.env to the Auth.js config without checking it is present or of sufficient length. If AUTH_SECRET is unset or empty, Auth.js v5 will reject it at runtime (throws on token signing), but there is no startup-time assertion that surfaces the misconfiguration early. A weak/known secret could allow session token forgery.",
+    "path": "api/auth/handler.js:21",
+    "modules": [
+      "api.auth.handler"
+    ],
+    "status": "open",
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "fix_hint": "Add a startup check: `if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) throw new Error('AUTH_SECRET must be at least 32 chars');`"
+  },
+  {
+    "id": "F-415",
+    "type": "security",
+    "severity": "low",
+    "title": "Checkout baseUrl accepts any *.vercel.app origin for post-checkout redirects",
+    "detail": "api/checkout.js:28 — `if (origin && (TRUSTED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app'))) return origin;`. The `*.vercel.app` pattern accepts any Vercel preview deployment from any account, not just OpenCITE's own. A malicious actor could create a Vercel project at `evil.vercel.app`, craft a checkout request with `Origin: https://evil.vercel.app`, and redirect users there post-checkout.",
+    "path": "api/checkout.js:28",
+    "modules": [
+      "api.checkout"
+    ],
+    "status": "open",
+    "wiki": "05-Billing/Billing-Credits.md#stripe-checkout",
+    "fix_hint": "Restrict the vercel.app check to a known project prefix: `origin.endsWith('-opencite.vercel.app') || origin.match(/^https:\\/\\/opencite.*\\.vercel\\.app$/)`."
+  },
+  {
+    "id": "F-416",
+    "type": "bug",
+    "severity": "low",
+    "title": "Webhook silently no-ops when client_reference_id absent and stripe_customer_id has no DB match",
+    "detail": "api/stripe/webhook.js:104 — resolveUserId returns null when neither client_reference_id nor a matching stripe_customer_id is found. The event is still claimed in processedEvent (no retry), but no credit/plan update occurs. This can happen if a customer was created in Stripe manually or if the DB reference was lost.",
+    "path": "api/stripe/webhook.js:104",
+    "modules": [
+      "api.stripe.webhook"
+    ],
+    "status": "open",
+    "wiki": "05-Billing/Billing-Credits.md#stripe-webhook",
+    "fix_hint": "Log a structured warning when userId is null for a handled event type so it surfaces in Vercel logs."
+  },
+  {
+    "id": "F-417",
+    "type": "security",
+    "severity": "low",
+    "title": "Webhook trusts Stripe metadata for pack/plan attribution — safe only while STRIPE_SECRET_KEY is uncompromised",
+    "detail": "api/stripe/webhook.js:117 uses obj.metadata.pack and obj.metadata.plan to determine what credits/plan to grant. Stripe metadata is only writable via the secret key, so this is safe in normal operation. If STRIPE_SECRET_KEY is compromised, an attacker could craft arbitrary checkout sessions with inflated pack/plan metadata.",
+    "path": "api/stripe/webhook.js:117",
+    "modules": [
+      "api.stripe.webhook"
+    ],
+    "status": "open",
+    "wiki": "05-Billing/Billing-Credits.md#stripe-webhook",
+    "fix_hint": "Cross-validate pack/plan from metadata against CREDIT_PACKS/PLANS before granting — reject unknown values explicitly."
+  },
+  {
+    "id": "F-500",
+    "type": "debt",
+    "severity": "low",
+    "title": "MCP SDK pinned with ^ semver — breaking minor releases allowed",
+    "detail": "@modelcontextprotocol/sdk ^1.0.0 in mcp/package.json allows any 1.x release. The MCP SDK has had breaking changes between minor versions. A future npm install could silently upgrade to an incompatible version.",
+    "path": "mcp/package.json",
+    "modules": [
+      "mcp.server"
+    ],
+    "status": "open",
+    "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
+    "fix_hint": "Pin to the exact tested version, e.g. \"@modelcontextprotocol/sdk\": \"1.0.4\". Re-test on each intentional upgrade."
+  },
+  {
+    "id": "F-501",
+    "type": "ux",
+    "severity": "low",
+    "title": "MCP non-JSON format responses return {_text} — undocumented shape for AI clients",
+    "detail": "When format=mla/apa/bibtex/ris is requested, client.js returns {_text: string} rather than a JSON object. The MCP tool description does not document this distinction. AI clients that always expect a JSON object will receive a misshapen response without a clear error.",
+    "path": "mcp/src/client.js:63",
+    "modules": [
+      "mcp.client"
+    ],
+    "status": "open",
+    "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
+    "fix_hint": "Add a note to the tool description: 'When format is not json, the response is a plain text bibliography in the _text field rather than a structured object.' Or detect at call site in server.js and surface as a separate content block."
+  },
+  {
+    "id": "F-502",
+    "type": "debt",
+    "severity": "low",
+    "title": "ApiUsage.key_id has no FK to api_keys — orphaned usage rows accumulate silently",
+    "detail": "The ApiUsage model references key_id but declares no @@relation to ApiKey. If an ApiKey row is deleted (via user delete Cascade), its ApiUsage rows remain. Over time this pollutes the analytics table with orphaned counts.",
+    "path": "prisma/schema.prisma:158",
+    "modules": [
+      "prisma.schema"
+    ],
+    "status": "open",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
+    "fix_hint": "Add a relation: keyId ApiKey @relation(fields: [key_id], references: [id], onDelete: Cascade). Add a migration."
+  },
+  {
+    "id": "F-503",
+    "type": "bug",
+    "severity": "med",
+    "title": "relevance_labels table missing from billing migration — re-provisioning will fail",
+    "detail": "prisma/schema.prisma defines the relevance_labels model but the only migration file (20260530120000_billing/migration.sql) does not create it. A fresh prisma migrate deploy will not create the table, breaking the F2 gold-set harness on a new environment.",
+    "path": "prisma/migrations/20260530120000_billing/migration.sql",
+    "modules": [
+      "prisma.schema",
+      "scripts.migrate"
+    ],
+    "status": "open",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
+    "fix_hint": "Add a second migration file (e.g. 20260531000000_relevance_labels/migration.sql) with the CREATE TABLE IF NOT EXISTS for relevance_labels, or append to the existing migration (only safe on a fresh DB)."
+  },
+  {
+    "id": "F-504",
+    "type": "debt",
+    "severity": "low",
+    "title": "Legacy useSettings.js localStorage keys use bare names — no opencite: namespace prefix",
+    "detail": "Keys europeanaKey, openAlexKey, openAlexEmail, crossrefEmail, s2Key, enabledSources, curatedJournals, viewMode are written/read without the opencite: prefix. The storage.js wrapper (used by newer code) does namespace. Bare keys risk collisions if the app is ever served on a shared origin, and mixing conventions makes future key migration harder.",
+    "path": "src/hooks/useSettings.js:29",
+    "modules": [],
+    "status": "open",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
+    "fix_hint": "Migrate to storage.js for all keys. Run a one-time migration in useSettings.js: read bare key, write namespaced key, remove bare key."
+  },
+  {
+    "id": "F-505",
+    "type": "bug",
+    "severity": "low",
+    "title": "users.total_credits is Decimal(12,4) but may be treated as float in JS arithmetic",
+    "detail": "Prisma returns Decimal values as Decimal.js objects (or strings, depending on the client version). If caller code does arithmetic with + or * rather than Decimal methods, silent precision loss occurs. Credit debit/credit paths in api/_shared/billing.js must coerce carefully.",
+    "path": "prisma/schema.prisma:33",
+    "modules": [
+      "prisma.schema"
+    ],
+    "status": "open",
+    "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
+    "fix_hint": "Audit billing.js for any plain JS arithmetic on total_credits. Prefer Prisma's atomic $increment/$decrement operations which keep the value in Postgres arithmetic."
+  },
+  {
+    "id": "F-506",
+    "type": "ux",
+    "severity": "low",
+    "title": "public/output.css is committed — stale during local dev without tailwindcss --watch",
+    "detail": "The Tailwind output is committed to the repo and served statically. During vite dev, changes to src/input.css or src/**/*.{jsx,js} are not reflected until tailwindcss CLI is also run. A developer running only `vite` will see stale styles.",
+    "path": "public/output.css",
+    "modules": [
+      "tailwind.config"
+    ],
+    "status": "open",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#css-pipeline",
+    "fix_hint": "Add a dev script: \"dev\": \"concurrently \\\"vite\\\" \\\"tailwindcss -i ./src/input.css -o ./public/output.css --watch\\\"\". Or import input.css via Vite instead of linking output.css in index.html."
+  },
+  {
+    "id": "F-507",
+    "type": "debt",
+    "severity": "med",
+    "title": "@auth/core and @auth/prisma-adapter use ^ semver — Auth.js v5 minor releases have broken adapters",
+    "detail": "@auth/core ^0.37.4 and @auth/prisma-adapter ^2.7.4 in package.json. Auth.js v5 has historically changed adapter interfaces and session shape in minor releases. An npm install on a new Vercel deployment could silently upgrade to a breaking version.",
+    "path": "package.json",
+    "modules": [
+      "package"
+    ],
+    "status": "open",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
+    "fix_hint": "Pin to exact versions. Use a lockfile (package-lock.json or yarn.lock) and commit it. Enable Dependabot for controlled upgrade PRs."
+  },
+  {
+    "id": "F-508",
+    "type": "bug",
+    "severity": "med",
+    "title": ".env.example documents DATABASE_URL/DIRECT_URL but Prisma schema reads POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING",
+    "detail": ".env.example shows DATABASE_URL and DIRECT_URL (old Supabase naming convention). prisma/schema.prisma and scripts/migrate.mjs read POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING (Vercel Postgres naming). A developer copying .env.example verbatim will get a Prisma environment variable error.",
+    "path": ".env.example",
+    "modules": [
+      "package",
+      "prisma.schema",
+      "scripts.migrate"
+    ],
+    "status": "open",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
+    "fix_hint": "Update .env.example to use POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING with appropriate comments. Add OPENCITE_MAILTO, KV_REST_API_URL, KV_REST_API_TOKEN, SETTINGS_ENCRYPTION_KEY, API_KEY_PEPPER to .env.example as they are all undocumented required vars."
+  },
+  {
+    "id": "F-509",
+    "type": "security",
+    "severity": "med",
+    "title": "API_KEY_PEPPER defaults to empty string — no startup guard for missing pepper",
+    "detail": "api/_shared/crypto.js:69 uses process.env.API_KEY_PEPPER || \"\". If the env var is not set in production, all API key hashes are computed without a pepper, reducing the hash to a bare SHA-256. An attacker who compromises the DB can rainbow-table the key hashes. There is no startup assertion that fails if the pepper is missing.",
+    "path": "api/_shared/crypto.js:69",
+    "modules": [],
+    "status": "open",
+    "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
+    "fix_hint": "Add a startup guard: if (!process.env.API_KEY_PEPPER && process.env.NODE_ENV === 'production') throw new Error('API_KEY_PEPPER must be set in production'). Or at minimum, warn loudly on startup."
+  }
+]

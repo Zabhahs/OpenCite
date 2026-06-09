@@ -1,0 +1,52 @@
+[
+  {
+    "id": "R-200",
+    "title": "scoring.js is pure shared — runs identically client and server",
+    "shared_module": "lib.scoring",
+    "client_users": ["hooks.useSearch"],
+    "server_users": ["api.search"],
+    "opportunity": "already-shared",
+    "detail": "scoreResults, applyConfidenceGate, hasContentMatch, meaningfulTerms, normalizeForMatch are all imported by both hooks.useSearch (client) and api/search.js (server). No divergence — both paths use the same code. Maintain this: do not fork scoring logic into per-side copies.",
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md"
+  },
+  {
+    "id": "R-201",
+    "title": "lib.rrf is pure shared — already used both client (3-input) and server (2-input)",
+    "shared_module": "lib.rrf",
+    "client_users": ["hooks.useSemanticRerank"],
+    "server_users": ["api.search"],
+    "opportunity": "already-shared",
+    "detail": "api/search.js imports buildNativeRanks, nativeWeight, rrfScores from lib/rrf.js and uses a two-input fusion (native + lexical) at lines 349-364. hooks.useSemanticRerank uses a three-input fusion (native + lexical + semantic) at lines 111-115. The semantic arm is the only difference and is unavailable server-side (Web Worker constraint). Both paths are correctly converged on RRF. No further work needed on the sharing front.",
+    "wiki": "03-Search-Pipeline/RRF-Fusion.md"
+  },
+  {
+    "id": "R-202",
+    "title": "Semantic rerank is inherently client-only — document the capability gap for API consumers",
+    "shared_module": "lib.semantic",
+    "client_users": ["hooks.useSemanticRerank"],
+    "server_users": [],
+    "opportunity": "already-shared",
+    "detail": "computeSemanticRanks uses the Web Worker API, which is unavailable in Vercel serverless Functions. The ~23MB MiniLM model also cannot be loaded synchronously in a serverless cold-start context. This is an accepted architectural constraint. No server reuse is possible without a separate embedding microservice. Document clearly in API docs: the /api/search endpoint does not apply semantic reranking.",
+    "wiki": "03-Search-Pipeline/Semantic-Rerank.md"
+  },
+  {
+    "id": "R-203",
+    "title": "lib.dedup is pure shared — already used both client and server",
+    "shared_module": "lib.dedup",
+    "client_users": ["hooks.useSearch"],
+    "server_users": ["api.search"],
+    "opportunity": "already-shared",
+    "detail": "Both dedupFirstWins (streaming / client) and dedupHighestScore (pooled / server) are imported and used on their respective sides. lib.groupResults (book-chapter clustering) is client-render-only and correctly has no server use. Keep the existing split.",
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md"
+  },
+  {
+    "id": "R-204",
+    "title": "lib.goldSetMetrics is NOT orphaned — used by GoldSetHarness admin component",
+    "shared_module": "lib.goldSetMetrics",
+    "client_users": ["components.admin.GoldSetHarness"],
+    "server_users": [],
+    "opportunity": "already-shared",
+    "detail": "goldSetMetrics is imported by src/components/admin/GoldSetHarness.jsx (F2 admin console feature). It is not orphaned. The regression harness is admin-gated (only visible to the email allowlist). Unit tests live in goldSetMetrics.test.js and are the only test file in the lib/ directory — they cover nDCG, MRR, recall, computeMetrics, aggregateMetrics with deterministic fixtures.",
+    "wiki": "03-Search-Pipeline/Ranking-Scoring.md"
+  }
+]

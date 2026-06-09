@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS = {
   // Any stale values in existing users' saved settings are inert (no adapter reads them).
   openAlexKey: "",
   crossrefEmail: "",
-  s2Key: "",
+  // s2Key removed v0.42 — Semantic Scholar adapter quarantined; stale saved values are inert.
   // TRANSITIONAL (v0.34): Europeana keeps a per-user key as a CLIENT FALLBACK — the
   // browser calls api.europeana.eu directly with this until the project-level
   // EUROPEANA_API_KEY env is provisioned; then it flips to backend-only like the others.

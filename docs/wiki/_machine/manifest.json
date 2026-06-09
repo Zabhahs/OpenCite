@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-09T00:34:48.422Z",
+  "counts": {
+    "modules": 152,
+    "curated": 146,
+    "edges": 291,
+    "findings": 71,
+    "reuse": 26
+  },
+  "byRuntime": {
+    "both": 35,
+    "client": 55,
+    "server": 39,
+    "shared": 7,
+    "unspecified": 6,
+    "build": 4,
+    "infra": 6
+  },
+  "byStatus": {
+    "healthy": 122,
+    "degraded": 7,
+    "buggy": 3,
+    "keyed": 8,
+    "quarantined": 4,
+    "stub": 1,
+    "dead": 1,
+    "unspecified": 6
+  },
+  "findingsBySeverity": {
+    "low": 44,
+    "med": 22,
+    "high": 5
+  },
+  "findingsByType": {
+    "dup": 3,
+    "bug": 14,
+    "debt": 11,
+    "deadcode": 8,
+    "ux": 10,
+    "perf": 8,
+    "security": 17
+  },
+  "problems": 0
+}
