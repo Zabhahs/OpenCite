@@ -45,6 +45,16 @@ export default async function handler(req) {
 
   log("MEXICANA", "start", { q: query, hasToken: !!token });
 
+  // F-409: the OAI resumptionToken is opaque but observably [alnum + limited punct].
+  // encodeURIComponent already prevents extra-param injection, but reject URL-structural
+  // chars (& ? # whitespace, <>) up front as defence-in-depth before it touches the URL.
+  if (token && !/^[\w%=+/\-.@:*]+$/.test(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid resumption token", results: [], total: 0 }),
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
   let oaiUrl;
   if (token) {
     oaiUrl = `${OAI_BASE}?verb=ListRecords&resumptionToken=${encodeURIComponent(token)}`;

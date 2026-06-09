@@ -4,6 +4,12 @@ export const config = { runtime: 'edge' };
 
 const BL_SPARQL = 'https://bnb.data.bl.uk/sparql';
 
+// F-408: the query is interpolated into a SPARQL FILTER string. Stripping only `"`
+// (the old behaviour) still let `#` comments, `\` escapes and `{}` patterns through.
+// Allowlist letters/digits (any script — keeps diacritics & CJK), spaces and a few
+// safe punctuation marks; everything else (incl. all SPARQL metacharacters) → space.
+const sparqlSafe = (q) => q.replace(/[^\p{L}\p{N} \-'.]/gu, ' ').trim();
+
 const buildSparql = (query, limit, offset) => `
 PREFIX dc:   <http://purl.org/dc/elements/1.1/>
 PREFIX dct:  <http://purl.org/dc/terms/>
@@ -12,7 +18,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?item ?title ?creator ?date ?description ?subject ?type ?lang WHERE {
   ?item dc:title ?title .
-  FILTER(CONTAINS(LCASE(STR(?title)), LCASE("${query.replace(/"/g, '')}")))
+  FILTER(CONTAINS(LCASE(STR(?title)), LCASE("${sparqlSafe(query)}")))
   OPTIONAL { ?item dc:creator ?creator }
   OPTIONAL { ?item dc:date ?date }
   OPTIONAL { ?item dc:description ?description }

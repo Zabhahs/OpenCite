@@ -24,7 +24,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_shared/prisma.js";
-import { getPack, getPlan, monthlyGrantFor, planIdForPriceId } from "../_shared/plans.js";
+import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS } from "../_shared/plans.js";
 import { applyMonthlyGrant } from "../_shared/billing.js";
 import { log } from "../_shared/log.js";
 
@@ -103,6 +103,17 @@ export default async function handler(req, res) {
   const obj = event.data.object;
   const userId = await resolveUserId(obj);
 
+  // F-416: a credit/plan event with no resolvable user is silently no-op'd below (correct
+  // — don't crash, don't guess a userId). Surface it so a lost client_reference_id /
+  // unmapped customer (e.g. a manually-created Stripe customer) is visible in the logs.
+  if (!userId && event.type !== "invoice.payment_failed") {
+    log.warn("stripe", "unresolved-user", {
+      type: event.type,
+      eventId: event.id,
+      customer: typeof obj.customer === "string" ? obj.customer : null,
+    });
+  }
+
   try {
     // Claim + side effects in ONE transaction: the unique PK on processed_events
     // dedupes (P2002 = already handled), and any failure rolls back the claim so a
@@ -114,11 +125,20 @@ export default async function handler(req, res) {
         if (obj.customer) {
           await tx.user.update({ where: { id: userId }, data: { stripe_customer_id: String(obj.customer) } });
         }
-        const pack = getPack(obj.metadata?.pack);
+        // F-417: defence-in-depth — getPack/getPlan already fall back safely on unknown
+        // inputs, but validate metadata explicitly and log anomalies. A compromised Stripe
+        // secret could otherwise mint a checkout with metadata.plan="pro" to self-grant a
+        // tier. The Stripe signature is the real boundary; this is the second line.
+        const rawPack = obj.metadata?.pack;
+        const rawPlan = obj.metadata?.plan;
+        if (rawPack && !CREDIT_PACKS[rawPack]) log.warn("stripe", "unknown-pack-metadata", { rawPack, eventId: event.id });
+        if (rawPlan && !PLANS[rawPlan]) log.warn("stripe", "unknown-plan-metadata", { rawPlan, eventId: event.id });
+
+        const pack = rawPack && CREDIT_PACKS[rawPack] ? getPack(rawPack) : null;
         if (pack) {
           await tx.user.update({ where: { id: userId }, data: { total_credits: { increment: dec(pack.credits) } } });
         }
-        const planId = obj.metadata?.plan;
+        const planId = rawPlan && PLANS[rawPlan] ? rawPlan : null;
         if (planId && getPlan(planId).subscription) {
           await tx.user.update({
             where: { id: userId },

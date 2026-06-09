@@ -8,7 +8,8 @@
 > Read `docs/wiki/09-Audit/Security.md` (threat model + ranked findings) first.
 > Cross-reference `docs/wiki/_machine/findings.json` for full `detail`/`path`/`fix_hint`.
 >
-> **Created:** 2026-06-08 · **Status:** PLANNED — not executed.
+> **Created:** 2026-06-08 · **Status:** ✅ EXECUTED 2026-06-08 (branch `feat/v0.39-security-hardening`,
+> on top of committed v0.38). Code complete + unit-verified; NOT yet deployed (see §8 deploy gate).
 > **Mode:** C (plan → approval → execute → checklist). Dense; no padding.
 
 ---
@@ -649,3 +650,56 @@ Defense-in-depth: cross-validate against the known PLANS/CREDIT_PACKS registry.
 
 *End v0.39 sprint plan. T1–T12, 18 tasks across 7 workstreams, ~14 hours estimated.
 Outcome: all 17 security audit findings closed; no new infra; no DB migrations.*
+
+---
+
+## 8. Execution actuals (2026-06-08)
+
+All 18 findings (F-400–F-417 minus F-405, plus F-509) → `status: fixed` in `findings.json`
+(`fixed_in: v0.39`). Build green (`vite build`), all changed `api/` files `node --check` clean,
+31/31 helper smoke tests pass, machine map `--check` consistent. **Two plan defects were found
+on-branch and corrected** — the plan's designs would have broken production:
+
+1. **F-407 (T2) — Origin-only check would 403 all legitimate browser search.** The Europeana/DPLA/
+   Smithsonian adapters call `fetch('/api/search/<src>?q=...')` as a **same-origin GET**, and
+   browsers **omit the `Origin` header** on those. The planned `req.headers.origin ∈ TRUSTED`
+   check would reject every real request. **Implemented instead:** `requireInternalOrigin` accepts
+   `Sec-Fetch-Site: same-origin|same-site` (a forbidden, browser-set header — primary signal),
+   falling back to trusted `Origin` then `Referer`. Direct curl/cross-site (none of those) → 403.
+   Documented as a *soft* quota guard (Origin/Referer are forgeable), not a hard auth boundary.
+
+2. **F-406 (T1) — the planned CSP would break federated search + real deps.** OpenCITE's browser
+   adapters fetch **dozens of arbitrary scholarly hosts** directly, so `connect-src 'self' …stripe
+   …supabase` would kill DOAJ/OpenAlex/Crossref/etc. The bundle also loads **Google Fonts**,
+   the **Ko-fi widget** (`storage.ko-fi.com` script + `ko-fi.com` iframe), and the **Transformers.js
+   worker** (`cdn.jsdelivr.net` + ONNX **WASM** → needs `'wasm-unsafe-eval'` + `worker-src blob:`).
+   **Implemented instead:** low-risk headers (HSTS, nosniff, X-Frame-Options:DENY, Referrer-Policy,
+   Permissions-Policy) **enforced**; a corrected CSP (`connect-src 'self' https:` + the above
+   allowances) shipped as **`Content-Security-Policy-Report-Only`** so it can't break prod before
+   monitoring. Flip the header name to `Content-Security-Policy` to enforce.
+
+Other deviations / notes:
+- **F-415** done in the SSOT: `OWN_VERCEL_HOST_RE` + `isTrustedOrigin`/`isTrustedHost` live in
+  `auth.js`; `setCorsHeaders`, `checkout.baseUrl`, and `requireInternalOrigin` all reuse them
+  (DRY) — replaces every loose `endsWith('.vercel.app')`.
+- **F-401** validation also accepts our own Vercel preview hosts + localhost, so sign-in on
+  preview/dev does not regress (plan's `selfHost()` would have routed preview loopback to prod).
+- **F-408** uses a Unicode-aware allowlist `[^\p{L}\p{N} \-'.]` (keeps diacritics/CJK) rather than
+  the plan's ASCII-only one, which would have degraded multilingual BL search.
+- **F-400** `parseBody(req, res)` now sends the 413 itself and resolves `null`; all 5 call sites
+  (checkout, history ×2, library ×2) guard with `if (!body) return;`.
+- **T9 (S2 protocol)** — N/A (Semantic Scholar quarantined in v0.42).
+- **`.env.example`** expanded (free F-508 fix): documented `API_KEY_PEPPER`, `SETTINGS_ENCRYPTION_KEY`,
+  `AUTH_URL`, KV pair, backend source keys, Stripe price ids, admin allowlist.
+
+### Deploy gate (do BEFORE merging/deploying to prod or preview)
+- [ ] **`API_KEY_PEPPER` set in Vercel prod (and preview) env** — `crypto.js` now throws at module
+      load if unset in production (F-509). Must be a stable `openssl rand -hex 32`; **never rotate**
+      (invalidates every issued key hash). Vercel sets `NODE_ENV=production` on preview too.
+- [ ] **`AUTH_SECRET` ≥ 32 chars** — `auth/handler.js` throws at load if absent/short (F-414).
+      The existing prod secret (`openssl rand -base64 32` → 44 chars) already satisfies this.
+- [ ] **Post-deploy:** `curl -I` the preview → confirm the 5 enforced headers; run a full
+      search/sign-in/checkout flow with DevTools open → confirm **zero** CSP Report-Only violations,
+      then flip `Content-Security-Policy-Report-Only` → `Content-Security-Policy`.
+- [ ] Confirm Europeana/DPLA/Smithsonian still return results in-browser (requireInternalOrigin),
+      and a direct `curl /api/search/europeana?q=test` (no browser headers) → 403.

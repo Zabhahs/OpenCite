@@ -16,6 +16,15 @@ import { TRUSTED_ORIGINS } from "../_shared/auth.js";
 
 // ─── Auth config ─────────────────────────────────────────────────────────────
 
+// F-414: fail at module load (deploy time) rather than at the first token-signing
+// operation. An absent/short secret is a session-forgery surface — make it fatal and
+// loud instead of a silent runtime 500. (openssl rand -base64 32 → 44 chars.)
+if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
+  throw new Error(
+    "[auth] AUTH_SECRET must be set and at least 32 characters. Generate with: openssl rand -base64 32"
+  );
+}
+
 const authConfig = {
   adapter: PrismaAdapter(prisma),
   secret: process.env.AUTH_SECRET,

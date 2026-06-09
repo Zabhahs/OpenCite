@@ -35,8 +35,9 @@ export default async function handler(req, res) {
 
   // ── POST — add entry ────────────────────────────────────────────────────────
   if (req.method === "POST") {
-    const { query } = await parseBody(req);
-    const q = (query ?? "").trim();
+    const body = await parseBody(req, res);
+    if (!body) return; // 413 already sent (F-400)
+    const q = (body.query ?? "").trim();
     if (!q) return res.status(400).json({ error: "Missing query" });
 
     await prisma.search_history.upsert({
@@ -64,7 +65,9 @@ export default async function handler(req, res) {
 
   // ── DELETE — remove one or clear all ───────────────────────────────────────
   if (req.method === "DELETE") {
-    const { query, clear } = await parseBody(req);
+    const body = await parseBody(req, res);
+    if (!body) return; // 413 already sent (F-400)
+    const { query, clear } = body;
 
     if (clear) {
       await prisma.search_history.deleteMany({ where: { user_id: userId } });

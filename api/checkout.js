@@ -17,16 +17,18 @@
 // Requires STRIPE_SECRET_KEY + the relevant STRIPE_PRICE_* envs; returns 503 if unset.
 
 import { prisma } from "./_shared/prisma.js";
-import { setCorsHeaders, getSession, TRUSTED_ORIGINS } from "./_shared/auth.js";
+import { setCorsHeaders, getSession, TRUSTED_ORIGINS, isTrustedOrigin } from "./_shared/auth.js";
 import { parseBody } from "./_shared/parseBody.js";
 import { getPlan, getPack, stripePriceId, PLANS, CREDIT_PACKS } from "./_shared/plans.js";
 import { log } from "./_shared/log.js";
 
 // Resolve a safe absolute base URL for success/cancel redirects.
+// F-415: only our own origins (prod domains + opencite*.vercel.app previews) — the old
+// endsWith(".vercel.app") accepted any Vercel project (e.g. evil.vercel.app) as a
+// post-checkout redirect target.
 function baseUrl(req) {
   const origin = req.headers.origin;
-  if (origin && (TRUSTED_ORIGINS.includes(origin) || origin.endsWith(".vercel.app"))) return origin;
-  return TRUSTED_ORIGINS[0];
+  return isTrustedOrigin(origin) ? origin : TRUSTED_ORIGINS[0];
 }
 
 export default async function handler(req, res) {
@@ -41,7 +43,8 @@ export default async function handler(req, res) {
   const user = await getSession(req);
   if (!user) return res.status(401).json({ error: "Please sign in to continue" });
 
-  const body = await parseBody(req);
+  const body = await parseBody(req, res);
+  if (!body) return; // 413 already sent (F-400)
   const wantPlan = typeof body.plan === "string" ? body.plan : null;
   const wantPack = typeof body.pack === "string" ? body.pack : null;
   if (!wantPlan && !wantPack) return res.status(400).json({ error: "Specify a plan or pack" });

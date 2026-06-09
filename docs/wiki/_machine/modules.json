@@ -1135,7 +1135,7 @@
   {
     "id": "api.auth.handler",
     "path": "api/auth/handler.js",
-    "loc": 136,
+    "loc": 145,
     "deps": [
       "api.shared.auth",
       "api.shared.prisma"
@@ -1162,7 +1162,7 @@
   {
     "id": "api.checkout",
     "path": "api/checkout.js",
-    "loc": 118,
+    "loc": 121,
     "deps": [
       "api.shared.auth",
       "api.shared.log",
@@ -1191,7 +1191,7 @@
   {
     "id": "api.history",
     "path": "api/history.js",
-    "loc": 84,
+    "loc": 87,
     "deps": [
       "api.shared.auth",
       "api.shared.parseBody",
@@ -1215,7 +1215,7 @@
   {
     "id": "api.keys",
     "path": "api/keys.js",
-    "loc": 76,
+    "loc": 83,
     "deps": [
       "api.shared.auth",
       "api.shared.crypto",
@@ -1243,7 +1243,7 @@
   {
     "id": "api.library",
     "path": "api/library.js",
-    "loc": 93,
+    "loc": 97,
     "deps": [
       "api.shared.auth",
       "api.shared.parseBody",
@@ -1267,7 +1267,7 @@
   {
     "id": "api.proxy",
     "path": "api/proxy.js",
-    "loc": 108,
+    "loc": 139,
     "deps": [
       "api.shared.log"
     ],
@@ -1320,7 +1320,7 @@
   {
     "id": "api.route.bl",
     "path": "api/search/bl.js",
-    "loc": 127,
+    "loc": 133,
     "deps": [
       "api.shared.log"
     ],
@@ -1347,9 +1347,10 @@
   {
     "id": "api.route.dpla",
     "path": "api/search/dpla.js",
-    "loc": 23,
+    "loc": 25,
     "deps": [
       "adapters.extensions.dpla",
+      "api.shared.requireInternalOrigin",
       "api.shared.serverKeys"
     ],
     "kind": "api-route",
@@ -1368,14 +1369,15 @@
       "browser-shim",
       "keyed"
     ],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn DPLA API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.route.europeana",
     "path": "api/search/europeana.js",
-    "loc": 23,
+    "loc": 25,
     "deps": [
       "adapters.extensions.europeana",
+      "api.shared.requireInternalOrigin",
       "api.shared.serverKeys"
     ],
     "kind": "api-route",
@@ -1394,7 +1396,7 @@
       "browser-shim",
       "keyed"
     ],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Europeana API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.route.gallica",
@@ -1425,7 +1427,7 @@
   {
     "id": "api.route.mexicana",
     "path": "api/search/mexicana.js",
-    "loc": 138,
+    "loc": 148,
     "deps": [
       "api.shared.log"
     ],
@@ -1502,9 +1504,10 @@
   {
     "id": "api.route.smithsonian",
     "path": "api/search/smithsonian.js",
-    "loc": 23,
+    "loc": 25,
     "deps": [
       "adapters.extensions.smithsonian",
+      "api.shared.requireInternalOrigin",
       "api.shared.serverKeys"
     ],
     "kind": "api-route",
@@ -1523,7 +1526,7 @@
       "browser-shim",
       "keyed"
     ],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Smithsonian API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.search",
@@ -1635,7 +1638,7 @@
   {
     "id": "api.shared.apiAuth",
     "path": "api/_shared/apiAuth.js",
-    "loc": 93,
+    "loc": 103,
     "deps": [
       "api.shared.auth",
       "api.shared.crypto",
@@ -1697,19 +1700,23 @@
   {
     "id": "api.shared.auth",
     "path": "api/_shared/auth.js",
-    "loc": 49,
+    "loc": 75,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
-    "purpose": "TRUSTED_ORIGINS SSOT, origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
+    "purpose": "TRUSTED_ORIGINS SSOT, the OWN_VERCEL_HOST_RE / isTrustedOrigin / isTrustedHost trust helpers (reused by checkout + requireInternalOrigin), origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
     "exports": [
       "TRUSTED_ORIGINS",
+      "OWN_VERCEL_HOST_RE",
+      "isTrustedOrigin",
+      "isTrustedHost",
       "setCorsHeaders",
       "getSession"
     ],
     "status": "healthy",
     "findings": [
-      "F-401"
+      "F-401",
+      "F-415"
     ],
     "wiki": "04-Backend-API/Auth-Sessions.md#getSession",
     "tags": [
@@ -1717,7 +1724,7 @@
       "cors",
       "session"
     ],
-    "notes": "getSession constructs loopback URL from x-forwarded-host without domain validation — safe on Vercel managed infra only."
+    "notes": "v0.39: getSession now pins the loopback host via isTrustedHost (F-401 fixed); setCorsHeaders + checkout.baseUrl use isTrustedOrigin, replacing the loose endsWith('.vercel.app') that trusted any Vercel project (F-415 fixed). OWN_VERCEL_HOST_RE matches opencite*.vercel.app previews only."
   },
   {
     "id": "api.shared.billing",
@@ -1802,7 +1809,7 @@
   {
     "id": "api.shared.crypto",
     "path": "api/_shared/crypto.js",
-    "loc": 72,
+    "loc": 85,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1904,7 +1911,7 @@
   {
     "id": "api.shared.parseBody",
     "path": "api/_shared/parseBody.js",
-    "loc": 10,
+    "loc": 39,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2004,7 +2011,7 @@
   {
     "id": "api.shared.ratelimit",
     "path": "api/_shared/ratelimit.js",
-    "loc": 36,
+    "loc": 55,
     "deps": [
       "api.shared.kv"
     ],
@@ -2025,6 +2032,32 @@
       "burst"
     ],
     "notes": "Admin plan.rateLimit.max===0 bypasses check without KV access. KV unavailable → fail-open (allow)."
+  },
+  {
+    "id": "api.shared.requireInternalOrigin",
+    "path": "api/_shared/requireInternalOrigin.js",
+    "loc": 46,
+    "deps": [
+      "api.shared.auth"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Internal-origin guard (v0.39) for the keyed browser-shim routes: accepts Sec-Fetch-Site same-origin/same-site or a trusted Origin/Referer; 403s direct/cross-site callers so the discoverable URLs can't burn paid upstream quota (F-407).",
+    "exports": [
+      "requireInternalOrigin"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-407"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
+    "tags": [
+      "auth",
+      "origin",
+      "quota",
+      "security"
+    ],
+    "notes": "Browsers omit Origin on same-origin GET, so an Origin-only check would 403 legitimate search; Sec-Fetch-Site (a forbidden, browser-set header) is the primary signal. Soft quota guard, not a hard auth boundary — Origin/Referer are forgeable by non-browser clients."
   },
   {
     "id": "api.shared.serverKeys",
@@ -2050,7 +2083,7 @@
   {
     "id": "api.stripe.webhook",
     "path": "api/stripe/webhook.js",
-    "loc": 192,
+    "loc": 212,
     "deps": [
       "api.shared.billing",
       "api.shared.log",
@@ -3697,7 +3730,7 @@
   {
     "id": "vercel",
     "path": "vercel.json",
-    "loc": 13,
+    "loc": 26,
     "deps": [],
     "kind": "config",
     "runtime": "infra",

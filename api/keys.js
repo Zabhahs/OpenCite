@@ -48,6 +48,13 @@ export default async function handler(req, res) {
 
   // ── POST — mint a new key ────────────────────────────────────────────────────
   if (req.method === "POST") {
+    // F-413: cap active keys per user. Financially self-limiting (a caller only drains
+    // their own credits) but unbounded minting pollutes the table and noises up audits.
+    const active = await prisma.apiKey.count({ where: { user_id: userId, revoked: false } });
+    if (active >= 10) {
+      return res.status(422).json({ error: "Key limit reached (10 active keys). Revoke an existing key first." });
+    }
+
     // Plan defaults to free; a paid plan is assigned only after a credit purchase
     // flow (not selectable client-side — entitlement is server-authoritative).
     const planId = DEFAULT_PLAN_ID;

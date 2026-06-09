@@ -1,8 +1,8 @@
 ---
 machine_ids: []
-findings: [F-400, F-401, F-402, F-403, F-404, F-406, F-407, F-408, F-409, F-410, F-411, F-412, F-413, F-414, F-415, F-417, F-509]
+findings: [F-400, F-401, F-402, F-403, F-404, F-406, F-407, F-408, F-409, F-410, F-411, F-412, F-413, F-414, F-415, F-416, F-417, F-509]
 runtime: infra
-status: mixed
+status: resolved
 tags: [audit, security]
 ---
 <!-- AUTO-GENERATED from docs/wiki/09-Audit/Security.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
@@ -12,6 +12,15 @@ tags: [audit, security]
 
 > **One-line role.** Every security finding, ranked by exploitability × blast-radius. Good news first:
 > **billing has no bypass** (see [What-We-Did-Well](What-We-Did-Well.md)); these are hardening gaps, not an open vault.
+
+> **✅ RESOLVED in v0.39** (see `sprint_log_v0_39.md`). All 18 findings below are `status: fixed`
+> in `findings.json`. Two have a deliberate staged/partial posture: **F-406** — security headers
+> are enforced, but CSP ships **Report-Only** first (this is a federated meta-search: browser
+> adapters fetch arbitrary scholarly hosts, so `connect-src 'self' https:`; flip the header to
+> `Content-Security-Policy` to enforce after violation monitoring). **F-403** — kept fail-open for
+> billing (credits are the durable quota) with an added in-process burst fallback during KV outage.
+> **Deploy gate:** `API_KEY_PEPPER` (F-509) and `AUTH_SECRET`≥32 (F-414) now throw at module load
+> if unset in production — confirm both are set in Vercel before deploying.
 
 ## 🟠 Fix-first (med, high blast radius)
 

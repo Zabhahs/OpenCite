@@ -47,6 +47,19 @@ export function decrypt(blob) {
 
 // ── (2) One-way API-key hashing — KEYS ONLY ────────────────────────────────────
 
+// F-404/F-509: fail fast in production if the pepper is missing. Without it, key
+// hashes are bare sha256(key) — a DB leak makes them offline-brute-forceable against
+// the known `oc_live_<...>` format. This throws at module load (deploy time) rather
+// than silently degrading to unpepped hashes at runtime.
+// HARD CONSTRAINT: API_KEY_PEPPER must be set in prod BEFORE this deploys, and must
+// NEVER change once keys are issued — rotating it invalidates every stored key_hash.
+if (process.env.NODE_ENV === "production" && !process.env.API_KEY_PEPPER) {
+  throw new Error(
+    "[crypto] API_KEY_PEPPER must be set in production. Generate with: openssl rand -hex 32 " +
+    "(must not change after keys are issued)."
+  );
+}
+
 // Public, human-recognizable prefix. Live keys: oc_live_<random>.
 export const API_KEY_LIVE_PREFIX = "oc_live_";
 // Characters kept for display (the bit shown in dashboards / logs). Safe because

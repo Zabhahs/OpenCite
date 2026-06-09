@@ -56,7 +56,9 @@ export default async function handler(req, res) {
 
   // ── POST — save item ────────────────────────────────────────────────────────
   if (req.method === "POST") {
-    const { result } = await parseBody(req);
+    const body = await parseBody(req, res);
+    if (!body) return; // 413 already sent (F-400)
+    const { result } = body;
     if (!result) return res.status(400).json({ error: "Missing result" });
 
     const key = libraryKey(result);
@@ -73,7 +75,9 @@ export default async function handler(req, res) {
 
   // ── DELETE — remove one or clear all ───────────────────────────────────────
   if (req.method === "DELETE") {
-    const { library_key, clear } = await parseBody(req);
+    const body = await parseBody(req, res);
+    if (!body) return; // 413 already sent (F-400)
+    const { library_key, clear } = body;
 
     if (clear) {
       await prisma.library_items.deleteMany({ where: { user_id: userId } });

@@ -630,11 +630,19 @@
     ],
     [
       "api.route.dpla",
+      "api.shared.requireInternalOrigin"
+    ],
+    [
+      "api.route.dpla",
       "api.shared.serverKeys"
     ],
     [
       "api.route.europeana",
       "adapters.extensions.europeana"
+    ],
+    [
+      "api.route.europeana",
+      "api.shared.requireInternalOrigin"
     ],
     [
       "api.route.europeana",
@@ -659,6 +667,10 @@
     [
       "api.route.smithsonian",
       "adapters.extensions.smithsonian"
+    ],
+    [
+      "api.route.smithsonian",
+      "api.shared.requireInternalOrigin"
     ],
     [
       "api.route.smithsonian",
@@ -787,6 +799,10 @@
     [
       "api.shared.ratelimit",
       "api.shared.kv"
+    ],
+    [
+      "api.shared.requireInternalOrigin",
+      "api.shared.auth"
     ],
     [
       "api.stripe.webhook",
@@ -1423,7 +1439,8 @@
       "api.keys",
       "api.library",
       "api.settings",
-      "api.shared.apiAuth"
+      "api.shared.apiAuth",
+      "api.shared.requireInternalOrigin"
     ],
     "api.shared.prisma": [
       "api.auth.handler",
@@ -1464,6 +1481,11 @@
       "api.keys",
       "api.settings",
       "api.shared.apiAuth"
+    ],
+    "api.shared.requireInternalOrigin": [
+      "api.route.dpla",
+      "api.route.europeana",
+      "api.route.smithsonian"
     ],
     "api.shared.serverKeys": [
       "api.route.dpla",

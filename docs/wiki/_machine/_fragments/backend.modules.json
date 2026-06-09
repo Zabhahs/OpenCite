@@ -49,15 +49,30 @@
     "path": "api/_shared/auth.js",
     "kind": "api-shared",
     "runtime": "server",
-    "loc": 48,
-    "purpose": "TRUSTED_ORIGINS SSOT, origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
-    "exports": ["TRUSTED_ORIGINS", "setCorsHeaders", "getSession"],
+    "loc": 74,
+    "purpose": "TRUSTED_ORIGINS SSOT, the OWN_VERCEL_HOST_RE / isTrustedOrigin / isTrustedHost trust helpers (reused by checkout + requireInternalOrigin), origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
+    "exports": ["TRUSTED_ORIGINS", "OWN_VERCEL_HOST_RE", "isTrustedOrigin", "isTrustedHost", "setCorsHeaders", "getSession"],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-401"],
+    "findings": ["F-401", "F-415"],
     "wiki": "04-Backend-API/Auth-Sessions.md#getSession",
     "tags": ["auth", "cors", "session"],
-    "notes": "getSession constructs loopback URL from x-forwarded-host without domain validation — safe on Vercel managed infra only."
+    "notes": "v0.39: getSession now pins the loopback host via isTrustedHost (F-401 fixed); setCorsHeaders + checkout.baseUrl use isTrustedOrigin, replacing the loose endsWith('.vercel.app') that trusted any Vercel project (F-415 fixed). OWN_VERCEL_HOST_RE matches opencite*.vercel.app previews only."
+  },
+  {
+    "id": "api.shared.requireInternalOrigin",
+    "path": "api/_shared/requireInternalOrigin.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "loc": 45,
+    "purpose": "Internal-origin guard (v0.39) for the keyed browser-shim routes: accepts Sec-Fetch-Site same-origin/same-site or a trusted Origin/Referer; 403s direct/cross-site callers so the discoverable URLs can't burn paid upstream quota (F-407).",
+    "exports": ["requireInternalOrigin"],
+    "deps": ["api.shared.auth"],
+    "status": "healthy",
+    "findings": ["F-407"],
+    "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
+    "tags": ["auth", "origin", "quota", "security"],
+    "notes": "Browsers omit Origin on same-origin GET, so an Origin-only check would 403 legitimate search; Sec-Fetch-Site (a forbidden, browser-set header) is the primary signal. Soft quota guard, not a hard auth boundary — Origin/Referer are forgeable by non-browser clients."
   },
   {
     "id": "api.shared.billing",
@@ -397,12 +412,12 @@
     "loc": 22,
     "purpose": "Browser-shim: proxies Europeana queries from the client adapter, injecting the backend API key from env.",
     "exports": ["default"],
-    "deps": ["adapters.extensions.europeana", "api.shared.serverKeys"],
+    "deps": ["adapters.extensions.europeana", "api.shared.serverKeys", "api.shared.requireInternalOrigin"],
     "status": "keyed",
     "findings": ["F-407"],
     "wiki": "04-Backend-API/Per-Source-Routes.md",
     "tags": ["per-source", "browser-shim", "keyed"],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Europeana API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.route.dpla",
@@ -412,12 +427,12 @@
     "loc": 22,
     "purpose": "Browser-shim: proxies DPLA queries from the client adapter, injecting the backend API key from env.",
     "exports": ["default"],
-    "deps": ["adapters.extensions.dpla", "api.shared.serverKeys"],
+    "deps": ["adapters.extensions.dpla", "api.shared.serverKeys", "api.shared.requireInternalOrigin"],
     "status": "keyed",
     "findings": ["F-407"],
     "wiki": "04-Backend-API/Per-Source-Routes.md",
     "tags": ["per-source", "browser-shim", "keyed"],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn DPLA API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.route.smithsonian",
@@ -427,12 +442,12 @@
     "loc": 22,
     "purpose": "Browser-shim: proxies Smithsonian queries from the client adapter, injecting the backend API key from env.",
     "exports": ["default"],
-    "deps": ["adapters.extensions.smithsonian", "api.shared.serverKeys"],
+    "deps": ["adapters.extensions.smithsonian", "api.shared.serverKeys", "api.shared.requireInternalOrigin"],
     "status": "keyed",
     "findings": ["F-407"],
     "wiki": "04-Backend-API/Per-Source-Routes.md",
     "tags": ["per-source", "browser-shim", "keyed"],
-    "notes": "No auth, no rate limit. Unauthenticated callers can use this to burn Smithsonian API quota."
+    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
   },
   {
     "id": "api.route.bl",

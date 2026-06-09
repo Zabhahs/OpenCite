@@ -15,12 +15,22 @@
 // it is NEVER read from the request. search.js gates the origin-revealing debug=1
 // mode strictly on this flag, so an ordinary caller can never pierce origin-blindness.
 
+import { timingSafeEqual, createHash } from "crypto";
 import { prisma } from "./prisma.js";
 import { hashApiKey } from "./crypto.js";
 import { getPlan } from "./plans.js";
 import { getSession } from "./auth.js";
 
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+// F-402: constant-time compare for the highest-privilege credential (master key).
+// Hashing both sides to a fixed 32 bytes equalises length (timingSafeEqual throws on
+// unequal lengths and would itself leak length) before the constant-time compare.
+function timingSafeCompare(a, b) {
+  const ha = createHash("sha256").update(String(a)).digest();
+  const hb = createHash("sha256").update(String(b)).digest();
+  return timingSafeEqual(ha, hb);
+}
 
 // Server-side admin allowlist. Reads the SAME VITE_ADMIN_EMAILS that gates the client
 // admin console UI (src/lib/admin.js) — serverless functions can read VITE_-prefixed env
@@ -44,7 +54,7 @@ export async function resolveApiKey(req) {
   // NOTE: getPlan("admin") (not the old "paid", which fell back to free → the master
   // key was silently metered + core-only). The `admin` plan zeroes cost + rate cap.
   const master = process.env.OPENCITE_API_KEY;
-  if (master && key === master) {
+  if (master && timingSafeCompare(key, master)) {
     return { userId: null, keyId: "master", plan: getPlan("admin"), master: true, admin: true };
   }
 

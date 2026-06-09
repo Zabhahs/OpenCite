@@ -7,8 +7,10 @@
 // never 500s a browser search. The key is NEVER echoed in the response or error.
 import { SMITHSONIAN_ADAPTER } from "../../src/adapters/extensions/smithsonian.js";
 import { serverInjectedKeys } from "../_shared/serverKeys.js";
+import { requireInternalOrigin } from "../_shared/requireInternalOrigin.js";
 
 export default async function handler(req, res) {
+  if (!requireInternalOrigin(req, res)) return; // F-407: same-origin browser callers only
   const q = (Array.isArray(req.query?.q) ? req.query.q[0] : req.query?.q) || "";
   const offset = Number(Array.isArray(req.query?.offset) ? req.query.offset[0] : req.query?.offset) || 0;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
