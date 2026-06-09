@@ -9,6 +9,10 @@ tags: [adapter, health, matrix]
 # Adapter Health Matrix
 
 > At-a-glance status for all 34 registered adapters + 1 deregistered. Source of truth: source code, not README.
+>
+> **For capability/metadata-richness TIER ranking** (what each upstream API *can* do, scored S–D from
+> live probing) see [[02-Adapters/Adapter-Capability-Tiers]] and the per-API dossiers in
+> `capability-dossiers/`. This page = current health; that page = true capability envelope.
 
 **Legend:** 🟢 healthy · 🟡 degraded/thin · 🔴 dead · 🔑 keyed (drops when key absent) · 🚫 deregistered
 
