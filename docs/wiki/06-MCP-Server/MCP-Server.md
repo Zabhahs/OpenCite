@@ -119,8 +119,8 @@ npm run print-schemas                     # print MCP + OpenAI/Anthropic + OpenA
 
 - **Verdict:** healthy — clean separation, DRY contract, good key hygiene.
 - **Findings:**
-  - [F-500] `@modelcontextprotocol/sdk ^1.0.0` — semver range allows any `1.x` release; the SDK has had breaking changes between minor versions. Pin to a tested exact version.
-  - [F-501] Non-JSON format responses return `{_text: string}` with no schema documentation; AI clients that expect a JSON object will silently receive `"[object Object]"` or similar. A format guard or explicit documentation of the `_text` shape is missing from the MCP tool description.
+  - [F-500] `@modelcontextprotocol/sdk ^1.0.0` — semver range allows any `1.x` release; the SDK has had breaking changes between minor versions. Pin to a tested exact version. **Fixed v0.40:** pinned to exact `1.29.0` (registry-verified latest 1.x — what `^1.0.0` already resolved to; only stable core import paths are used). Dependabot watches `/mcp` for controlled upgrades. Committing `mcp/package-lock.json` is an optional contributor-reproducibility follow-up (the package is standalone, not in the Vercel build).
+  - [F-501] Non-JSON format responses return `{_text: string}` with no schema documentation; AI clients that expect a JSON object will silently receive `"[object Object]"` or similar. A format guard or explicit documentation of the `_text` shape is missing from the MCP tool description. **Fixed v0.40:** `server.js` now surfaces `body._text` as a native MCP `text` content block (idiomatic plain-text shape) instead of a JSON-wrapped envelope; the surprising `{_text}` object no longer reaches the client.
 - **Reuse:** contract is genuinely DRY — `api/_shared/apiContract.js` is the single SSOT; `mcp/src/contract.js` re-exports it without copy-paste. See [[09-Audit/Duplication-and-Reuse#r-500]].
 - **Smells:** `TOOL_PARAM_MAP` in `contract.js:27` is a hand-maintained map; if a new REST param is added to `PARAMS` it is silently omitted from the tool unless the map is updated. There is no lint/test that would catch the omission.
 

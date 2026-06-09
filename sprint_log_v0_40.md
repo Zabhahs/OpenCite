@@ -8,7 +8,7 @@
 > Read `sprint_log_v0_36.md` (house style + pipeline context) first.
 > Cross-refs: [[07-Data-Layer/Data-Layer]] · [[08-Build-Deploy/Build-Deploy]]
 >
-> **Created:** 2026-06-08 · **Status:** PLANNED — not executed.
+> **Created:** 2026-06-08 · **Status:** EXECUTED 2026-06-09 (not yet deployed) — see §8 Actuals.
 > **Mode:** C (plan → approval → execute → checklist). Dense, no padding; precise execution.
 
 ---
@@ -683,6 +683,64 @@ any second developer.
 
 ---
 
-*End v0.40 sprint plan. T1–T9 this sprint, ~8 h total. No pipeline changes; no user-facing
-changes. Primary outcomes: a fresh deploy works end-to-end, DB schema is complete and
-consistent, critical deps are pinned, localStorage namespace is clean.*
+---
+
+## 8. Actuals (executed 2026-06-09)
+
+Read the live source first — the repo had drifted from the plan's assumptions. Notable
+corrections vs the plan:
+
+- **T1 (F-508):** `.env.example` had already grown most of the "8 undocumented vars"
+  (SETTINGS_ENCRYPTION_KEY, API_KEY_PEPPER, KV pair, DPLA/SMITHSONIAN/EUROPEANA, Stripe,
+  OPENCITE_API_KEY, VITE_ADMIN_EMAILS, OPENCITE_MAILTO — all present). The **only** real
+  bug left was the DB var-name mismatch. Fixed the Prisma block to
+  `POSTGRES_PRISMA_URL`/`POSTGRES_URL_NON_POOLING` (what `schema.prisma:12-13` +
+  `migrate.mjs` actually read). Verified by grepping every `process.env.*` in `api/` —
+  all documented. The Phase-4 placeholder block was left in (harmless, clearly labelled).
+- **T2 (F-503):** new `20260608000000_relevance_labels/migration.sql`. `migrate.mjs` now
+  `readdirSync`-iterates all `^\d{14}_` migration dirs in order, in both the deploy path
+  and the P3005 fallback (apply-all-then-baseline-all, still only baselines if every SQL
+  applied — preserves the v0.30 OAuth-incident guard + always-exit-0).
+- **T3 (F-502):** new `20260608000100_api_usage_fk/migration.sql` — nullable `key_id`,
+  R4 orphan-null preflight, FK `ON DELETE SET NULL`. Schema: `key_id String?` + the
+  `key`/`usage` relation. (`prisma generate` NOT run locally — operating rules; schema
+  eyeballed, types compatible: `api_keys.id` and `api_usage.key_id` are both TEXT.)
+- **T4 (F-505):** audit found ALL ledger writes already atomic (incl. `stripe/webhook.js`
+  pack top-up). Only `round4` uses plain JS floats (never written back). Documented with
+  a comment. No code change to ledger primitives.
+- **T5 (F-507):** lock-resolved versions are **`@auth/core 0.37.4`** + **`@auth/prisma-adapter
+  2.11.2`** — the plan's guessed `0.41.2` was wrong. Pinned to the lock values (no-op for
+  `npm ci`, so no install needed). Added `.github/dependabot.yml` (@auth/* + MCP SDK).
+- **T8 (F-310/F-504):** F-504 was **already done** — `useSettings.js` routes everything
+  through `storage.js` (verified no stray bare access outside `migrateLegacyKeys`).
+  F-310 fixed: `GoldSetHarness.jsx` now uses `storage.get/set` + a one-time mount
+  migration of the legacy bare keys.
+- **T9 (F-501):** chose the plan's T9.3 enhancement over T9.2. The tool description is
+  `API_CONTRACT.description` (shared REST/OpenAPI SSOT) — documenting an MCP-client-only
+  `_text` artifact there would violate DRY. Instead `server.js` now surfaces `body._text`
+  as a native MCP text block, so the surprising envelope never reaches the client.
+
+### Deviations requiring Shahbaz (the "no `npm install`" rule)
+
+- **T6 (F-500) — DONE.** Pinned `@modelcontextprotocol/sdk` to exact **`1.29.0`** —
+  verified against the npm registry (a web fetch, not `npm install`) as the latest 1.x,
+  i.e. exactly what `^1.0.0` already resolves to; the server only imports stable core
+  paths (`/server/index.js`, `/server/stdio.js`, `/types.js`) present across all 1.x.
+  Dependabot watches `/mcp`. **Optional follow-up (not required to close F-500):** run
+  `npm install` in `mcp/` once to commit `mcp/package-lock.json` for contributor-
+  reproducible installs — the mcp package is standalone (not in the Vercel build), so
+  there's no `npm ci` to break without it.
+- **T7 (F-506) — done lockfile-safe, not via `concurrently`.** Adding the `concurrently`
+  devDep desyncs `package-lock.json` (needs an `npm install` to re-sync). Instead added a
+  zero-dependency `dev:css` script (reuses the already-present `tailwindcss` binary). Run
+  `npm run dev:css` alongside `npm run dev` to live-rebuild `output.css`. `public/output.css`
+  stays committed (required by `vite preview` + the Vercel build).
+
+### Not done (per rules — needs Shahbaz)
+- No `prisma generate` / `npm install` / build / test run locally (operating rules).
+- **Migration not yet applied to prod.** Acceptance §4 (fresh `migrate deploy` → 10
+  tables; FK SET-NULL behaviour) verifies on the next prod deploy / a Supabase branch.
+
+*End v0.40 sprint plan. All of T1–T9 executed (T6 pinned to 1.29.0; T7 via `dev:css`).
+No pipeline changes; no user-facing changes. All 10 findings (F-500–F-508 + F-310) flipped
+to `fixed` in the machine layer. Only open item is the OPTIONAL `mcp/package-lock.json`.*

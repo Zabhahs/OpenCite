@@ -169,14 +169,14 @@ Bare (un-namespaced) keys:
 | `opencite_auth_prompted` | App.dismissModal | App (two useEffects) |
 | `eagle_library_prompted` | useEagleTooltip | useEagleTooltip |
 
-**F-310:** `GoldSetHarness` (admin-only) stores gold queries and test runs under bare keys `"opencite_gold_queries"` and `"opencite_test_runs"` — not using the namespaced `storage` utility. Should use `storage.set/get("gold_queries")` etc.
+**F-310:** `GoldSetHarness` (admin-only) stores gold queries and test runs under bare keys `"opencite_gold_queries"` and `"opencite_test_runs"` — not using the namespaced `storage` utility. Should use `storage.set/get("gold_queries")` etc. **Fixed v0.40:** now does, with a one-time migration of the legacy bare keys.
 
 ---
 
 ## 🩺 Health audit
 
 - **Verdict:** healthy overall; one real race condition (F-307), one dead feature (F-308, F-309), one namespace inconsistency (F-310).
-- **Findings:** [F-307] Search race — no AbortController; stale adapter responses from a superseded search can land in state after a new search fires. [F-308] SettingsContext never mounted — dead code. [F-309] `DEFAULT_THEME` exported but never used. [F-310] GoldSetHarness writes localStorage outside the namespaced storage utility.
+- **Findings:** [F-307] Search race — no AbortController; stale adapter responses from a superseded search can land in state after a new search fires. [F-308] SettingsContext never mounted — dead code. [F-309] `DEFAULT_THEME` exported but never used. [F-310] GoldSetHarness writes localStorage outside the namespaced storage utility. (fixed v0.40)
 - **Reuse:** `useHistory`/`useLibrary`/`useSettings` share an identical DB-sync pattern (load from localStorage → syncFromDB on sign-in → write both on mutation). This pattern should be a shared `useSyncedStore` factory — see [Duplication-and-Reuse](../09-Audit/Duplication-and-Reuse.md#r-300).
 
 ## See also

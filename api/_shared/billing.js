@@ -122,4 +122,10 @@ function isAtOrBelow(band, threshold) {
   const b = BAND_ORDER.indexOf(threshold);
   return a !== -1 && b !== -1 && a <= b;
 }
+// round4: settlement arithmetic only — creditCost (≈0.01–10.0) × multiplier (0.0–1.0).
+// Plain JS float precision is adequate at these magnitudes and the result is never
+// written back to the ledger directly: every DB credit write goes through atomic
+// Prisma increment/decrement (Postgres-side Decimal math). If creditCost ever scales
+// past ~10^6 this should move to Prisma.Decimal arithmetic. (F-505 audit: no unsafe
+// total_credits arithmetic found across billing.js / stripe/webhook.js.)
 const round4 = (n) => Math.round(n * 1e4) / 1e4;

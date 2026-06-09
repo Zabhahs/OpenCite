@@ -2,7 +2,8 @@
 machine_ids: [adapters.index, adapters.core.crossref, adapters.core.doaj, adapters.core.openalex, adapters.core.curatedJournals, adapters.extensions.internetArchive, adapters.extensions.europeana, adapters.extensions.dpla, adapters.extensions.smithsonian, adapters.extensions.met, adapters.extensions.rijksmuseum, adapters.extensions.gallica, adapters.extensions.thaqalayn, adapters.extensions.ncbi, adapters.extensions.openContext, adapters.extensions.northwestern, adapters.extensions.princetonDpul, adapters.extensions.pangaea, adapters.extensions.laReferencia, adapters.extensions.oapen, adapters.extensions.openEdition, adapters.extensions.openLibrary, adapters.extensions.coreAc, adapters.extensions.ndli, adapters.extensions.base, adapters.extensions.chroniclingAmerica, adapters.extensions.onb, adapters.extensions.bdh, adapters.extensions.bnfApi, adapters.extensions.britishLibrary, adapters.extensions.lcDatasets, adapters.extensions.mexicana, adapters.extensions.wikidata]
 findings: []
 runtime: both
-status: in-progress
+status: complete
+audited: 2026-06-09
 tags: [adapter, capability, tier, ranking, rubric, metadata, oa]
 ---
 <!-- AUTO-GENERATED from docs/wiki/02-Adapters/Adapter-Capability-Tiers.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
@@ -154,15 +155,230 @@ Each §11 row becomes a parser test fixture (input → expected normalized outpu
 
 ---
 
-## Master Capability Matrix
-
-> _Populated by the research pass. One row per API; scores feed the tier column._
-
-_(pending research fan-out — see [`capability-dossiers/`](capability-dossiers/))_
-
 ## Tier Summary
 
-_(pending)_
+> 36 APIs audited 2026-06-09 (live probe + docs). 31 integrated/quarantined + 5 revival candidates.
+> **No source reaches Tier S** — the ceiling is OpenAlex (2.23): nothing offers true semantic search
+> (A9≥2) *and* a citation graph *and* full-abstract coverage at once, so the "Cornerstone" band is
+> currently empty. That is the headline strategic finding: our best lever is **fusing** complementary
+> sources, not leaning on any single one. Each row links its full dossier.
+
+| Tier | API | Overall | A / B / C | Role / status | One-liner |
+|------|-----|:---:|:---:|---|---|
+| **A** | [OPENALEX](capability-dossiers/openalex.md) | **2.23** | 2.32/2.06/2.40 | integrated · core | Richest metadata + best OA signal + structurally pollution-proof content scope |
+| **A** | [CURATED](capability-dossiers/curated.md) | **2.19** | 2.23/2.06/2.40 | integrated · core | OpenAlex envelope on an ISSN-curated set; inherits all OpenAlex strengths |
+| **A** | [EUROPE_PMC](capability-dossiers/EUROPE_PMC.md) | **2.05** | 2.00/2.06/2.20 | **new — top search candidate** | PubMed-class biomedical + preprints + OA full text; keyless; sub-1s |
+| **B** | [PANGAEA](capability-dossiers/PANGAEA.md) | **1.91** | 2.14/1.56/2.20 | integrated | Strongest earth/env data; ES `_score`; full Lucene; RIS latency bottleneck |
+| **B** | [WIKIDATA](capability-dossiers/WIKIDATA.md) | **1.90** | 2.05/1.56/2.40 | integrated | Best ID-crosswalk of any source (8 namespaces) + CC0 + SPARQL; NL fails |
+| **B** | [DOAJ](capability-dossiers/doaj.md) | **1.74** | 1.73/1.50/2.40 | integrated · core | Only 100%-OA-by-definition corpus; fast; no score, no citation graph |
+| **B** | [DATACITE](capability-dossiers/DATACITE.md) | **1.74** | 1.82/1.39/2.40 | **new — datasets search** | Datasets/software DOI search (Zenodo/Dryad/figshare); unique corpus |
+| **B** | [CROSSREF](capability-dossiers/crossref.md) | **1.73** | 2.05/1.11/2.40 | integrated · core | DOI authority + reference graph; abstract too sparse to rank on |
+| **B** | [NORTHWESTERN](capability-dossiers/NORTHWESTERN.md) | **1.73** | 1.59/1.72/2.20 | integrated | ES + Cohere embeddings stored but **not exposed**; best subject vocab |
+| **B** | [OPENNEURO](capability-dossiers/OPENNEURO.md) | **1.72** | 1.68/1.44/2.60 | **quarantined — REVIVE** | CC0 neuroimaging; GraphQL fast; old adapter was wrong architecture |
+| **B** | [NCBI](capability-dossiers/ncbi.md) | **1.66** | 1.82/1.28/2.20 | integrated | Gold-standard biomedical MeSH; 3 req/s cap; MeSH mapping currently dead |
+| **B** | [INTERNET_ARCHIVE](capability-dossiers/INTERNET_ARCHIVE.md) | **1.59** | 1.82/1.17/2.00 | integrated | Dual metadata+FTS (BM25 score); `downloads≠citedBy` defect |
+| **B** | [OAPEN](capability-dossiers/OAPEN.md) | **1.54** | 1.23/1.72/2.00 | integrated | OA scholarly books; rich CC0 metadata + thumbnails; slow, no total count |
+| **B** | [MET](capability-dossiers/MET.md) | **1.53** | 1.32/1.44/2.40 | integrated | CC0 museum; `tags[]` (AAT+Wikidata) unmapped; 30+ fan-out resolves/page |
+| **B** | [CHRONICLING_AMERICA](capability-dossiers/CHRONICLING_AMERICA.md) | **1.51** | 1.23/1.56/2.20 | integrated | OCR full-text newspapers; rich facets; brutal 8–16s latency |
+| **B** | [OPENCONTEXT](capability-dossiers/OPENCONTEXT.md) | **1.50** | 1.46/1.28/2.20 | integrated | Unique geo-temporal archaeology data; thumbnails; NL fails |
+| **B** | [PRINCETON_DPUL](capability-dossiers/PRINCETON_DPUL.md) | **1.50** | 1.41/1.50/1.80 | integrated | Blacklight; IIIF + abstract only in item-detail (extra call); 50k Islamic MSS |
+| **C** | [BASE](capability-dossiers/BASE.md) | **1.49** | 1.73/1.11/1.80 | integrated | 400M OA records, Solr DSL, but IP-allowlisted + abstract-sparse |
+| **C** | [LC_DATASETS](capability-dossiers/LC_DATASETS.md) | **1.49** | 1.14/1.61/2.20 | integrated | Heterogeneous LoC collections; strong IIIF; junk without `fa=` filter |
+| **C** | [OPENAIRE](capability-dossiers/OPENAIRE.md) | **1.46** | 1.73/1.11/1.60 | **new — search, low priority** | EU-funded research + SDG tags; abstracts absent; 60 req/hr blocker |
+| **C** | [GALLICA](capability-dossiers/GALLICA.md) | **1.44** | 1.27/1.50/1.80 | integrated | SRU/DC; IIIF + OCR-quality signal; `isOA` hardcoded-true bug |
+| **C** | [SCIELO](capability-dossiers/SCIELO.md) | **1.44** | 1.09/1.78/1.60 | **quarantined — keep dead** | No public search API; DOAJ covers the LatAm OA overlap |
+| **C** | [ENA](capability-dossiers/ENA.md) | **1.43** | 1.50/1.06/2.20 | **quarantined — REVIVE (~30min)** | Trivial syntax bug caused quarantine; unique genomic study corpus |
+| **C** | [OPEN_LIBRARY](capability-dossiers/OPEN_LIBRARY.md) | **1.43** | 1.50/1.06/2.20 | integrated | Book corpus; rich LCSH subjects; no abstract; no score; OA via IA scan |
+| **C** | [RIJKSMUSEUM](capability-dossiers/RIJKSMUSEUM.md) | **1.35** | 1.23/1.39/1.60 | integrated | Linked-Art; no `q=`; 3-hop image chain; 3.5–5s; abstracts unmapped |
+| **C** | [BNF_API](capability-dossiers/BNF_API.md) | **1.33** | 1.27/1.06/2.20 | integrated | SRU/UNIMARC; 15M catalogue; no abstract; Rameau subjects; 856 OA URL unused |
+| **C** | [BDH](capability-dossiers/BDH.md) | **1.20** | 1.18/1.00/1.80 | **BROKEN — route 404** | REST endpoint dead; needs full SPARQL rewrite (datos.bne.es) |
+| **C** | [LA_REFERENCIA](capability-dossiers/LA_REFERENCIA.md) | **1.20** | 1.32/0.83/1.80 | integrated | LatAm OA aggregator; no score/DOI; `summary` abstract unmapped |
+| **C** | [BL](capability-dossiers/BL.md) | **1.17** | 1.36/0.72/1.80 | **DEAD — endpoint unreachable** | bnb.data.bl.uk ETIMEDOUT on all probes; recommend quarantine |
+| **C** | [THAQALAYN](capability-dossiers/THAQALAYN.md) | **1.13** | 0.64/1.44/1.80 | integrated | Unique bilingual Shia hadith + gradings; single-term search only |
+| **C** | [ONB](capability-dossiers/ONB.md) | **1.12** | 1.18/0.72/2.00 | integrated | SRU/DC via Alma; 2M; NL→0; MARCXML schema unexploited |
+| **C** | [OPENEDITION](capability-dossiers/OPENEDITION.md) | **1.05** | 0.91/1.00/1.60 | integrated | French/Euro SSH; undocumented API; freemium≠OA bug |
+| **C** | [MEXICANA](capability-dossiers/MEXICANA.md) | **1.01** | 0.73/1.11/1.60 | **DEAD — SSL expired** | OAI-PMH client-side filter; zero ranking guarantee; wrong architecture |
+| **D** | [UNPAYWALL](capability-dossiers/UNPAYWALL.md) | **0.91** | 0.45/0.94/2.20 | **enrichment (S-tier for role)** | Authoritative OA URL by DOI; inject into every result card |
+| **D** | [OPENCITATIONS](capability-dossiers/OPENCITATIONS.md) | **0.87** | 0.64/0.56/2.40 | **enrichment (best-in-class)** | 2B+ CC0 citation links; inject `citedByCount` for every DOI |
+| **D** | [CROSSREF_EVENTS](capability-dossiers/CROSSREF_EVENTS.md) | **0.44** | 0.64/0.00/1.00 | **DEFUNCT — do not integrate** | Crossref sunset the API 2026-04-23; returns 403 |
+
+> ⚠️ **D-tier ≠ useless.** UNPAYWALL and OPENCITATIONS score D *only* because the rubric is search-
+> centric and they are **lookup/enrichment** services (no free-text search → A-axis floors). For their
+> intended role they are S-tier and should be **integrated immediately** as a per-DOI enrichment layer.
+
+---
+
+## Master Capability Matrix
+
+Full per-dimension scores (0–3). See Part 1 for dimension definitions. Sorted by tier then Overall.
+
+### Axis A — Pass-Through (A1 score · A2 query · A3 sort/filter · A4 paging · A5 bulk · A6 rate · A7 IDs · A8 count · A9 semantic/NL · A10 author-ctrl)
+
+| API | A1 | A2 | A3 | A4 | A5 | A6 | A7 | A8 | A9 | A10 | Raw A |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| OPENALEX | 2 | 2 | 3 | 3 | 3 | 2 | 3 | 2 | 1 | 3 | 2.32 |
+| CURATED | 2 | 2 | 3 | 3 | 2 | 2 | 3 | 2 | 1 | 3 | 2.23 |
+| EUROPE_PMC | 1 | 2 | 2 | 3 | 2 | 2 | 3 | 3 | 1 | 2 | 2.00 |
+| PANGAEA | 2 | 3 | 3 | 2 | 2 | 2 | 2 | 3 | 1 | 2 | 2.14 |
+| WIKIDATA | 0 | 3 | 3 | 2 | 3 | 2 | 3 | 2 | 1 | 3 | 2.05 |
+| DOAJ | 1 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 1.73 |
+| DATACITE | 1 | 2 | 2 | 3 | 2 | 2 | 2 | 3 | 1 | 1 | 1.82 |
+| CROSSREF | 2 | 2 | 3 | 2 | 3 | 2 | 2 | 2 | 1 | 2 | 2.05 |
+| NORTHWESTERN | 0 | 3 | 2 | 2 | 2 | 2 | 2 | 2 | 1 | 1 | 1.59 |
+| OPENNEURO | 0 | 2 | 2 | 3 | 2 | 2 | 2 | 1 | 1 | 3 | 1.68 |
+| NCBI | 1 | 2 | 2 | 2 | 2 | 1 | 3 | 2 | 1 | 3 | 1.82 |
+| INTERNET_ARCHIVE | 1 | 3 | 2 | 2 | 3 | 2 | 1 | 2 | 1 | 2 | 1.82 |
+| OAPEN | 0 | 1 | 1 | 2 | 2 | 2 | 2 | 1 | 1 | 1 | 1.23 |
+| MET | 0 | 2 | 2 | 1 | 2 | 2 | 2 | 2 | 1 | 0 | 1.32 |
+| CHRONICLING_AMERICA | 0 | 1 | 2 | 2 | 1 | 0 | 1 | 2 | 1 | 3 | 1.23 |
+| OPENCONTEXT | 0 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 0 | 3 | 1.46 |
+| PRINCETON_DPUL | 0 | 2 | 2 | 2 | 1 | 2 | 1 | 2 | 1 | 2 | 1.41 |
+| BASE | 1 | 3 | 1 | 2 | 2 | 1 | 2 | 2 | 1 | 3 | 1.73 |
+| LC_DATASETS | 0 | 1 | 2 | 2 | 1 | 1 | 1 | 2 | 1 | 1 | 1.14 |
+| OPENAIRE | 1 | 2 | 2 | 3 | 2 | 1 | 2 | 3 | 1 | 1 | 1.73 |
+| GALLICA | 0 | 2 | 2 | 2 | 1 | 2 | 1 | 2 | 0 | 2 | 1.27 |
+| SCIELO | 0 | 0 | 1 | 2 | 2 | 1 | 1 | 2 | 0 | 3 | 1.09 |
+| ENA | 0 | 2 | 1 | 2 | 1 | 2 | 2 | 3 | 1 | 2 | 1.50 |
+| OPEN_LIBRARY | 0 | 2 | 2 | 2 | 2 | 1 | 2 | 3 | 1 | 1 | 1.50 |
+| RIJKSMUSEUM | 0 | 1 | 1 | 2 | 1 | 2 | 1 | 2 | 1 | 2 | 1.23 |
+| BNF_API | 0 | 2 | 1 | 2 | 1 | 2 | 2 | 2 | 0 | 2 | 1.27 |
+| BDH | 0 | 3 | 2 | 2 | 2 | 1 | 1 | 1 | 0 | 1 | 1.18 |
+| LA_REFERENCIA | 0 | 2 | 2 | 2 | 1 | 2 | 1 | 2 | 1 | 1 | 1.32 |
+| BL | 0 | 3 | 2 | 2 | 2 | 1 | 2 | 0 | 0 | 3 | 1.36 |
+| THAQALAYN | 0 | 0 | 0 | 0 | 2 | 2 | 0 | 2 | 0 | 1 | 0.64 |
+| ONB | 0 | 2 | 1 | 2 | 1 | 2 | 1 | 2 | 0 | 2 | 1.18 |
+| OPENEDITION | 0 | 1 | 0 | 2 | 1 | 2 | 1 | 2 | 0 | 1 | 0.91 |
+| MEXICANA | 0 | 0 | 0 | 2 | 3 | 1 | 1 | 0 | 0 | 1 | 0.73 |
+| UNPAYWALL | 0 | 0 | 0 | 0 | 2 | 2 | 1 | 0 | 0 | 0 | 0.45 |
+| OPENCITATIONS | 0 | 0 | 1 | 0 | 2 | 1 | 2 | 1 | 0 | 0 | 0.64 |
+| CROSSREF_EVENTS | 0 | 1 | 1 | 2 | 1 | 0 | 1 | 1 | 0 | 0 | 0.64 |
+
+### Axis B — Richness (B1 biblio · B2 abstract · B3 citations · B4 discipline tags · B5 OA · B6 media · B7 holdings · B8 quality)
+
+| API | B1 | B2 | B3 | B4 | B5 | B6 | B7 | B8 | Raw B |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| OPENALEX | 3 | 2 | 3 | 3 | 3 | 0 | 0 | 2 | 2.06 |
+| CURATED | 3 | 2 | 3 | 3 | 3 | 0 | 0 | 2 | 2.06 |
+| EUROPE_PMC | 3 | 3 | 2 | 3 | 2 | 0 | 1 | 2 | 2.06 |
+| PANGAEA | 2 | 2 | 0 | 2 | 2 | 0 | 2 | 2 | 1.56 |
+| WIKIDATA | 3 | 1 | 2 | 3 | 1 | 0 | 1 | 2 | 1.56 |
+| DOAJ | 3 | 2 | 0 | 2 | 3 | 0 | 0 | 1 | 1.50 |
+| DATACITE | 3 | 1 | 1 | 1 | 2 | 0 | 1 | 2 | 1.39 |
+| CROSSREF | 3 | 1 | 2 | 1 | 1 | 0 | 0 | 1 | 1.11 |
+| NORTHWESTERN | 2 | 2 | 0 | 3 | 1 | 2 | 2 | 2 | 1.72 |
+| OPENNEURO | 2 | 1 | 0 | 2 | 3 | 0 | 1 | 2 | 1.44 |
+| NCBI | 2 | 2 | 0 | 3 | 1 | 0 | 0 | 2 | 1.28 |
+| INTERNET_ARCHIVE | 1 | 2 | 0 | 1 | 3 | 1 | 0 | 0 | 1.17 |
+| OAPEN | 3 | 2 | 0 | 2 | 3 | 1 | 0 | 2 | 1.72 |
+| MET | 1 | 1 | 0 | 2 | 3 | 2 | 1 | 1 | 1.44 |
+| CHRONICLING_AMERICA | 1 | 1 | 0 | 2 | 3 | 3 | 1 | 1 | 1.56 |
+| OPENCONTEXT | 1 | 0 | 0 | 2 | 3 | 2 | 1 | 1 | 1.28 |
+| PRINCETON_DPUL | 2 | 1 | 0 | 2 | 2 | 2 | 2 | 1 | 1.50 |
+| BASE | 2 | 1 | 0 | 1 | 3 | 0 | 0 | 1 | 1.11 |
+| LC_DATASETS | 2 | 1 | 0 | 2 | 2 | 3 | 2 | 1 | 1.61 |
+| OPENAIRE | 2 | 0 | 1 | 1 | 2 | 0 | 1 | 2 | 1.11 |
+| GALLICA | 2 | 1 | 0 | 2 | 2 | 3 | 1 | 1 | 1.50 |
+| SCIELO | 2 | 3 | 1 | 2 | 3 | 0 | 1 | 1 | 1.78 |
+| ENA | 1 | 1 | 0 | 2 | 2 | 0 | 1 | 1 | 1.06 |
+| OPEN_LIBRARY | 2 | 0 | 0 | 2 | 1 | 1 | 2 | 1 | 1.06 |
+| RIJKSMUSEUM | 1 | 1 | 0 | 1 | 2 | 3 | 2 | 1 | 1.39 |
+| BNF_API | 3 | 0 | 0 | 3 | 1 | 0 | 1 | 1 | 1.06 |
+| BDH | 2 | 0 | 0 | 1 | 2 | 2 | 1 | 0 | 1.00 |
+| LA_REFERENCIA | 1 | 1 | 0 | 1 | 2 | 0 | 0 | 1 | 0.83 |
+| BL | 2 | 1 | 0 | 2 | 0 | 0 | 1 | 0 | 0.72 |
+| THAQALAYN | 1 | 3 | 0 | 1 | 3 | 0 | 0 | 2 | 1.44 |
+| ONB | 2 | 1 | 0 | 2 | 0 | 0 | 1 | 0 | 0.72 |
+| OPENEDITION | 2 | 2 | 0 | 0 | 2 | 0 | 0 | 1 | 1.00 |
+| MEXICANA | 1 | 2 | 0 | 1 | 2 | 1 | 1 | 0 | 1.11 |
+| UNPAYWALL | 1 | 0 | 0 | 0 | 3 | 0 | 1 | 2 | 0.94 |
+| OPENCITATIONS | 0 | 0 | 3 | 0 | 0 | 0 | 0 | 2 | 0.56 |
+| CROSSREF_EVENTS | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0.00 |
+
+### Axis C — Operational (C1 reliability · C2 auth · C3 TOS · C4 protocol · C5 hygiene)
+
+| API | C1 | C2 | C3 | C4 | C5 | Raw C |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| OPENALEX | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| CURATED | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| EUROPE_PMC | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| PANGAEA | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| WIKIDATA | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| DOAJ | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| DATACITE | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| CROSSREF | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| NORTHWESTERN | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| OPENNEURO | 2 | 3 | 3 | 3 | 2 | 2.60 |
+| NCBI | 2 | 2 | 3 | 2 | 2 | 2.20 |
+| INTERNET_ARCHIVE | 2 | 3 | 2 | 2 | 1 | 2.00 |
+| OAPEN | 1 | 3 | 3 | 1 | 2 | 2.00 |
+| MET | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| CHRONICLING_AMERICA | 1 | 3 | 3 | 2 | 2 | 2.20 |
+| OPENCONTEXT | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| PRINCETON_DPUL | 2 | 3 | 2 | 1 | 1 | 1.80 |
+| BASE | 2 | 1 | 2 | 2 | 2 | 1.80 |
+| LC_DATASETS | 2 | 3 | 3 | 2 | 1 | 2.20 |
+| OPENAIRE | 2 | 1 | 2 | 2 | 1 | 1.60 |
+| GALLICA | 1 | 3 | 1 | 2 | 2 | 1.80 |
+| SCIELO | 1 | 3 | 2 | 1 | 1 | 1.60 |
+| ENA | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| OPEN_LIBRARY | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| RIJKSMUSEUM | 1 | 3 | 2 | 1 | 1 | 1.60 |
+| BNF_API | 1 | 3 | 3 | 2 | 2 | 2.20 |
+| BDH | 1 | 3 | 2 | 1 | 2 | 1.80 |
+| LA_REFERENCIA | 2 | 3 | 2 | 1 | 1 | 1.80 |
+| BL | 0 | 2 | 3 | 2 | 2 | 1.80 |
+| THAQALAYN | 1 | 3 | 2 | 1 | 2 | 1.80 |
+| ONB | 1 | 3 | 2 | 2 | 2 | 2.00 |
+| OPENEDITION | 2 | 2 | 2 | 1 | 1 | 1.60 |
+| MEXICANA | 0 | 3 | 2 | 2 | 1 | 1.60 |
+| UNPAYWALL | 2 | 3 | 2 | 2 | 2 | 2.20 |
+| OPENCITATIONS | 2 | 3 | 3 | 2 | 2 | 2.40 |
+| CROSSREF_EVENTS | 0 | 2 | 3 | 0 | 0 | 1.00 |
+
+---
+
+## Cross-Cutting Findings & Action Items
+
+These surfaced repeatedly across dossiers. Full detail + exact field paths live in each dossier's §11/§12.
+
+### 🔴 Broken / dead in production (fix or quarantine)
+- **BL** — `bnb.data.bl.uk` SPARQL endpoint `ETIMEDOUT` on every probe; silently returns empty. **Quarantine.**
+- **MEXICANA** — SSL cert expired + OAI-PMH client-side-filter architecture gives zero ranking. **Quarantine / rebuild.**
+- **BDH** — `api/search/bdh.js` REST endpoint returns **404**; the real source is `datos.bne.es/sparql`. **Needs SPARQL rewrite** (~fast once rewritten, 370ms).
+- **SCIELO** (quarantined) — `search.scielo.org/api/v2` is a private ES endpoint, permanently 403. No public search API exists. **Keep quarantined**; DOAJ covers the overlap.
+
+### 🟢 Revive (cheap, high value)
+- **ENA** (~30 min) — quarantine was a single syntax bug: `field="*word*"` (wildcard-in-quotes) → 400. Correct: `study_title="term" OR study_description="term"`; drop invalid `study_type` field; add `/count` endpoint. Healthy API, ~1s, exact counts.
+- **OPENNEURO** (~2–3 hr) — API is alive/fast/CC0; old adapter fetched 100 newest + client-filtered. Rebuild on `datasets(first,after)` Relay cursor + local BM25F. `metadata.associatedPaperDOI` is a high-value dataset→paper crosswalk.
+
+### ➕ New sources to adopt (revival-candidate audit)
+- **EUROPE_PMC** (Tier A, 2.05) — **top priority.** Keyless, ~937ms, 85%+ abstracts, MeSH, 6.5M OA full-text. `TITLE:{q} OR ABSTRACT:{q} OR MESH:{q}` is pollution-proof; `OPEN_ACCESS:Y` filter works.
+- **DATACITE** (Tier B, 1.74) — adopt as the **datasets/software search** source (Zenodo/Dryad/figshare). `titles.title:{q}` avoids author pollution.
+- **UNPAYWALL** + **OPENCITATIONS** — adopt as a **per-DOI enrichment layer** (not search): inject `best_oa_location.url`/`oa_status` and `citedByCount` into every DOI-bearing card. Both keyless-ish, CC0/open, cache-friendly. (Unpaywall needs a real `UNPAYWALL_EMAIL`.)
+- **OPENAIRE** (Tier C) — only if EU-funding/SDG filters are wanted; **60 req/hr unauthenticated is a hard blocker** → needs server-side OAuth token refresh. Graph API v1 drops abstracts.
+- **CROSSREF_EVENTS** — ❌ **defunct** (sunset 2026-04-23, returns 403). Remove from roadmaps.
+
+### ⚡ Quick-win field exploits (we already query these APIs — fields are returned but unmapped)
+- **CROSSREF** — `isOA:false` is hardcoded but ~50% of records carry a CC `license[].URL`; derive `isOA` from it. Also map `reference[]` (citation crosswalk), `author[].ORCID`, `link[].URL` (full text).
+- **OPENALEX** — `relevance_score` is returned but only reaches RRF on the **browser** path; `api/search.js` never imports `rrf.js` (BM25F-only server-side). Wiring it server-side is the single biggest ranking win. (Confirms the standing memory note.)
+- **NCBI** — MeSH mapping (`meshheadinglist`) is **dead code** (absent from esummary JSON); MeSH only comes from efetch MEDLINE/XML. PMC full-text URL derivable from `articleids[type=pmc]`.
+- **INTERNET_ARCHIVE** — FTS endpoint returns a real BM25 `_score` not forwarded to RRF; and `downloads`→`citedBy` must stop (already `rankFields.citedBy:false`, but drop any downloads sort).
+- **NORTHWESTERN** — stores `cohere.embed-multilingual-v3` embeddings per doc but strips them from API output; `/ai-search` 404. No semantic access today, but watch for exposure.
+- **PANGAEA** — each ES hit embeds an `xml-thumb` blob containing the full citation; parsing it inline **eliminates the per-hit RIS round-trip** (~1.2s/record). `sp-loginOption:"unrestricted"` is a one-line OA filter.
+- **LA_REFERENCIA** — `summary` field holds the abstract but is unmapped → `abstract:""`. One-line win.
+- **THAQALAYN** — `author` populated but mapped to `[]`; `item.URL` is a working per-hadith permalink but adapter falls back to homepage.
+- **OPEN_LIBRARY** — `cover_i` (thumbnail) + `isbn`/`lccn`/`oclc` crosswalk unmapped.
+- **MET** — `tags[]` carry AAT + Wikidata IDs (discipline + crosswalk), unmapped.
+- **GALLICA** — `nqamoyen` OCR-quality (0–100) unique signal; `dc:rights` should drive `isOA` (hardcoded true for ~40% non-OA); IIIF manifest buildable from ARK.
+- **BNF_API** — UNIMARC 856 $u (electronic access URL) unparsed → would enable `isOA` for digitised items.
+- **ONB** — `recordSchema=marcxml` would add ISBN, GND subject IDs (→VIAF crosswalk), DDC; currently only flattened DC.
+- **PRINCETON_DPUL / RIJKSMUSEUM** — IIIF manifest + abstract live only in the per-item detail call; current adapters miss them.
+
+### 📐 Systemic patterns
+- **Semantic search is absent fleet-wide** — A9 = 0/1 everywhere (no source exposes vector/ANN search to us; Northwestern has embeddings but hides them). Any semantic capability must be **our own** embedding layer over fetched results, not upstream.
+- **Author-name pollution** is real on lexical sources (Open Library, LA Referencia, ONB defaults). Field-scoping (`title:`/`bibliographic`/CQL `title=`) fixes most; OpenAlex `title_and_abstract.search` and Europe PMC `TITLE/ABSTRACT/MESH` are structurally clean.
+- **Discipline tags for our own faceting** are best from **OpenAlex concepts (Wikidata QIDs + scores)**, **NCBI/Europe PMC MeSH**, and **Northwestern/BnF (LCSH/Rameau)** — these are the sources to drive a cross-source discipline facet.
+- **OA-guarantee tiers**: whole-corpus-OA (DOAJ, OAPEN, OpenNeuro, BASE, IA) > reliable flag+filter (OpenAlex, Europe PMC, PANGAEA) > derive-from-license (Crossref, Gallica, BnF) > none. Unpaywall is the universal backstop.
 
 ## See also
 

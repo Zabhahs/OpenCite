@@ -1,0 +1,18 @@
+# Dependabot — controlled upgrade PRs for the pinned-but-fragile deps (F-507/F-500).
+# We pin @auth/* and @modelcontextprotocol/* to exact versions (auth + MCP SDK have
+# both shipped breaking changes inside a minor); Dependabot surfaces upgrades as PRs
+# so a human reviews the diff instead of a clean-machine install silently drifting.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: "@auth/*"
+  - package-ecosystem: npm
+    directory: "/mcp"
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: "@modelcontextprotocol/*"

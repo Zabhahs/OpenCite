@@ -42,7 +42,7 @@ tags: [components, index]
 | `SourceSection` | `components.SourceSection` | Per-adapter result list (source view) | `App.jsx` | props from `useSearch`/`useFilters` | F-314 (duplicate group header JSX) |
 | `UnifiedResultList` | `components.UnifiedResultList` | Cross-adapter ranked list (unified view) | `App.jsx` | props; `displayCount`: local | F-314 (duplicate group header JSX) |
 | `ScoreExplainer` | `components.admin.ScoreExplainer` | Debug search → ranked results with score breakdown | `AdminConsole` | local state (query, results, expandedId) | — |
-| `GoldSetHarness` | `components.admin.GoldSetHarness` | Gold-set regression test harness | `AdminConsole` | local state + localStorage | F-310 (bare localStorage keys) |
+| `GoldSetHarness` | `components.admin.GoldSetHarness` | Gold-set regression test harness | `AdminConsole` | local state + localStorage | ~~F-310 (bare localStorage keys)~~ fixed v0.40 |
 
 ---
 
@@ -124,7 +124,7 @@ tags: [components, index]
 
 **ScoreExplainer (F1):** Uses `/api/search?debug=1`. The `debug=1` flag is admin-gated on the server side (`resolveSessionAdmin()` in `api/_shared/log.js`). Results show `_scoreBreakdown` with BM25F per-field, phrase/source bonuses, RRF ranks, and gate disposition (kept/best_guess/dropped) color-coded.
 
-**GoldSetHarness (F2):** Stores gold queries + test runs in localStorage (outside `storage` namespace — F-310). Grading modal is a full-screen overlay (`fixed inset-0`) — correct z-index. `computeMetrics` / `aggregateMetrics` imported from `lib/goldSetMetrics.js` (pure functions, separately unit-tested per memory).
+**GoldSetHarness (F2):** Stores gold queries + test runs in localStorage (outside `storage` namespace — F-310). Grading modal is a full-screen overlay (`fixed inset-0`) — correct z-index. `computeMetrics` / `aggregateMetrics` imported from `lib/goldSetMetrics.js` (pure functions, separately unit-tested per memory). **Fixed v0.40:** now uses `storage.get/set('gold_queries'|'test_runs')` with a one-time mount migration of the legacy bare keys.
 
 ---
 

@@ -124,10 +124,10 @@
     "type": "debt",
     "severity": "low",
     "title": "GoldSetHarness stores data in bare localStorage keys outside the opencite: namespace",
-    "detail": "src/components/admin/GoldSetHarness.jsx:16–27 uses localStorage.getItem('opencite_gold_queries') and localStorage.getItem('opencite_test_runs') directly, bypassing the namespaced storage utility (lib/storage.js). These keys use underscores (not the opencite: colon-separated namespace). This risks key collision with other apps, breaks storage.remove(), and is inconsistent with the rest of the app.",
+    "detail": "src/components/admin/GoldSetHarness.jsx:16–27 uses localStorage.getItem('opencite_gold_queries') and localStorage.getItem('opencite_test_runs') directly, bypassing the namespaced storage utility (lib/storage.js). These keys use underscores (not the opencite: colon-separated namespace). This risks key collision with other apps, breaks storage.remove(), and is inconsistent with the rest of the app. [RESOLVED v0.40: GoldSetHarness now reads/writes via storage.get/set('gold_queries'|'test_runs') (opencite: namespace). A one-time mount migration copies the legacy bare keys into the namespace then removes them, so existing admin data carries over transparently.]",
     "path": "src/components/admin/GoldSetHarness.jsx:16",
     "modules": ["components.admin.GoldSetHarness"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory",
     "fix_hint": "Replace localStorage.getItem/setItem calls with storage.get/set('gold_queries') and storage.get/set('test_runs') from lib/storage.js."
   },

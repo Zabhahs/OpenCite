@@ -79,7 +79,7 @@ Index: `[user_id]`. The hash lookup path is a unique index on `key_hash` — O(1
 
 #### `ApiUsage` (table: `api_usage`)
 
-Per-day rollup for analytics. One row per `(key_id, day)` where `day` is `YYYY-MM-DD` UTC. **Not the billing source of truth** — that's `users.total_credits`. No FK from `key_id` to `api_keys.id` in the Prisma schema — a dangling `key_id` would silently accumulate (see F-502).
+Per-day rollup for analytics. One row per `(key_id, day)` where `day` is `YYYY-MM-DD` UTC. **Not the billing source of truth** — that's `users.total_credits`. ~~No FK from `key_id` to `api_keys.id`~~ → **fixed v0.40 (F-502):** `key_id` is nullable with an FK to `api_keys.id` `ON DELETE SET NULL` (migration `20260608000100_api_usage_fk`) — orphans are nulled, not accumulated.
 
 #### `ProcessedEvent` (table: `processed_events`)
 
@@ -116,7 +116,7 @@ What it adds:
 - `api_usage` table.
 - `processed_events` table.
 
-**Note:** the migration does **not** add `relevance_labels` — that table was added via `prisma db push` or a separate step in v0.33. If re-provisioning from scratch, `relevance_labels` must be created separately (see F-503).
+**Note:** ~~the migration does **not** add `relevance_labels`~~ → **fixed v0.40 (F-503):** migration `20260608000000_relevance_labels` creates it (`CREATE TABLE IF NOT EXISTS`), and `scripts/migrate.mjs` iterates all migration dirs — a from-scratch `migrate deploy` now provisions every table.
 
 ## migrate.mjs — P3005-safe runner (`scripts/migrate.mjs`)
 
@@ -153,7 +153,7 @@ All client `localStorage` access goes through `src/lib/storage.js` (namespaced) 
 | `<tooltip_flag_key>` | (bare) | `src/hooks/useEagleTooltip.js:30` | One-time eagle tooltip flag |
 | `<TOOLTIP_KEY>` | (bare) | `src/components/Layout.jsx:39` | One-time layout tooltip flag |
 
-**Observation:** most legacy settings keys (`europeanaKey`, `openAlexKey`, etc.) are bare (no namespace prefix). The `storage.js` wrapper is newer. A future migration of all keys to the `opencite:` namespace would prevent collisions with other apps on the same origin but is not yet done (F-504).
+**Observation:** legacy settings keys (`europeanaKey`, `openAlexKey`, etc.) were bare (no namespace prefix). **Fixed v0.40 (F-504):** `useSettings.js` migrates them into the `opencite:` namespace via `migrateLegacyKeys()` (copy into `storage.set('settings')`, then purge the bare keys); all reads/writes now go through `storage.js`. `GoldSetHarness` was likewise namespaced (F-310).
 
 **Admin harness data** (`opencite_gold_queries`, `opencite_test_runs`) is entirely client-side — it is **not synced to Postgres**. Gold queries survive browser sessions but not device switches. For multi-device admin use, these need to be migrated to `relevance_labels` DB (currently only grades go to DB, not the query set itself).
 
@@ -178,10 +178,10 @@ All client `localStorage` access goes through `src/lib/storage.js` (namespaced) 
 
 - **Verdict:** healthy for its scope; two schema gaps worth noting.
 - **Findings:**
-  - [F-502] `ApiUsage.key_id` has no FK constraint to `api_keys.id` — orphaned usage rows accumulate silently if a key is deleted (Cascade on `api_keys` only applies to the Prisma relation layer, but `api_usage` has no declared `@@relation`).
-  - [F-503] `relevance_labels` table is defined in `prisma/schema.prisma` but not in the single migration file (`20260530120000_billing/migration.sql`). Re-provisioning from scratch with `migrate deploy` will fail to create it.
-  - [F-504] Most `useSettings.js` localStorage keys use bare names (no `opencite:` namespace prefix), leaving them collision-prone if the app is ever served on a shared origin.
-  - [F-505] `users.total_credits` is `Decimal(12,4)` in Prisma but treated as a float in some JS arithmetic. Prisma returns Decimals as strings in some contexts — callers must coerce carefully to avoid silent precision loss.
+  - [F-502] `ApiUsage.key_id` has no FK constraint to `api_keys.id` — orphaned usage rows accumulate silently if a key is deleted (Cascade on `api_keys` only applies to the Prisma relation layer, but `api_usage` has no declared `@@relation`). **Fixed v0.40:** migration `20260608000100_api_usage_fk` makes `key_id` nullable with `FK → api_keys.id ON DELETE SET NULL`; deleted-key rows are nulled, not accumulated.
+  - [F-503] `relevance_labels` table is defined in `prisma/schema.prisma` but not in the single migration file (`20260530120000_billing/migration.sql`). Re-provisioning from scratch with `migrate deploy` will fail to create it. **Fixed v0.40:** migration `20260608000000_relevance_labels` (`CREATE TABLE IF NOT EXISTS`) added; `scripts/migrate.mjs` now iterates all migration dirs so a from-scratch deploy creates every table.
+  - [F-504] Most `useSettings.js` localStorage keys use bare names (no `opencite:` namespace prefix), leaving them collision-prone if the app is ever served on a shared origin. **Fixed v0.40:** verified — `useSettings.js` already routes all keys through `storage.js` (`opencite:` namespace) via `migrateLegacyKeys()`; bare keys are migrated then purged on first load.
+  - [F-505] `users.total_credits` is `Decimal(12,4)` in Prisma but treated as a float in some JS arithmetic. Prisma returns Decimals as strings in some contexts — callers must coerce carefully to avoid silent precision loss. **Fixed v0.40:** audited `billing.js` — all ledger writes use atomic Prisma increment/decrement; only `round4()` uses plain JS floats on settlement values that are never written back; documented with a comment. No unsafe write path found.
 - **Reuse:** The encrypted `settings` blob (`users.settings`) stores user-managed API keys; the backend `serverInjectedKeys()` system (v0.34) moved CC0 keys server-side, reducing the client-side key surface. These two patterns are now divergent (one encrypted DB blob, one env var injection) — see [Duplication-and-Reuse](../09-Audit/Duplication-and-Reuse.md#r-501).
 
 ## See also

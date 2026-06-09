@@ -149,6 +149,7 @@ model ApiKey {
   last_used_at DateTime?
 
   user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  usage        ApiUsage[]
 
   @@index([user_id])
   @@map("api_keys")
@@ -157,10 +158,11 @@ model ApiKey {
 // Optional per-day usage rollup for analytics (billing truth is the credit ledger,
 // not this table). One row per (key, day).
 model ApiUsage {
-  id      String @id @default(uuid())
-  key_id  String
-  day     String // YYYY-MM-DD (UTC)
-  count   Int    @default(0)
+  id      String  @id @default(uuid())
+  key_id  String?                      // nullable: orphan rows survive key deletion (F-502)
+  key     ApiKey? @relation(fields: [key_id], references: [id], onDelete: SetNull)
+  day     String  // YYYY-MM-DD (UTC)
+  count   Int     @default(0)
 
   @@unique([key_id, day], name: "key_id_day")
   @@index([key_id])

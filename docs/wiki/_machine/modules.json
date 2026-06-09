@@ -1729,7 +1729,7 @@
   {
     "id": "api.shared.billing",
     "path": "api/_shared/billing.js",
-    "loc": 126,
+    "loc": 132,
     "deps": [
       "api.shared.coverage",
       "api.shared.prisma"
@@ -2165,9 +2165,10 @@
   {
     "id": "components.admin.GoldSetHarness",
     "path": "src/components/admin/GoldSetHarness.jsx",
-    "loc": 398,
+    "loc": 404,
     "deps": [
-      "lib.goldSetMetrics"
+      "lib.goldSetMetrics",
+      "lib.storage"
     ],
     "kind": "component",
     "runtime": "client",
@@ -3537,7 +3538,7 @@
   {
     "id": "mcp.server",
     "path": "mcp/src/server.js",
-    "loc": 66,
+    "loc": 72,
     "deps": [
       "mcp.client",
       "mcp.contract",
@@ -3561,7 +3562,7 @@
   {
     "id": "package",
     "path": "package.json",
-    "loc": 30,
+    "loc": 31,
     "deps": [],
     "kind": "config",
     "runtime": "build",
@@ -3585,9 +3586,21 @@
     "deps": []
   },
   {
+    "id": "prisma.migrations.20260608000000_relevance_labels.migration",
+    "path": "prisma/migrations/20260608000000_relevance_labels/migration.sql",
+    "loc": 18,
+    "deps": []
+  },
+  {
+    "id": "prisma.migrations.20260608000100_api_usage_fk.migration",
+    "path": "prisma/migrations/20260608000100_api_usage_fk/migration.sql",
+    "loc": 32,
+    "deps": []
+  },
+  {
     "id": "prisma.schema",
     "path": "prisma/schema.prisma",
-    "loc": 195,
+    "loc": 197,
     "deps": [],
     "kind": "schema",
     "runtime": "infra",
@@ -3646,7 +3659,7 @@
   {
     "id": "scripts.migrate",
     "path": "scripts/migrate.mjs",
-    "loc": 69,
+    "loc": 80,
     "deps": [],
     "kind": "script",
     "runtime": "build",

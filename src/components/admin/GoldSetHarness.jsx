@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { computeMetrics, aggregateMetrics } from "../../lib/goldSetMetrics.js";
+import { storage } from "../../lib/storage.js";
 
 // F2 — Gold-Set Regression Harness
 // Store test queries with labeled relevance; run regression tests; track nDCG@10 / MRR / recall.
@@ -11,30 +12,35 @@ export function GoldSetHarness() {
   const [gradingMode, setGradingMode] = useState(null); // { query, results }
   const [testRuns, setTestRuns] = useState([]);
 
-  // Load gold queries and test runs from localStorage
+  // Load gold queries and test runs from the opencite: namespace (lib/storage.js).
+  // One-time migration of the legacy bare keys (opencite_gold_queries /
+  // opencite_test_runs) runs first: read bare → write namespaced → remove bare.
+  // No-op once the bare key is gone, so it's safe to run on every mount. Runs
+  // before the read below, and before the write effects fire (React lifecycle),
+  // so existing admin data is preserved transparently. (F-310 / F-504)
   useEffect(() => {
-    const saved = localStorage.getItem("opencite_gold_queries");
-    if (saved) {
-      try {
-        setGoldQueries(JSON.parse(saved));
-      } catch {}
-    }
-    const runs = localStorage.getItem("opencite_test_runs");
-    if (runs) {
-      try {
-        setTestRuns(JSON.parse(runs));
-      } catch {}
-    }
+    const migrateKey = (bare, nsKey) => {
+      const raw = localStorage.getItem(bare);
+      if (raw === null) return;
+      try { storage.set(nsKey, JSON.parse(raw)); } catch { storage.set(nsKey, raw); }
+      localStorage.removeItem(bare);
+    };
+    migrateKey("opencite_gold_queries", "gold_queries");
+    migrateKey("opencite_test_runs", "test_runs");
+
+    const saved = storage.get("gold_queries");
+    if (Array.isArray(saved)) setGoldQueries(saved);
+    const runs = storage.get("test_runs");
+    if (Array.isArray(runs)) setTestRuns(runs);
   }, []);
 
-  // Save gold queries to localStorage
+  // Persist to the namespaced store on change.
   useEffect(() => {
-    localStorage.setItem("opencite_gold_queries", JSON.stringify(goldQueries));
+    storage.set("gold_queries", goldQueries);
   }, [goldQueries]);
 
-  // Save test runs to localStorage
   useEffect(() => {
-    localStorage.setItem("opencite_test_runs", JSON.stringify(testRuns));
+    storage.set("test_runs", testRuns);
   }, [testRuns]);
 
   // Create a new gold query: search, then enter grading mode

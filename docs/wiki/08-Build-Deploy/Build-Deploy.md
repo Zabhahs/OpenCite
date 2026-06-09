@@ -31,7 +31,7 @@ OpenCITE's build and deploy pipeline is intentionally minimal. Vercel runs `npm 
 
 `postinstall` runs `prisma generate` after every `npm install` to regenerate the Prisma client from `prisma/schema.prisma`. This is critical on Vercel: the client must be regenerated for the correct Vercel Postgres binaries.
 
-**Note:** `public/output.css` is committed to the repo (confirmed present via `public/output.css` glob). This is intentional — Vite's static asset serving during `vite dev` requires it, and it allows the HTML to reference `/output.css` directly without a Vite import. The committed file may be stale relative to `src/input.css` for local dev; `npm run build` always regenerates it (F-506).
+**Note:** `public/output.css` is committed to the repo (confirmed present via `public/output.css` glob). This is intentional — Vite's static asset serving during `vite dev` requires it, and it allows the HTML to reference `/output.css` directly without a Vite import. The committed file may be stale relative to `src/input.css` for local dev; `npm run build` always regenerates it (F-506). **Fixed v0.40:** a zero-dep `dev:css` npm script (`tailwindcss --watch`) was added — run alongside `npm run dev` to keep `output.css` live during local development.
 
 ## Vite config (`vite.config.js`)
 
@@ -99,7 +99,7 @@ Vercel infers all `api/*.js` files as serverless functions automatically (no exp
 
 **Observation:** no test framework, no linter, no TypeScript. No `@types/*` in dev deps. The project runs pure JS. No dead deps detected — all listed packages are actively used (`stripe` in `api/checkout.js` and `api/stripe/webhook.js`; `@vercel/analytics` and `@vercel/speed-insights` in `src/main.jsx` or layout).
 
-**Version drift risk:** `@auth/core ^0.37.4` and `@auth/prisma-adapter ^2.7.4` are pegged to minor ranges; Auth.js v5 has had breaking changes between minors. The `^` range allows auto-upgrades on `npm install` (F-507).
+**Version drift risk:** ~~`@auth/core ^0.37.4` and `@auth/prisma-adapter ^2.7.4` are pegged to minor ranges; Auth.js v5 has had breaking changes between minors. The `^` range allows auto-upgrades on `npm install`~~ (F-507). **Fixed v0.40:** both pinned to exact lock-resolved versions (`@auth/core 0.37.4`, `@auth/prisma-adapter 2.11.2`); `package-lock.json` committed; `.github/dependabot.yml` watches `@auth/*` and `@modelcontextprotocol/*`.
 
 ## Env var inventory
 
@@ -112,7 +112,7 @@ All vars referenced across config and the codebase. Grouped by consumer.
 | `POSTGRES_PRISMA_URL` | **yes** | `prisma/schema.prisma` | pgBouncer pooler (port 6543); runtime queries. Append `?pgbouncer=true` |
 | `POSTGRES_URL_NON_POOLING` | **yes** | `prisma/schema.prisma`, `scripts/migrate.mjs` | Direct connection (port 5432); migrations only |
 
-**Gap:** `.env.example` documents `DATABASE_URL` and `DIRECT_URL` (old Supabase naming), but `prisma/schema.prisma` references `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` (Vercel Postgres naming). These are the same connection strings — but the `.env.example` naming does not match the actual schema env keys. Developers following `.env.example` verbatim will get a Prisma error (F-508).
+~~**Gap:** `.env.example` documents `DATABASE_URL` and `DIRECT_URL` (old Supabase naming), but `prisma/schema.prisma` references `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` (Vercel Postgres naming). These are the same connection strings — but the `.env.example` naming does not match the actual schema env keys. Developers following `.env.example` verbatim will get a Prisma error~~ (F-508). **Fixed v0.40:** `.env.example` now uses `POSTGRES_PRISMA_URL`/`POSTGRES_URL_NON_POOLING` with comments naming the readers; all `api/` `process.env` vars verified documented.
 
 ### Auth.js / OAuth
 
@@ -223,9 +223,9 @@ Local smoke test for the `?simple=1` diagnostic mode (v0.36). Imports `api/searc
 
 - **Verdict:** healthy overall; two env-doc gaps and one version-drift risk.
 - **Findings:**
-  - [F-506] `public/output.css` is committed — stale during local dev unless `tailwindcss --watch` is run alongside `vite`.
-  - [F-507] `@auth/core ^0.37.4` and `@auth/prisma-adapter ^2.7.4` use `^` semver; Auth.js v5 minor releases have historically broken the adapter interface.
-  - [F-508] `.env.example` documents `DATABASE_URL`/`DIRECT_URL` but `prisma/schema.prisma` reads `POSTGRES_PRISMA_URL`/`POSTGRES_URL_NON_POOLING`. Docs and code are mismatched — a developer following `.env.example` will get a Prisma env error.
+  - [F-506] `public/output.css` is committed — stale during local dev unless `tailwindcss --watch` is run alongside `vite`. **Fixed v0.40:** `dev:css` npm script added (`tailwindcss --watch`); run alongside `npm run dev`.
+  - [F-507] `@auth/core ^0.37.4` and `@auth/prisma-adapter ^2.7.4` use `^` semver; Auth.js v5 minor releases have historically broken the adapter interface. **Fixed v0.40:** pinned to exact versions (`0.37.4` / `2.11.2`); `package-lock.json` committed; Dependabot watches `@auth/*` + `@modelcontextprotocol/*`.
+  - [F-508] `.env.example` documents `DATABASE_URL`/`DIRECT_URL` but `prisma/schema.prisma` reads `POSTGRES_PRISMA_URL`/`POSTGRES_URL_NON_POOLING`. Docs and code are mismatched — a developer following `.env.example` will get a Prisma env error. **Fixed v0.40:** `.env.example` updated to use correct Vercel Postgres key names with reader comments; all `api/` env vars verified documented.
   - [F-509] `API_KEY_PEPPER` defaults to `""` if unset (`api/_shared/crypto.js:69`). An unset pepper makes the SHA-256 hash effectively a single-factor hash with no pepper protection. The prod Vercel env must set this; there is no guard that fails startup if it's missing.
 - **Smells:** no test runner in `package.json` scripts. The only automated assertions are the probe scripts (live-endpoint or in-process). `OPENCITE_MAILTO` is undocumented in `.env.example`.
 

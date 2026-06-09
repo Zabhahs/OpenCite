@@ -921,6 +921,10 @@
       "lib.goldSetMetrics"
     ],
     [
+      "components.admin.GoldSetHarness",
+      "lib.storage"
+    ],
+    [
       "components.AdminConsole",
       "components.admin.GoldSetHarness"
     ],
@@ -1621,6 +1625,12 @@
       "components.admin.GoldSetHarness",
       "lib.goldSetMetrics.test"
     ],
+    "lib.storage": [
+      "components.admin.GoldSetHarness",
+      "hooks.useSettings",
+      "lib.history",
+      "lib.library"
+    ],
     "components.admin.GoldSetHarness": [
       "components.AdminConsole"
     ],
@@ -1683,11 +1693,6 @@
     ],
     "lib.semantic": [
       "hooks.useSemanticRerank"
-    ],
-    "lib.storage": [
-      "hooks.useSettings",
-      "lib.history",
-      "lib.library"
     ],
     "launchers._factory": [
       "launchers.index"

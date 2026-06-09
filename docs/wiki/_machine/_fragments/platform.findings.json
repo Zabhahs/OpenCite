@@ -4,12 +4,12 @@
     "type": "debt",
     "severity": "low",
     "title": "MCP SDK pinned with ^ semver — breaking minor releases allowed",
-    "detail": "@modelcontextprotocol/sdk ^1.0.0 in mcp/package.json allows any 1.x release. The MCP SDK has had breaking changes between minor versions. A future npm install could silently upgrade to an incompatible version.",
+    "detail": "@modelcontextprotocol/sdk ^1.0.0 in mcp/package.json allows any 1.x release. The MCP SDK has had breaking changes between minor versions. A future npm install could silently upgrade to an incompatible version. [RESOLVED v0.40: pinned to exact 1.29.0 (the npm-registry-verified latest 1.x — what ^1.0.0 already resolved to; the server only imports stable core paths /server/index.js, /server/stdio.js, /types.js present across all 1.x). Dependabot opens controlled upgrade PRs for mcp/ (.github/dependabot.yml). OPTIONAL follow-up: commit mcp/package-lock.json for contributor-reproducible installs — needs one `npm install` in mcp/; not required to close this finding (the mcp package is standalone, not in the Vercel build, so there's no npm ci to break).]",
     "path": "mcp/package.json",
     "modules": [
       "mcp.server"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
     "fix_hint": "Pin to the exact tested version, e.g. \"@modelcontextprotocol/sdk\": \"1.0.4\". Re-test on each intentional upgrade."
   },
@@ -18,12 +18,12 @@
     "type": "ux",
     "severity": "low",
     "title": "MCP non-JSON format responses return {_text} — undocumented shape for AI clients",
-    "detail": "When format=mla/apa/bibtex/ris is requested, client.js returns {_text: string} rather than a JSON object. The MCP tool description does not document this distinction. AI clients that always expect a JSON object will receive a misshapen response without a clear error.",
+    "detail": "When format=mla/apa/bibtex/ris is requested, client.js returns {_text: string} rather than a JSON object. The MCP tool description does not document this distinction. AI clients that always expect a JSON object will receive a misshapen response without a clear error. [RESOLVED v0.40: server.js now detects body._text and surfaces the raw citation text as the MCP text content block instead of a JSON-wrapped envelope — the idiomatic plain-text shape. The surprising {_text} envelope no longer reaches the client; no SSOT description change needed.]",
     "path": "mcp/src/client.js:63",
     "modules": [
       "mcp.client"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "06-MCP-Server/MCP-Server.md#-health-audit",
     "fix_hint": "Add a note to the tool description: 'When format is not json, the response is a plain text bibliography in the _text field rather than a structured object.' Or detect at call site in server.js and surface as a separate content block."
   },
@@ -32,12 +32,12 @@
     "type": "debt",
     "severity": "low",
     "title": "ApiUsage.key_id has no FK to api_keys — orphaned usage rows accumulate silently",
-    "detail": "The ApiUsage model references key_id but declares no @@relation to ApiKey. If an ApiKey row is deleted (via user delete Cascade), its ApiUsage rows remain. Over time this pollutes the analytics table with orphaned counts.",
+    "detail": "The ApiUsage model references key_id but declares no @@relation to ApiKey. If an ApiKey row is deleted (via user delete Cascade), its ApiUsage rows remain. Over time this pollutes the analytics table with orphaned counts. [RESOLVED v0.40: migration 20260608000100_api_usage_fk makes key_id nullable, nulls pre-existing orphans, and adds the FK with ON DELETE SET NULL (analytics rows survive key deletion). Schema updated with the ApiKey.usage relation + key_id String?.]",
     "path": "prisma/schema.prisma:158",
     "modules": [
       "prisma.schema"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Add a relation: keyId ApiKey @relation(fields: [key_id], references: [id], onDelete: Cascade). Add a migration."
   },
@@ -46,13 +46,13 @@
     "type": "bug",
     "severity": "med",
     "title": "relevance_labels table missing from billing migration — re-provisioning will fail",
-    "detail": "prisma/schema.prisma defines the relevance_labels model but the only migration file (20260530120000_billing/migration.sql) does not create it. A fresh prisma migrate deploy will not create the table, breaking the F2 gold-set harness on a new environment.",
+    "detail": "prisma/schema.prisma defines the relevance_labels model but the only migration file (20260530120000_billing/migration.sql) does not create it. A fresh prisma migrate deploy will not create the table, breaking the F2 gold-set harness on a new environment. [RESOLVED v0.40: new migration 20260608000000_relevance_labels (CREATE TABLE IF NOT EXISTS). scripts/migrate.mjs now iterates ALL migration dirs in order in both the deploy path and the P3005 fallback, so fresh deploys provision every table.]",
     "path": "prisma/migrations/20260530120000_billing/migration.sql",
     "modules": [
       "prisma.schema",
       "scripts.migrate"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Add a second migration file (e.g. 20260531000000_relevance_labels/migration.sql) with the CREATE TABLE IF NOT EXISTS for relevance_labels, or append to the existing migration (only safe on a fresh DB)."
   },
@@ -61,10 +61,10 @@
     "type": "debt",
     "severity": "low",
     "title": "Legacy useSettings.js localStorage keys use bare names — no opencite: namespace prefix",
-    "detail": "Keys europeanaKey, openAlexKey, openAlexEmail, crossrefEmail, s2Key, enabledSources, curatedJournals, viewMode are written/read without the opencite: prefix. The storage.js wrapper (used by newer code) does namespace. Bare keys risk collisions if the app is ever served on a shared origin, and mixing conventions makes future key migration harder.",
+    "detail": "Keys europeanaKey, openAlexKey, openAlexEmail, crossrefEmail, s2Key, enabledSources, curatedJournals, viewMode are written/read without the opencite: prefix. The storage.js wrapper (used by newer code) does namespace. Bare keys risk collisions if the app is ever served on a shared origin, and mixing conventions makes future key migration harder. [RESOLVED v0.40: verified on-branch — useSettings.js already routes all reads/writes through storage.js (opencite: namespace) via migrateLegacyKeys(), which copies the bare keys into storage.set('settings') then purges them (LEGACY_KEYS). No bare localStorage access remains outside that one-time migration.]",
     "path": "src/hooks/useSettings.js:29",
     "modules": [],
-    "status": "open",
+    "status": "fixed",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Migrate to storage.js for all keys. Run a one-time migration in useSettings.js: read bare key, write namespaced key, remove bare key."
   },
@@ -73,12 +73,12 @@
     "type": "bug",
     "severity": "low",
     "title": "users.total_credits is Decimal(12,4) but may be treated as float in JS arithmetic",
-    "detail": "Prisma returns Decimal values as Decimal.js objects (or strings, depending on the client version). If caller code does arithmetic with + or * rather than Decimal methods, silent precision loss occurs. Credit debit/credit paths in api/_shared/billing.js must coerce carefully.",
+    "detail": "Prisma returns Decimal values as Decimal.js objects (or strings, depending on the client version). If caller code does arithmetic with + or * rather than Decimal methods, silent precision loss occurs. Credit debit/credit paths in api/_shared/billing.js must coerce carefully. [RESOLVED v0.40: audit of billing.js + stripe/webhook.js found all ledger writes use atomic Prisma increment/decrement (Postgres-side Decimal math); the only plain-JS arithmetic is round4() on settlement values (creditCost x multiplier, magnitudes <=10) which is never written back to the DB. Documented with a comment above round4. No unsafe path found.]",
     "path": "prisma/schema.prisma:33",
     "modules": [
       "prisma.schema"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "07-Data-Layer/Data-Layer.md#-health-audit",
     "fix_hint": "Audit billing.js for any plain JS arithmetic on total_credits. Prefer Prisma's atomic $increment/$decrement operations which keep the value in Postgres arithmetic."
   },
@@ -87,12 +87,12 @@
     "type": "ux",
     "severity": "low",
     "title": "public/output.css is committed — stale during local dev without tailwindcss --watch",
-    "detail": "The Tailwind output is committed to the repo and served statically. During vite dev, changes to src/input.css or src/**/*.{jsx,js} are not reflected until tailwindcss CLI is also run. A developer running only `vite` will see stale styles.",
+    "detail": "The Tailwind output is committed to the repo and served statically. During vite dev, changes to src/input.css or src/**/*.{jsx,js} are not reflected until tailwindcss CLI is also run. A developer running only `vite` will see stale styles. [RESOLVED v0.40: added an npm script `dev:css` (tailwindcss --watch) — run it alongside `npm run dev` to live-rebuild output.css. Chosen over the `concurrently` single-command approach because adding that devDep needs an `npm install` lockfile sync the operating rules forbid; dev:css reuses the already-present tailwindcss binary, so no new dependency and no lockfile change. public/output.css stays committed (required by vite preview + the Vercel build).]",
     "path": "public/output.css",
     "modules": [
       "tailwind.config"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "08-Build-Deploy/Build-Deploy.md#css-pipeline",
     "fix_hint": "Add a dev script: \"dev\": \"concurrently \\\"vite\\\" \\\"tailwindcss -i ./src/input.css -o ./public/output.css --watch\\\"\". Or import input.css via Vite instead of linking output.css in index.html."
   },
@@ -101,12 +101,12 @@
     "type": "debt",
     "severity": "med",
     "title": "@auth/core and @auth/prisma-adapter use ^ semver — Auth.js v5 minor releases have broken adapters",
-    "detail": "@auth/core ^0.37.4 and @auth/prisma-adapter ^2.7.4 in package.json. Auth.js v5 has historically changed adapter interfaces and session shape in minor releases. An npm install on a new Vercel deployment could silently upgrade to a breaking version.",
+    "detail": "@auth/core ^0.37.4 and @auth/prisma-adapter ^2.7.4 in package.json. Auth.js v5 has historically changed adapter interfaces and session shape in minor releases. An npm install on a new Vercel deployment could silently upgrade to a breaking version. [RESOLVED v0.40: pinned to the exact package-lock-resolved versions — @auth/core 0.37.4, @auth/prisma-adapter 2.11.2 (the lockfile already resolved these, so pinning is a no-op for npm ci, no install needed). package-lock.json is committed. Dependabot (.github/dependabot.yml) now opens weekly controlled-upgrade PRs for @auth/*.]",
     "path": "package.json",
     "modules": [
       "package"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Pin to exact versions. Use a lockfile (package-lock.json or yarn.lock) and commit it. Enable Dependabot for controlled upgrade PRs."
   },
@@ -115,14 +115,14 @@
     "type": "bug",
     "severity": "med",
     "title": ".env.example documents DATABASE_URL/DIRECT_URL but Prisma schema reads POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING",
-    "detail": ".env.example shows DATABASE_URL and DIRECT_URL (old Supabase naming convention). prisma/schema.prisma and scripts/migrate.mjs read POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING (Vercel Postgres naming). A developer copying .env.example verbatim will get a Prisma environment variable error.",
+    "detail": ".env.example shows DATABASE_URL and DIRECT_URL (old Supabase naming convention). prisma/schema.prisma and scripts/migrate.mjs read POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING (Vercel Postgres naming). A developer copying .env.example verbatim will get a Prisma environment variable error. [RESOLVED v0.40: .env.example now uses POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING with comments naming the readers. Verified via grep that every process.env var referenced in api/ is documented — SETTINGS_ENCRYPTION_KEY, API_KEY_PEPPER, KV_REST_API_URL/TOKEN, DPLA/SMITHSONIAN/EUROPEANA keys, Stripe, OPENCITE_API_KEY, VITE_ADMIN_EMAILS, OPENCITE_MAILTO were all already present.]",
     "path": ".env.example",
     "modules": [
       "package",
       "prisma.schema",
       "scripts.migrate"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "08-Build-Deploy/Build-Deploy.md#-health-audit",
     "fix_hint": "Update .env.example to use POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING with appropriate comments. Add OPENCITE_MAILTO, KV_REST_API_URL, KV_REST_API_TOKEN, SETTINGS_ENCRYPTION_KEY, API_KEY_PEPPER to .env.example as they are all undocumented required vars."
   },

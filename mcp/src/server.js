@@ -42,9 +42,15 @@ export function createServer({ apiKey, baseUrl } = {}) {
     }
     try {
       const body = await searchScholarlySources(args, { apiKey, baseUrl });
-      return {
-        content: [{ type: "text", text: JSON.stringify(body, null, 2) }],
-      };
+      // Non-JSON formats (mla/apa/bibtex/ris) come back from client.js as { _text }.
+      // Surface that raw citation text as the MCP text block directly — the idiomatic
+      // plain-text shape an agent expects — instead of a JSON-wrapped envelope. JSON
+      // formats (json/csl-json) keep the pretty-printed structured response. (F-501)
+      const text =
+        body && typeof body._text === "string"
+          ? body._text
+          : JSON.stringify(body, null, 2);
+      return { content: [{ type: "text", text }] };
     } catch (err) {
       // err.message is built in client.js without headers, so the key can't leak.
       return { isError: true, content: [{ type: "text", text: err.message }] };

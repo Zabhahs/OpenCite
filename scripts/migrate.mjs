@@ -19,9 +19,14 @@
 // no-op forever.
 
 import { execSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 
-const MIGRATION = "20260530120000_billing";
-const SQL_FILE = `prisma/migrations/${MIGRATION}/migration.sql`;
+// All migration dirs in lexicographic order. Timestamp prefixes (YYYYMMDDHHMMSS_)
+// sort chronologically, so this is also apply order. Adding a new migration is
+// drop-in — no edit here required (only the dir + its idempotent migration.sql).
+const MIGRATIONS = readdirSync("prisma/migrations")
+  .filter((d) => /^\d{14}_/.test(d))
+  .sort();
 // DDL is safest over the direct (non-pooling) connection.
 const DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING || "";
 
@@ -46,20 +51,26 @@ if (run("npx prisma migrate deploy", "migrate deploy")) {
 // 2) Fallback for the P3005 first-run (db-push'd DB with no history).
 console.warn("[migrate] migrate deploy failed (likely P3005) — applying SQL directly + baselining");
 
-// 2a) Apply the idempotent SQL so any missing columns/tables are created.
-//     No-op where objects already exist.
-const execCmd = DIRECT_URL
-  ? `npx prisma db execute --url "${DIRECT_URL}" --file ${SQL_FILE}`
-  : `npx prisma db execute --schema prisma/schema.prisma --file ${SQL_FILE}`;
-const applied = run(execCmd, "direct SQL apply");
+// 2a) Apply each idempotent migration SQL in order so any missing
+//     columns/tables/constraints are created. No-op where objects already exist.
+let allApplied = true;
+for (const m of MIGRATIONS) {
+  const sqlFile = `prisma/migrations/${m}/migration.sql`;
+  const execCmd = DIRECT_URL
+    ? `npx prisma db execute --url "${DIRECT_URL}" --file ${sqlFile}`
+    : `npx prisma db execute --schema prisma/schema.prisma --file ${sqlFile}`;
+  if (!run(execCmd, `direct SQL apply: ${m}`)) { allApplied = false; break; }
+}
 
-// 2b) Record the migration as applied — but ONLY if the SQL actually applied.
-//     Baselining without applying would leave the DB permanently missing the
-//     billing columns (history says "done", so `migrate deploy` never retries),
-//     which breaks the Prisma adapter's user queries → auth fails. If the SQL
-//     apply failed, leave the migration unbaselined so the next deploy retries.
-if (applied) {
-  run(`npx prisma migrate resolve --applied ${MIGRATION}`, "baseline (resolve --applied)");
+// 2b) Record the migrations as applied — but ONLY if every SQL actually applied.
+//     Baselining without applying would leave the DB permanently missing objects
+//     (history says "done", so `migrate deploy` never retries), which breaks the
+//     Prisma adapter's user queries → auth fails. If any apply failed, leave them
+//     all unbaselined so the next deploy retries the whole sequence.
+if (allApplied) {
+  for (const m of MIGRATIONS) {
+    run(`npx prisma migrate resolve --applied ${m}`, `baseline (resolve --applied): ${m}`);
+  }
 } else {
   console.warn("[migrate] SQL apply failed — NOT baselining; next deploy will retry");
 }
