@@ -34,6 +34,12 @@ export const THAQALAYN_ADAPTER = {
         authors: [], year: "", journal: h.chapterName || h.chapter || "",
         publisher: "Thaqalayn", volume: "", issue: "",
         pages: hadithNumber ? String(hadithNumber) : "", doi: "",
+        // v0.38 (T11, F-108): ACCEPTED — no reliable item-level deep link is constructible.
+        // The API (thaqalayn-api.net /api/v2/query) returns id/bookId/book/category/chapter
+        // but the public site (thaqalayn.net) is a Next.js SPA whose only routes are /, /search,
+        // /quran, /duas, /about — there is NO documented per-hadith canonical URL, and the query
+        // `id` does not even resolve against /api/v2/hadith/<id>. Homepage is the safe link; a
+        // guessed /hadith/<id> path would 404. Revisit if the site exposes per-hadith routes.
         url: "https://thaqalayn.net/",
         abstract: stripHtml(englishText) || stripHtml(arabicText),
         isOA: true, type: "textual"

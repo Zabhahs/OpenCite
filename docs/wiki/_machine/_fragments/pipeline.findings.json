@@ -121,10 +121,12 @@
     "title": "Always-dead adapters (SCIELO/OPENNEURO/ENA) drag every query to partial coverage, causing systematic billing discounts",
     "detail": "SCIELO/OPENNEURO/ENA throw on every query so failedCount>0 always → coverage.js bandFor() can never return \"full\" (line 36). BUT their corpusSize is tiny (1M/500K/1K) vs OpenAlex/Crossref (hundreds of millions), so attrition is ~0.3% → band is \"near-full\" (coverage>=0.99), NOT \"partial\". Real impact: every query billed at coverageMultiplier(\"near-full\")=0.99 instead of 1.0 — a guaranteed ~1% systematic UNDERCHARGE + a permanently non-full coverage signal. The freeBelowBand free-waiver does NOT fire (plans set freeBelowBand:\"limited\"; isAtOrBelow waives only the \"limited\" band, coverage<0.5). Earlier \"partial coverage → billing discount/free\" framing was an overstatement. Fix (remove + circuit-breaker) still valid: restores \"full\" on queries where no OTHER adapter errors. [VERIFIED ON-BRANCH 2026-06-08]",
     "path": "src/adapters/extensions/",
-    "modules": [],
-    "status": "open",
+    "modules": [
+      "api.shared.adapterHealth"
+    ],
+    "status": "fixed",
     "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
-    "fix_hint": "Quarantine done (v0.38 T0). Add a chronic-failure circuit-breaker so failedCount can reach 0 → band \"full\" (1.0x). Verify empirically via probe (v0.38 T2): measure full vs near-full split + 0.99x→1.0x charge delta."
+    "fix_hint": "FIXED in code (v0.38): T0 quarantined the 3 dead adapters; T1 added a chronic-failure circuit-breaker (api/_shared/adapterHealth.js, threshold 5, unit-tested) wired into api/search.js so a future always-failing adapter is DROPPED from the eligible set before coverage — failedCount can reach 0 → band \"full\" (1.0x). REMAINING: T2 empirical prod verification (run scripts/stress/probe.mjs --coverage-only with an admin KEY before/after, record the full vs near-full split + 0.99x->1.0x charge delta in COVERAGE_VERIFICATION_v0_38.md). Code-complete; prod measurement pending."
   },
   {
     "id": "F-209",

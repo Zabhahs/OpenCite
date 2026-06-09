@@ -13,6 +13,11 @@ export const GALLICA_ADAPTER = {
     // Server-proxied SRU via /api/search/gallica. "gallica all" index = OCR full-text + metadata.
     protocol: "sru", fulltext: true, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    // v0.38 (T8, F-112): NOT serverSafe — `search` calls the RELATIVE URL /api/search/gallica,
+    // which only resolves in the browser (the dedicated edge route does the SRU fetch). Marking
+    // it serverSafe would put an unresolvable relative URL into the server fan-out. corpusSize
+    // is recorded for documentation/future use only (no effect while not in the server denominator).
+    corpusSize: 15000000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

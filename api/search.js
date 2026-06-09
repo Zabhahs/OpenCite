@@ -53,6 +53,7 @@ import { checkRateLimit } from "./_shared/ratelimit.js";
 import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
 import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
 import { serverInjectedKeys } from "./_shared/serverKeys.js";
+import { recordSuccess, recordFailure, isCircuitOpen, circuitBreakerStats } from "./_shared/adapterHealth.js";
 
 // DRY-2: the server-safe set is DERIVED from the registry — `capability.serverSafe`
 // lives next to each adapter's transport code, not hardcoded here.
@@ -193,10 +194,18 @@ export default async function handler(req, res) {
   // it from counting as a "failed adapter" (no false coverage-band drop) and lets
   // Europeana/DPLA/Smithsonian auto-activate the moment their env var is set (no redeploy).
   const KEYED_ENV = { EUROPEANA: "europeanaKey", DPLA: "dplaKey", SMITHSONIAN: "smithsonianKey" };
-  const adapters = ADAPTERS.filter(
+  const eligible = ADAPTERS.filter(
     (a) => tierIds.has(a.id) && selectedIds.includes(a.id)
          && (!KEYED_ENV[a.id] || !!envKeys[KEYED_ENV[a.id]])
   );
+
+  // v0.38 (T1, F-208): chronic-failure circuit-breaker. Drop any adapter whose
+  // circuit is open (FAILURE_STREAK_THRESHOLD consecutive throws on this function
+  // instance) BEFORE fan-out + coverage. A circuit-opened adapter is treated as if
+  // it was never eligible — NOT as a failed adapter — so a permanently-broken source
+  // can no longer pin the coverage band below `full` and under-charge every search.
+  const cbDropped = eligible.filter((a) => isCircuitOpen(a.id));
+  const adapters = eligible.filter((a) => !isCircuitOpen(a.id));
 
   // Settings — defaults + per-request overrides.
   const settings = {
@@ -278,10 +287,12 @@ export default async function handler(req, res) {
             ));
           }
           adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: results.length, errored: false });
+          recordSuccess(adapter.id); // v0.38 T1: reset circuit-breaker streak on a non-throwing run
           return results;
         } catch {
           failedAdapters.push(adapter);
           adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: 0, errored: true });
+          recordFailure(adapter.id); // v0.38 T1: advance circuit-breaker streak; opens after FAILURE_STREAK_THRESHOLD
           return [];
         }
       })
@@ -345,6 +356,11 @@ export default async function handler(req, res) {
         perAdapter: adapterStats,
         dedup: { raw: scored.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
         coverage: { rawPercent: Math.round(cov.coverage * 1000) / 10, failedCount: failedAdapters.length, band: cov.band },
+        // v0.38 T1: circuit-breaker visibility (admin-only). `circuitBreaker` is the
+        // streak snapshot for every tracked adapter; `cbDropped` lists ids dropped from
+        // eligibility this request because their circuit is open.
+        circuitBreaker: circuitBreakerStats(),
+        cbDropped: cbDropped.map((a) => a.id),
       };
     }
   } catch {

@@ -13,6 +13,9 @@ export const BRITISH_LIBRARY_ADAPTER = {
     // Server-proxied SPARQL (title-substring CONTAINS match). No COUNT — total = page length only.
     protocol: "sparql", fulltext: false, pagination: "offset", totalCount: false, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    // v0.38 (T8, F-112): NOT serverSafe — `search` calls the RELATIVE URL /api/search/bl
+    // (browser-only). corpusSize recorded for documentation only; no effect while client-only.
+    corpusSize: 200000000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

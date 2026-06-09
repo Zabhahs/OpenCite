@@ -7,7 +7,7 @@
     "loc": 434,
     "purpose": "Origin-blind metered scholarly search endpoint: resolves identity, gates credits, fans out to server-safe adapters, scores/deduplicates/fuses with RRF, and returns public or admin-debug cards.",
     "exports": ["default"],
-    "deps": ["adapters.index", "lib.scoring", "lib.dedup", "lib.rrf", "lib.citations", "constants.defaults", "api.shared.publicResult", "api.shared.debugResult", "api.shared.coverage", "api.shared.apiContract", "api.shared.apiAuth", "api.shared.plans", "api.shared.ratelimit", "api.shared.cache", "api.shared.billing", "api.shared.serverKeys"],
+    "deps": ["adapters.index", "lib.scoring", "lib.dedup", "lib.rrf", "lib.citations", "constants.defaults", "api.shared.publicResult", "api.shared.debugResult", "api.shared.coverage", "api.shared.apiContract", "api.shared.apiAuth", "api.shared.plans", "api.shared.ratelimit", "api.shared.cache", "api.shared.billing", "api.shared.serverKeys", "api.shared.adapterHealth"],
     "status": "healthy",
     "findings": ["F-402", "F-403"],
     "wiki": "04-Backend-API/Search-Endpoint.md",
@@ -103,6 +103,21 @@
     "wiki": "05-Billing/Billing-Credits.md#coverage-prorated-billing",
     "tags": ["coverage", "billing", "origin-blind"],
     "notes": "Only the band string is safe to emit externally — raw %, failedCount, and adapter names are internal only."
+  },
+  {
+    "id": "api.shared.adapterHealth",
+    "path": "api/_shared/adapterHealth.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "loc": 60,
+    "purpose": "Chronic-failure circuit-breaker (v0.38): an in-process, instance-scoped consecutive-failure streak per adapter id; once it crosses FAILURE_STREAK_THRESHOLD the adapter is dropped from the eligible set before coverage, so a permanently-broken source can't pin the coverage band below full or under-charge.",
+    "exports": ["recordSuccess", "recordFailure", "isCircuitOpen", "circuitBreakerStats", "FAILURE_STREAK_THRESHOLD"],
+    "deps": [],
+    "status": "healthy",
+    "findings": ["F-208"],
+    "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
+    "tags": ["circuit-breaker", "coverage", "billing", "resilience", "origin-blind"],
+    "notes": "State resets on cold start by design (transient outages self-clear; a still-broken adapter re-opens within FAILURE_STREAK_THRESHOLD requests). Unit-tested in api/_shared/adapterHealth.test.js."
   },
   {
     "id": "api.shared.crypto",

@@ -1,31 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-09T00:34:48.422Z",
+  "generatedAt": "2026-06-09T01:04:43.887Z",
   "counts": {
-    "modules": 152,
-    "curated": 146,
-    "edges": 291,
+    "modules": 154,
+    "curated": 147,
+    "edges": 293,
     "findings": 71,
     "reuse": 26
   },
   "byRuntime": {
     "both": 35,
     "client": 55,
-    "server": 39,
+    "server": 40,
+    "unspecified": 7,
     "shared": 7,
-    "unspecified": 6,
     "build": 4,
     "infra": 6
   },
   "byStatus": {
-    "healthy": 122,
+    "healthy": 123,
     "degraded": 7,
     "buggy": 3,
     "keyed": 8,
     "quarantined": 4,
+    "unspecified": 7,
     "stub": 1,
-    "dead": 1,
-    "unspecified": 6
+    "dead": 1
   },
   "findingsBySeverity": {
     "low": 44,

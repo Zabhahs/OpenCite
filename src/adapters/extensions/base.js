@@ -25,6 +25,12 @@ export const BASE_ADAPTER = {
     totalCount: true, maxWindow: 10000, auth: "none",
     // dcdescription (abstract) is populated when the source repo includes it — varies by record.
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    // v0.38 (T8, F-112): BASE uses proxiedFetch with an ABSOLUTE URL (api.base-search.net),
+    // which resolves server-side — so it is genuinely server-safe and joins the /api/search
+    // fan-out. corpusSize ~300M (10,000+ OA repositories) gives the coverage engine a real
+    // weight instead of FALLBACK_CORPUS=1, which had drastically understated its contribution.
+    serverSafe: true,
+    corpusSize: 300000000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

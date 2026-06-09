@@ -13,6 +13,9 @@ export const BDH_ADAPTER = {
     // Server-proxied datos.bne.es REST via /api/search/bdh.
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "full", citedBy: false },
+    // v0.38 (T8, F-112): NOT serverSafe — `search` calls the RELATIVE URL /api/search/bdh
+    // (browser-only). corpusSize recorded for documentation only; no effect while client-only.
+    corpusSize: 400000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

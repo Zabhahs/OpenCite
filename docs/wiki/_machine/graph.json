@@ -670,6 +670,10 @@
     ],
     [
       "api.search",
+      "api.shared.adapterHealth"
+    ],
+    [
+      "api.search",
       "api.shared.apiAuth"
     ],
     [
@@ -735,6 +739,10 @@
     [
       "api.settings",
       "api.shared.prisma"
+    ],
+    [
+      "api.shared.adapterHealth.test",
+      "api.shared.adapterHealth"
     ],
     [
       "api.shared.apiAuth",
@@ -1469,6 +1477,10 @@
       "components.UnifiedResultList",
       "hooks.useSearch",
       "hooks.useSettings"
+    ],
+    "api.shared.adapterHealth": [
+      "api.search",
+      "api.shared.adapterHealth.test"
     ],
     "api.shared.apiAuth": [
       "api.search"

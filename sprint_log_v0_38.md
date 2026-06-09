@@ -522,32 +522,39 @@ maps to `https://thaqalayn.net/hadith/<id>`, use it.
 
 ## 4. Acceptance criteria
 
-- [ ] **T0 verified:** `npx vite build` passes; SciELO/OpenNeuro/ENA absent from
+- [x] **T0 verified:** `npx vite build` passes; SciELO/OpenNeuro/ENA absent from
       `ADAPTERS` array and extensions barrel; quarantine dossiers present in
       `docs/wiki/99-Archive/_quarantine/`.
-- [ ] **T1 circuit-breaker:** after 5 consecutive adapter failures, the adapter is absent
-      from `eligibleAdapters` passed to `computeCoverage`. Admin `?debug=1` response
-      includes `circuitBreaker` telemetry.
-- [ ] **T2 coverage:** at least 4/5 probe queries return `coverage: "full"` or
-      `"near-full"` after T0 lands in prod. `creditsCharged > 0` on all non-admin queries.
-- [ ] **T3 Wikidata:** decision documented. If kept: comment in `wikidata.js`. If
-      quarantined: dossier + machine record + build green.
-- [ ] **T4 IA citedBy:** product decision recorded. UI already shows IA `citedBy` as
-      "N downloaded" (not "cited") — `ResultCard.jsx:153`. Either keep (close F-104 wontfix) or,
-      if hiding, `citedBy: null` at `internetArchive.js:100/141`.
-- [ ] **T5 Mexicana load-more:** load-more fetches a new batch (not a repeat of batch 1).
-      `nextPageToken` key returned from adapter.
-- [ ] **T6 BnF isOA:** `isOA: false` in BnF results. BnF cards absent from OA-only views.
-- [ ] **T7 CORS noise:** no red CORS pre-flight error in browser DevTools for Northwestern
-      and ONB queries.
-- [ ] **T8 BASE server:** BASE appears in server fan-out results (`?debug=1`). Coverage
-      denominator includes BASE's 300M corpusSize.
-- [ ] **T9 S2 protocol:** `semanticScholar.js` has `protocol: 'rest-json'`.
-- [ ] **T10 CURATED pageSize:** load-more on Curated Journals returns new results (not
-      repeat of page 1).
-- [ ] **T11 Thaqalayn URL:** either deep URLs constructed, or F-108 closed with a comment.
-- [ ] **No regression:** existing `npx vite build` passes; no new console errors for the
-      adapter changes.
+- [x] **T1 circuit-breaker:** `api/_shared/adapterHealth.js` (threshold 5) wired into
+      `api/search.js` — circuit-open adapters are filtered out of `eligible` BEFORE
+      `computeCoverage` (passed as `adapters`). Admin `?debug=1` includes `circuitBreaker`
+      + `cbDropped` telemetry. **Unit-tested** (`adapterHealth.test.js`, 6/6 pass). T1.3
+      live-dev manual recovery test still recommended on deploy.
+- [~] **T2 coverage:** tooling done (`probe.mjs --coverage-only` + `KEY`). Mechanism +
+      denominator math verified on-branch. Before/after **prod runs PENDING** (need admin
+      key) — see `COVERAGE_VERIFICATION_v0_38.md`.
+- [~] **T3 Wikidata:** kept for now (no prod evidence to quarantine; T1 circuit-breaker
+      now auto-drops it if it 429s in prod). Prod decision runs PENDING — documented in
+      `COVERAGE_VERIFICATION_v0_38.md`.
+- [x] **T4 IA citedBy:** product decision = **KEEP** the honest "N downloaded" badge
+      (`ResultCard.jsx:153` already source-aware; rank ignores it). F-104 → wontfix. No code change.
+- [x] **T5 Mexicana load-more:** TWO-part fix — return key `nextToken`→`nextPageToken`
+      AND read `opts.pageToken` (was bespoke `opts.mexicanaToken`, never populated). Server
+      route body unchanged (adapter maps its `nextToken` body field). Manual load-more test
+      recommended on deploy.
+- [x] **T6 BnF isOA:** `isOA: false` at `bnfApi.js:60`.
+- [x] **T7 CORS noise:** `typeof window === 'undefined'` guard applied to `northwestern.js`,
+      `onb.js`, and `bnfApi.js`. Browser DevTools spot-check recommended on deploy.
+- [x] **T8 BASE server:** BASE → `serverSafe: true` + `corpusSize: 300000000` (proxiedFetch,
+      absolute URL). **Plan correction:** Gallica/OpenEdition/BDH/BL/OpenContext/Mexicana use
+      RELATIVE-URL `fetch(/api/search/<x>)` (browser-only) → given `corpusSize` for docs but
+      deliberately NOT `serverSafe` (risk R6).
+- [x] **T9 S2 protocol:** SUPERSEDED — Semantic Scholar fully quarantined in v0.42; F-105 closed.
+- [x] **T10 CURATED pageSize:** `curatedJournals.js:26` now uses INITIAL/LOAD_MORE_PAGE_SIZE.
+- [x] **T11 Thaqalayn URL:** investigated — no constructible deep link (SPA, no per-hadith
+      route; `id` doesn't resolve via `/api/v2/hadith/<id>`). Comment added, F-108 → wontfix.
+- [x] **No regression:** `npx vite build` passes (3.3s, 121 modules); circuit-breaker
+      tests 6/6.
 
 ---
 

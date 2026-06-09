@@ -12,6 +12,9 @@ export const OPENCONTEXT_ADAPTER = {
     // Server-proxied via /api/search/opencontext. abstract = Context/Type labels only; no subjects emitted.
     protocol: "rest-json", fulltext: false, pagination: "offset", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "sparse", subjects: "none", citedBy: false },
+    // v0.38 (T8, F-112): NOT serverSafe — `search` calls the RELATIVE URL /api/search/opencontext
+    // (browser-only). corpusSize recorded for documentation only; no effect while client-only.
+    corpusSize: 900000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

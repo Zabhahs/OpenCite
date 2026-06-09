@@ -22,10 +22,13 @@ export const NORTHWESTERN_ADAPTER = {
     const safeQuery = query.replace(/\//g, '\\/');
     const body = { query: { query_string: { query: safeQuery, default_operator: "AND" } }, size: pageSize, from: offset };
     const nuUrl = "https://api.dc.library.northwestern.edu/api/v2/search";
+    // v0.38 (T7, F-102): browser direct fetch throws a CORS error before the proxy fallback
+    // (wasted RTT + red DevTools error every call). Server hits the origin directly; browser
+    // always proxies. No SSR today, so the `window` guard is correct for this architecture.
     let r;
-    try {
+    if (typeof window === 'undefined') {
       r = await fetch(nuUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
-    } catch {
+    } else {
       r = await proxiedFetch(nuUrl, { method: "POST", body: JSON.stringify(body) }, { adapterId: "NORTHWESTERN" });
     }
     if (!r.ok) throw new Error(`Northwestern ${r.status}`);

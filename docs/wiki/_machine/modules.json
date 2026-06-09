@@ -27,7 +27,7 @@
   {
     "id": "adapters.core.curatedJournals",
     "path": "src/adapters/core/curatedJournals.js",
-    "loc": 52,
+    "loc": 55,
     "deps": [
       "adapters.shared.parseOpenAlex",
       "constants.defaults",
@@ -102,7 +102,7 @@
   {
     "id": "adapters.extensions.base",
     "path": "src/adapters/extensions/base.js",
-    "loc": 87,
+    "loc": 93,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -130,7 +130,7 @@
   {
     "id": "adapters.extensions.bdh",
     "path": "src/adapters/extensions/bdh.js",
-    "loc": 29,
+    "loc": 32,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -155,7 +155,7 @@
   {
     "id": "adapters.extensions.bnfApi",
     "path": "src/adapters/extensions/bnfApi.js",
-    "loc": 69,
+    "loc": 78,
     "deps": [
       "adapters.shared.proxy",
       "adapters.shared.xmlUtils",
@@ -185,7 +185,7 @@
   {
     "id": "adapters.extensions.britishLibrary",
     "path": "src/adapters/extensions/britishLibrary.js",
-    "loc": 30,
+    "loc": 33,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -342,7 +342,7 @@
   {
     "id": "adapters.extensions.gallica",
     "path": "src/adapters/extensions/gallica.js",
-    "loc": 29,
+    "loc": 34,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -517,7 +517,7 @@
   {
     "id": "adapters.extensions.mexicana",
     "path": "src/adapters/extensions/mexicana.js",
-    "loc": 33,
+    "loc": 42,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -594,7 +594,7 @@
   {
     "id": "adapters.extensions.northwestern",
     "path": "src/adapters/extensions/northwestern.js",
-    "loc": 53,
+    "loc": 56,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -647,7 +647,7 @@
   {
     "id": "adapters.extensions.onb",
     "path": "src/adapters/extensions/onb.js",
-    "loc": 61,
+    "loc": 64,
     "deps": [
       "adapters.shared.proxy",
       "adapters.shared.xmlUtils",
@@ -675,7 +675,7 @@
   {
     "id": "adapters.extensions.openContext",
     "path": "src/adapters/extensions/openContext.js",
-    "loc": 28,
+    "loc": 31,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -700,7 +700,7 @@
   {
     "id": "adapters.extensions.openEdition",
     "path": "src/adapters/extensions/openEdition.js",
-    "loc": 32,
+    "loc": 35,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -930,7 +930,7 @@
   {
     "id": "adapters.extensions.thaqalayn",
     "path": "src/adapters/extensions/thaqalayn.js",
-    "loc": 45,
+    "loc": 51,
     "deps": [
       "constants.defaults",
       "constants.vocabulary",
@@ -1528,9 +1528,10 @@
   {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 405,
+    "loc": 421,
     "deps": [
       "adapters.index",
+      "api.shared.adapterHealth",
       "api.shared.apiAuth",
       "api.shared.apiContract",
       "api.shared.billing",
@@ -1593,6 +1594,43 @@
       "encryption"
     ],
     "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
+  },
+  {
+    "id": "api.shared.adapterHealth",
+    "path": "api/_shared/adapterHealth.js",
+    "loc": 52,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Chronic-failure circuit-breaker (v0.38): an in-process, instance-scoped consecutive-failure streak per adapter id; once it crosses FAILURE_STREAK_THRESHOLD the adapter is dropped from the eligible set before coverage, so a permanently-broken source can't pin the coverage band below full or under-charge.",
+    "exports": [
+      "recordSuccess",
+      "recordFailure",
+      "isCircuitOpen",
+      "circuitBreakerStats",
+      "FAILURE_STREAK_THRESHOLD"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-208"
+    ],
+    "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
+    "tags": [
+      "circuit-breaker",
+      "coverage",
+      "billing",
+      "resilience",
+      "origin-blind"
+    ],
+    "notes": "State resets on cold start by design (transient outages self-clear; a still-broken adapter re-opens within FAILURE_STREAK_THRESHOLD requests). Unit-tested in api/_shared/adapterHealth.test.js."
+  },
+  {
+    "id": "api.shared.adapterHealth.test",
+    "path": "api/_shared/adapterHealth.test.js",
+    "loc": 97,
+    "deps": [
+      "api.shared.adapterHealth"
+    ]
   },
   {
     "id": "api.shared.apiAuth",
@@ -3593,7 +3631,7 @@
   {
     "id": "scripts.stress.probe",
     "path": "scripts/stress/probe.mjs",
-    "loc": 63,
+    "loc": 90,
     "deps": [],
     "kind": "script",
     "runtime": "infra",

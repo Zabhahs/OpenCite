@@ -32,14 +32,14 @@
     "type": "bug",
     "severity": "low",
     "title": "OpenNeuro/Northwestern/ONB try raw fetch before proxy, causing silent CORS errors in browser",
-    "detail": "openNeuro.js:26-29, northwestern.js:27-30, onb.js:26-29 all attempt a direct fetch() first and fall back to proxiedFetch on network error. In the browser, the direct fetch throws a CORS network error (caught silently) before the proxy runs. This adds one failed RTT and pollutes the network error log on every browser call.",
-    "path": "src/adapters/extensions/openNeuro.js:26",
+    "detail": "openNeuro.js:26-29, northwestern.js:27-30, onb.js:26-29 all attempt a direct fetch() first and fall back to proxiedFetch on network error. In the browser, the direct fetch throws a CORS network error (caught silently) before the proxy runs. This adds one failed RTT and pollutes the network error log on every browser call. [RESOLVED v0.38 T7: replaced try-direct/catch-proxy with a `typeof window === 'undefined'` guard in northwestern.js + onb.js (and bnfApi.js, which had the same pattern). Browser always proxies; server fetches directly. OpenNeuro was quarantined in T0, so only the two remaining adapters needed the guard.]",
+    "path": "src/adapters/extensions/northwestern.js:26",
     "modules": [
-      "adapters.extensions.openNeuro",
       "adapters.extensions.northwestern",
-      "adapters.extensions.onb"
+      "adapters.extensions.onb",
+      "adapters.extensions.bnfApi"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-102--openneuro-raw-fetch-before-proxy-fallback-causes-silent-cors-error-in-browser",
     "fix_hint": "Check typeof window === 'undefined' first (as proxiedFetch does) and skip the direct fetch in the browser."
   },
@@ -48,12 +48,12 @@
     "type": "debt",
     "severity": "low",
     "title": "CuratedJournals per_page hardcoded to 5",
-    "detail": "src/adapters/core/curatedJournals.js:27 uses `const pageSize = 5` instead of INITIAL_PAGE_SIZE/LOAD_MORE_PAGE_SIZE. The page math Math.floor(offset/pageSize)+1 will compute wrong page numbers if the offset was advanced by a different page size. Minor inconsistency.",
-    "path": "src/adapters/core/curatedJournals.js:27",
+    "detail": "src/adapters/core/curatedJournals.js:27 uses `const pageSize = 5` instead of INITIAL_PAGE_SIZE/LOAD_MORE_PAGE_SIZE. The page math Math.floor(offset/pageSize)+1 will compute wrong page numbers if the offset was advanced by a different page size. Minor inconsistency. [RESOLVED v0.38 T10: pageSize now = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE (constants already imported), so load-more computes the correct OpenAlex page.]",
+    "path": "src/adapters/core/curatedJournals.js:26",
     "modules": [
       "adapters.core.curatedJournals"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "02-Adapters/Core-Adapters.md#f-103--curatedjournals-per_page-hardcoded-to-5",
     "fix_hint": "Use const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE; (constants already imported)."
   },
@@ -67,9 +67,9 @@
     "modules": [
       "adapters.extensions.internetArchive"
     ],
-    "status": "confirmed",
+    "status": "wontfix",
     "wiki": "02-Adapters/Extension-Adapters.md#internetarchive",
-    "fix_hint": "Product call: keep \"N downloaded\" badge (accurate) OR set citedBy:null at internetArchive.js:100/141 to hide. Not a correctness bug."
+    "fix_hint": "WONTFIX (v0.38 T4 product decision): keep the honest \"N downloaded\" badge. ResultCard.jsx:153 already renders it source-aware (IA shows \"downloaded\", others \"cited\"); rankFields.citedBy:false means it never affects rank. It is a real, correctly-labelled IA metric — no mislabelling, no correctness bug. To hide later: set citedBy:null at internetArchive.js:100/141 and drop the now-unused downloads var."
   },
   {
     "id": "F-105",
@@ -90,12 +90,12 @@
     "type": "bug",
     "severity": "low",
     "title": "Mexicana returns nextToken instead of generic nextPageToken",
-    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination.",
-    "path": "src/adapters/extensions/mexicana.js:29",
+    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination. [RESOLVED v0.38 T5: TWO-part fix — (1) return key renamed nextToken->nextPageToken, AND (2) the adapter read the token from a bespoke opts.mexicanaToken that useSearch never populated; corrected to opts.pageToken (the generic key, matching Rijksmuseum). Both halves were required for load-more to work.]",
+    "path": "src/adapters/extensions/mexicana.js:21",
     "modules": [
       "adapters.extensions.mexicana"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "02-Adapters/Adapter-Health-Matrix.md#f-106",
     "fix_hint": "Change nextToken to nextPageToken in the return statement. Verify the server route at api/search/mexicana.js passes it back under the same key."
   },
@@ -118,14 +118,14 @@
     "type": "ux",
     "severity": "low",
     "title": "Thaqalayn url always points to homepage, not item-level deep link",
-    "detail": "src/adapters/extensions/thaqalayn.js:38: url: 'https://thaqalayn.net/' — hardcoded to the homepage for every result. The API response does not include item-level URLs. Users cannot navigate to the specific hadith from the result card.",
-    "path": "src/adapters/extensions/thaqalayn.js:38",
+    "detail": "src/adapters/extensions/thaqalayn.js:38: url: 'https://thaqalayn.net/' — hardcoded to the homepage for every result. The API response does not include item-level URLs. Users cannot navigate to the specific hadith from the result card. [INVESTIGATED v0.38 T11: the API (thaqalayn-api.net /api/v2/query) returns id/bookId/book/category/chapter, but the public site thaqalayn.net is a Next.js SPA whose only routes are /, /search, /quran, /duas, /about — there is NO per-hadith canonical URL, and the query `id` does not resolve against /api/v2/hadith/<id>. A guessed /hadith/<id> would 404. Homepage is the safe link. Comment added at the url line.]",
+    "path": "src/adapters/extensions/thaqalayn.js:37",
     "modules": [
       "adapters.extensions.thaqalayn"
     ],
-    "status": "open",
+    "status": "wontfix",
     "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
-    "fix_hint": "Check if the API returns an id or book/chapter/number that can construct a deep URL (e.g. https://thaqalayn.net/hadith/<id>)."
+    "fix_hint": "WONTFIX/ACCEPTED: no reliable item-level URL is constructible (site SPA exposes no per-hadith route). Revisit if thaqalayn.net publishes deep-link routes."
   },
   {
     "id": "F-109",
@@ -165,23 +165,23 @@
     "modules": [
       "adapters.extensions.openLibrary"
     ],
-    "status": "open",
+    "status": "wontfix",
     "wiki": "02-Adapters/Extension-Adapters.md#openlibrary",
-    "fix_hint": "Optionally fetch the /works/<key>.json endpoint per item for a description field, but this adds per-hit fan-out similar to PANGAEA/MET."
+    "fix_hint": "WONTFIX/ACCEPTED (v0.38): OpenLibrary's search.json returns no abstract by design; fetching /works/<key>.json per hit adds a fan-out wave with no ranking benefit (BM25F already uses subjects as the rich signal). Documented in sprint_log_v0_38.md."
   },
   {
     "id": "F-112",
     "type": "debt",
     "severity": "low",
     "title": "BASE adapter missing serverSafe and corpusSize in capability",
-    "detail": "src/adapters/extensions/base.js capability object has no serverSafe or corpusSize fields. BASE uses proxiedFetch which works server-side, so serverSafe should be true. Corpus is ~300M records. Without these fields, the coverage engine cannot reason about BASE's contribution and the /api/search fan-out excludes it.",
+    "detail": "src/adapters/extensions/base.js capability object has no serverSafe or corpusSize fields. BASE uses proxiedFetch which works server-side, so serverSafe should be true. Corpus is ~300M records. Without these fields, the coverage engine cannot reason about BASE's contribution and the /api/search fan-out excludes it. [RESOLVED v0.38 T8: BASE now serverSafe:true + corpusSize:300000000 (verified: it uses proxiedFetch with an ABSOLUTE url, so it resolves server-side). Transport audit of the 6 sibling thin-shims found Gallica/OpenEdition/BDH/BritishLibrary/OpenContext/Mexicana all use RELATIVE-URL fetch(/api/search/<x>) — browser-only — so they were given corpusSize for documentation but deliberately NOT serverSafe (per risk R6: marking them would push an unresolvable relative URL into the server fan-out).]",
     "path": "src/adapters/extensions/base.js:24",
     "modules": [
       "adapters.extensions.base"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "02-Adapters/Extension-Adapters.md#base",
-    "fix_hint": "Add serverSafe: true, corpusSize: 300000000 to the capability object."
+    "fix_hint": "Done. Note: the plan's proposal to mark Gallica/OpenEdition/BDH/BL/OpenContext serverSafe was CORRECTED on transport verification — they call relative URLs and stay client-only. To make them server-safe later, switch each to an absolute origin + proxiedFetch (or fold their edge-route logic into the main fan-out)."
   },
   {
     "id": "F-113",
@@ -202,12 +202,12 @@
     "type": "bug",
     "severity": "low",
     "title": "BnF Catalogue isOA hardcoded true (catalogue includes non-OA items)",
-    "detail": "src/adapters/extensions/bnfApi.js:62: isOA: true hardcoded. The BnF catalogue (catalogue.bnf.fr SRU) indexes all BnF holdings, the majority of which are not open access. This causes non-OA catalogue records to appear in OA-filtered views.",
-    "path": "src/adapters/extensions/bnfApi.js:62",
+    "detail": "src/adapters/extensions/bnfApi.js:62: isOA: true hardcoded. The BnF catalogue (catalogue.bnf.fr SRU) indexes all BnF holdings, the majority of which are not open access. This causes non-OA catalogue records to appear in OA-filtered views. [RESOLVED v0.38 T6: isOA set to false — conservative + correct for catalogue records (UNIMARC 856 electronic-access links are not parsed, so OA cannot be detected per-record).]",
+    "path": "src/adapters/extensions/bnfApi.js:60",
     "modules": [
       "adapters.extensions.bnfApi"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "02-Adapters/Extension-Adapters.md#bnfapi",
     "fix_hint": "Set isOA: false or attempt to detect OA from UNIMARC field 856 (electronic access links) if present."
   },
@@ -361,10 +361,12 @@
     "title": "Always-dead adapters (SCIELO/OPENNEURO/ENA) drag every query to partial coverage, causing systematic billing discounts",
     "detail": "SCIELO/OPENNEURO/ENA throw on every query so failedCount>0 always → coverage.js bandFor() can never return \"full\" (line 36). BUT their corpusSize is tiny (1M/500K/1K) vs OpenAlex/Crossref (hundreds of millions), so attrition is ~0.3% → band is \"near-full\" (coverage>=0.99), NOT \"partial\". Real impact: every query billed at coverageMultiplier(\"near-full\")=0.99 instead of 1.0 — a guaranteed ~1% systematic UNDERCHARGE + a permanently non-full coverage signal. The freeBelowBand free-waiver does NOT fire (plans set freeBelowBand:\"limited\"; isAtOrBelow waives only the \"limited\" band, coverage<0.5). Earlier \"partial coverage → billing discount/free\" framing was an overstatement. Fix (remove + circuit-breaker) still valid: restores \"full\" on queries where no OTHER adapter errors. [VERIFIED ON-BRANCH 2026-06-08]",
     "path": "src/adapters/extensions/",
-    "modules": [],
-    "status": "open",
+    "modules": [
+      "api.shared.adapterHealth"
+    ],
+    "status": "fixed",
     "wiki": "03-Search-Pipeline/Known-Defects.md#f-208",
-    "fix_hint": "Quarantine done (v0.38 T0). Add a chronic-failure circuit-breaker so failedCount can reach 0 → band \"full\" (1.0x). Verify empirically via probe (v0.38 T2): measure full vs near-full split + 0.99x→1.0x charge delta."
+    "fix_hint": "FIXED in code (v0.38): T0 quarantined the 3 dead adapters; T1 added a chronic-failure circuit-breaker (api/_shared/adapterHealth.js, threshold 5, unit-tested) wired into api/search.js so a future always-failing adapter is DROPPED from the eligible set before coverage — failedCount can reach 0 → band \"full\" (1.0x). REMAINING: T2 empirical prod verification (run scripts/stress/probe.mjs --coverage-only with an admin KEY before/after, record the full vs near-full split + 0.99x->1.0x charge delta in COVERAGE_VERIFICATION_v0_38.md). Code-complete; prod measurement pending."
   },
   {
     "id": "F-209",

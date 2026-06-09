@@ -17,6 +17,9 @@ export const OPENEDITION_ADAPTER = {
     // Server-proxied JSON POST via /api/search/openedition. 1-based page pagination.
     protocol: "rest-json", fulltext: false, pagination: "page", totalCount: true, maxWindow: null, auth: "none",
     rankFields: { abstract: "full", subjects: "sparse", citedBy: false },
+    // v0.38 (T8, F-112): NOT serverSafe — `search` calls the RELATIVE URL /api/search/openedition
+    // (browser-only). corpusSize recorded for documentation only; no effect while client-only.
+    corpusSize: 600000,
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;

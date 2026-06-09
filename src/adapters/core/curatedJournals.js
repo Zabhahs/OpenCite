@@ -23,7 +23,10 @@ export const CURATED_JOURNALS_ADAPTER = {
     const issns = journals.map(j => j.issn).filter(Boolean);
     if (issns.length === 0) throw new Error("No curated journals configured. Add some in settings (⚙).");
     const offset = opts.offset || 0;
-    const pageSize = 5;
+    // v0.38 (T10, F-103): use the shared page-size constants instead of a hardcoded 5.
+    // The hardcoded value made Math.floor(offset/pageSize)+1 compute the wrong OpenAlex
+    // page on load-more (offset is advanced by INITIAL/LOAD_MORE_PAGE_SIZE), skipping a page.
+    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const issnFilter = issns.join("|");
     let auth = "";

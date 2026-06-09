@@ -23,10 +23,15 @@ export const BNF_API_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const startRecord = offset + 1;
     const sruUrl = `https://catalogue.bnf.fr/api/SRU?version=1.2&operation=searchRetrieve&query=${encodeURIComponent(`bib.anywhere="${query}"`)}&maximumRecords=${pageSize}&startRecord=${startRecord}&recordSchema=unimarcxchange`;
+    // v0.38 (T7, F-102): in the browser a direct cross-origin fetch to catalogue.bnf.fr
+    // throws a CORS error before the proxy fallback runs — one wasted RTT + a red error in
+    // DevTools on every call. Only the server (no `window`, no CORS) hits the origin
+    // directly; the browser always goes through the proxy. (No SSR today — guard is correct
+    // for the current architecture; revisit if Vite pre-render is ever enabled.)
     let r;
-    try {
+    if (typeof window === 'undefined') {
       r = await fetch(sruUrl, { headers: { Accept: 'application/xml, text/xml' } });
-    } catch {
+    } else {
       r = await proxiedFetch(sruUrl, {}, { adapterId: "BNF_API" });
     }
     if (!r.ok) throw new Error(`BnF SRU ${r.status}`);
@@ -57,7 +62,11 @@ export const BNF_API_ADAPTER = {
         volume: '', issue: '', pages: '', doi: '',
         url: identifier.startsWith('http') ? identifier : '',
         abstract: '',
-        isOA: true,
+        // v0.38 (T6, F-114): the BnF SRU catalogue indexes ALL holdings — the vast majority
+        // are physical, non-OA items. Hardcoding true leaked non-OA records into OA-only
+        // views. UNIMARC 856 (electronic access) is not parsed here, so false is the
+        // conservative, correct default for catalogue records.
+        isOA: false,
         type: 'primary-source',
         subjects,
         language,

@@ -22,10 +22,13 @@ export const ONB_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const startRecord = offset + 1;
     const sruUrl = `https://obv-at-oenb.alma.exlibrisgroup.com/view/sru/43ACC_ONB?version=1.2&operation=searchRetrieve&query=${encodeURIComponent(`alma.all_for_ui="${query}"`)}&maximumRecords=${pageSize}&startRecord=${startRecord}&recordSchema=dc`;
+    // v0.38 (T7, F-102): browser direct fetch throws a CORS error before the proxy fallback
+    // (wasted RTT + red DevTools error every call). Server hits the origin directly; browser
+    // always proxies. No SSR today, so the `window` guard is correct for this architecture.
     let r;
-    try {
+    if (typeof window === 'undefined') {
       r = await fetch(sruUrl, { headers: { Accept: "application/xml, text/xml" } });
-    } catch {
+    } else {
       r = await proxiedFetch(sruUrl, {}, { adapterId: "ONB" });
     }
     if (!r.ok) throw new Error(`ONB SRU ${r.status}`);
