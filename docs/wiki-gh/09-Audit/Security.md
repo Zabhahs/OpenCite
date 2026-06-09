@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from docs/wiki/09-Audit/Security.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
 ---
 machine_ids: []
 findings: [F-400, F-401, F-402, F-403, F-404, F-406, F-407, F-408, F-409, F-410, F-411, F-412, F-413, F-414, F-415, F-416, F-417, F-509]
@@ -5,8 +6,6 @@ runtime: infra
 status: resolved
 tags: [audit, security]
 ---
-<!-- AUTO-GENERATED from docs/wiki/09-Audit/Security.md by scripts/wiki/to-github.mjs — do not edit here. Edit the Obsidian source in docs/wiki/ and re-run: node scripts/wiki/to-github.mjs -->
-
 
 # Security
 

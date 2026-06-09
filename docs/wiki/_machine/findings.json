@@ -370,18 +370,19 @@
   },
   {
     "id": "F-209",
-    "type": "perf",
-    "severity": "low",
-    "title": "Server RRF fusion is two-input (native+lexical) only — no semantic arm unlike the client UI path",
-    "detail": "api/search.js uses buildNativeRanks + rrfScores with a two-input fusion (native weight = nativeWeight(pool); lexical = 1-wNative). This correctly eliminates D4 cross-query incomparability on the server path. The client UI path adds a third semantic (MiniLM embedding) input via useSemanticRerank. The semantic gap on the server is an accepted architectural constraint (Web Worker + 23MB model cannot run in Vercel Functions) — not a bug. Previously recorded as an open gap; verified FIXED as of the current sprint.",
-    "path": "api/search.js:349-364",
+    "type": "bug",
+    "severity": "med",
+    "title": "Server /api/search does NOT use RRF — returns BM25F-only order while the browser does full RRF (the two front doors disagree)",
+    "detail": "CORRECTED 2026-06-08, verified against live prod code: api/search.js never imports lib/rrf.js (no buildNativeRanks/rrfScores) and sorts purely by BM25F _score at api/search.js:351 (finalResults.sort((a,b)=>(b._score||0)-(a._score||0))). rrf.js is imported ONLY by src/hooks/useSemanticRerank.js:3 (browser). So the metered API + MCP path returns BM25F-only ranking, while the browser app returns native+lexical+semantic RRF fusion — the same query yields DIFFERENTLY-ORDERED results across the two surfaces. The earlier finding (and the v0.35 commit message 2cf5cb6) claimed server RRF was live; the code in prod refutes that — it was reverted or never landed. This is NOT 'what we did well'; it is an open ranking-consistency defect. Note: native rank fusion (buildNativeRanks/nativeWeight) is dead on the server regardless; only the in-browser fuseRanks path is wired.",
+    "path": "api/search.js:351",
     "modules": [
+      "api.search",
       "lib.rrf",
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md",
-    "fix_hint": "Server RRF is already in place. The only missing signal vs the client is semantic embeddings — acceptable limitation. Document for API consumers."
+    "status": "open",
+    "wiki": "03-Search-Pipeline/Known-Defects.md#f-209",
+    "fix_hint": "Wire server RRF: import { buildNativeRanks, nativeWeight, rrfScores } from ../src/lib/rrf.js into api/search.js, stamp nativeRank/nativeScore on adapter results (as the browser path does), fuse native+lexical, and sort by the fused score instead of raw _score (line 351). ~5-line change reusing the existing 13-LOC rrf.js. Semantic arm stays browser-only (Web Worker + 23MB MiniLM can't run in Vercel Functions — see F-205), so server fusion is native+lexical two-input; document that residual gap for API/MCP consumers."
   },
   {
     "id": "F-300",

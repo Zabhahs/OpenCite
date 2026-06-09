@@ -14,17 +14,19 @@ tags: [audit, dashboard, moc]
 > Full machine registry: `_machine/findings.json` (71), `_machine/modules.json` (151), `_machine/reuse.json` (26).
 
 ## Headline numbers
-- **151 modules**, 305 dependency edges. Runtime split: 35 `both` · 55 client · 39 server · 7 shared.
-- **71 findings**: 🔴 5 high · 🟠 22 med · 🟡 44 low. By type: 17 security · 14 bug · 11 debt · 10 ux · 8 deadcode · 8 perf · 3 dup.
-- **All 5 high-severity findings are now resolved:** F-202/F-203 (v0.35 IA fixes) + F-107/F-109/F-110 (dead-adapter quarantine, v0.38). F-208 (systemic coverage) was reassessed **high→med** on-branch (2026-06-08): real impact is a guaranteed ~1% per-query *undercharge* (band can never be `full`), **not** a free-search discount — see [[09-Audit/Bugs#f-208]].
-- **Verdict:** the *architecture* is sound — shared adapter/scoring core, DRY MCP contract, P3005-safe migrations, **no billing bypass**. The *rot* is concentrated in: **dead adapters poisoning coverage/billing**, **missing HTTP security headers**, **unauthenticated keyed routes**, a **proxy SSRF chain**, and a cluster of **dead frontend providers + triplicated hooks**.
+> Counts are generated — see `_machine/manifest.json` for the live figures (this prose tracks it).
+- **155 modules**, 297 dependency edges (incl. 4 quarantined virtuals). Authoritative split in `_machine/manifest.json`.
+- **71 findings**: 🔴 5 high · 🟠 23 med · 🟡 43 low. Status: **31 fixed · 3 wontfix · 1 confirmed · 36 open**. By type: 17 security · 15 bug · 11 debt · 10 ux · 8 deadcode · 7 perf · 3 dup.
+- **All 5 high-severity findings are resolved + SHIPPED to prod** (commit `b5cd7ab`): F-202/F-203 (v0.35 IA fixes) + F-107/F-109/F-110 (dead-adapter quarantine, v0.38). F-208 (systemic coverage) reassessed **high→med**: real impact was a guaranteed ~1% per-query *undercharge* (band could never be `full`), **not** a free-search discount; fixed in v0.38 (quarantine + circuit-breaker) — see [[09-Audit/Bugs#f-208]].
+- **Also shipped (v0.39, in prod):** all 18 security findings closed — CSP/HSTS headers, authenticated keyed routes, proxy SSRF fix, timing-safe key compare, startup env guards. See [[09-Audit/Security]].
+- **Verdict:** architecture is sound — shared adapter/scoring core, DRY MCP contract, P3005-safe migrations, **no billing bypass**. With v0.38+v0.39 shipped, the headline security/coverage rot is **fixed**. Largest *open* items now: **server `/api/search` returns BM25F-only order (no RRF) so it disagrees with the browser** ([[03-Search-Pipeline/Known-Defects#f-209]]); dead frontend providers + triplicated hooks ([[09-Audit/Tech-Debt-Overengineering]]); the v0.40–v0.42 backlog.
 
 ## Cluster scorecard
 
 | Cluster | Verdict | Worst issues |
 |---|---|---|
 | [[02-Adapters/Adapter-Architecture\|Adapters]] | 🟡 needs-work | 3 dead adapters in live array ([[09-Audit/Bugs#f-208]]), IA citedBy=downloads ([[09-Audit/Bugs#f-104]]), Mexicana load-more broken ([[09-Audit/Bugs#f-106]]), BnF isOA hardcoded ([[09-Audit/Bugs#f-114]]) |
-| [[03-Search-Pipeline/Ranking-Scoring\|Search pipeline]] | 🟢 mostly-healthy | degenerate BM25F micro-pool IDF ([[09-Audit/Tech-Debt-Overengineering#f-200]]); semantic is client-only ([[09-Audit/Duplication-and-Reuse#f-205]]) — **server RRF fusion is already LIVE**, see [[09-Audit/What-We-Did-Well#f-209]] |
+| [[03-Search-Pipeline/Ranking-Scoring\|Search pipeline]] | 🟡 needs-work | **server `/api/search` returns BM25F-only order — RRF runs in the browser only, so the two front doors disagree** ([[03-Search-Pipeline/Known-Defects#f-209]], ~5-line fix); degenerate BM25F micro-pool IDF ([[09-Audit/Tech-Debt-Overengineering#f-200]]); semantic is client-only ([[09-Audit/Duplication-and-Reuse#f-205]]) |
 | [[01-Frontend/UI-Map\|Frontend/UI]] | 🟡 needs-work | dead providers shipped ([[09-Audit/Tech-Debt-Overengineering#f-300]]), search race / no AbortController ([[09-Audit/Bugs#f-307]]), triplicated DB-sync hooks ([[09-Audit/Duplication-and-Reuse#r-300]]) |
 | [[04-Backend-API/Search-Endpoint\|Backend API]] | 🟠 security-gaps | no CSP/HSTS ([[09-Audit/Security#f-406]]), unauth keyed routes ([[09-Audit/Security#f-407]]), proxy SSRF chain ([[09-Audit/Security#f-410]]/[[09-Audit/Security#f-411]]) — **billing integrity verified** |
 | [[05-Billing/Billing-Credits\|Billing]] | 🟢 healthy | webhook trusts metadata ([[09-Audit/Security#f-417]], low); checkout `*.vercel.app` redirect ([[09-Audit/Security#f-415]]) |

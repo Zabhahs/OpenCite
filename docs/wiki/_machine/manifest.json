@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-09T01:32:59.680Z",
+  "generatedAt": "2026-06-09T01:53:47.063Z",
   "counts": {
     "modules": 155,
     "curated": 148,
@@ -28,17 +28,17 @@
     "dead": 1
   },
   "findingsBySeverity": {
-    "low": 44,
-    "med": 22,
+    "low": 43,
+    "med": 23,
     "high": 5
   },
   "findingsByType": {
     "dup": 3,
-    "bug": 14,
+    "bug": 15,
     "debt": 11,
     "deadcode": 8,
     "ux": 10,
-    "perf": 8,
+    "perf": 7,
     "security": 17
   },
   "problems": 0

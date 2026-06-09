@@ -61,11 +61,11 @@ Additionally, IA now stamps `nativeRank` from position in the merged metadata+FT
 - `src/adapters/core/openalex.js:45` — requests `sort=relevance_score:desc` (the real signal)
 - `src/adapters/core/crossref.js` — receives Solr score per item
 
-**Status: FIXED in v0.35 (both client and server paths).** Verified:
+**Status: FIXED on the CLIENT path only; OPEN on the server — see [[#f-209]].** Verified 2026-06-08:
 
-*Client path:* `useSemanticRerank.js:73` calls `buildNativeRanks` and includes the native rank-list in the three-input `fuseRanks` call (native + lexical + semantic).
+*Client path (fixed):* `useSemanticRerank.js` calls `buildNativeRanks` and includes the native rank-list in the three-input `fuseRanks` call (native + lexical + semantic).
 
-*Server path:* `api/search.js:349-364` — `buildNativeRanks` + `rrfScores` with two-input fusion (native weight from `nativeWeight(pool)`, lexical = `1 - wNative`). Results sorted by `_fused`. Raw BM25F `_score` preserved for gate/debug only.
+*Server path (NOT fixed):* `api/search.js` does **not** import `rrf.js` and sorts by raw BM25F `_score` (`api/search.js:351`). Native relevance is discarded on the API/MCP path. This is the open defect **[[#f-209|F-209]]** (an earlier note here wrongly claimed it was done).
 
 *Native signal sources (verified):*
 - OpenAlex: `parseOpenAlex.js:69` — `nativeScore: w.relevance_score`, `nativeRank: rank`, `capability.nativeRelevance: "score"`
@@ -153,13 +153,19 @@ Additionally, IA now stamps `nativeRank` from position in the merged metadata+FT
 
 ---
 
-## Server path RRF fusion — CONFIRMED IMPLEMENTED
+<a id="f-209"></a>
+## F-209 — Server `/api/search` does NOT use RRF (returns BM25F-only order) [bug, med, OPEN]
 
-**What it is:** `api/search.js` (lines 341-364) calls `buildNativeRanks` + `rrfScores` with a two-input fusion (native weight from `nativeWeight(pool)`, lexical weight = `1 - wNative`). Results are sorted by `_fused` (the RRF value), with raw BM25F `_score` preserved for the confidence gate and admin debug cards. This correctly eliminates D4 cross-query incomparability on the server path.
+> **⚠ CORRECTED 2026-06-08, verified against live prod code.** An earlier version of this note
+> claimed server RRF was "confirmed implemented." That was **wrong** — the code refutes it.
 
-**The one remaining gap:** The server uses a two-input fusion (native + lexical) while the client UI path has a three-input fusion (native + lexical + semantic). The semantic arm is unavailable server-side (Web Worker API, ~23MB model — cannot run in Vercel Functions). This is an accepted architectural constraint, not an open bug.
+**What it actually is:** `api/search.js` **never imports `lib/rrf.js`** (no `buildNativeRanks`, no `rrfScores`) and sorts purely by BM25F `_score` at **`api/search.js:351`** (`finalResults.sort((a,b)=>(b._score||0)-(a._score||0))`). `rrf.js` is imported **only** by `src/hooks/useSemanticRerank.js:3` (the browser path). The v0.35 commit message (`2cf5cb6`) described wiring fusion into the API path, but that code is not in prod — reverted or never landed.
 
-**See also:** [[RRF-Fusion]] · [[Semantic-Rerank#overengineering-assessment]]
+**Impact:** the two front doors return **differently-ordered results for the same query** — the browser app does full native+lexical+semantic RRF; the metered `/api/search` + MCP path returns lexical(BM25F)-only order. A ranking-consistency defect, not a "win."
+
+**Fix (~5 lines, reuses existing 13-LOC `rrf.js`):** import `buildNativeRanks`/`nativeWeight`/`rrfScores` into `api/search.js`, stamp `nativeRank`/`nativeScore` on adapter results (as the browser already does), fuse native+lexical, and sort by the fused score instead of raw `_score` at line 351. The **semantic** arm stays browser-only (Web Worker + ~23MB MiniLM can't run in Vercel Functions — [[#d5|see F-205]]), so server fusion is two-input native+lexical; document that residual for API/MCP consumers.
+
+**See also:** [[RRF-Fusion]] · [[09-Audit/Duplication-and-Reuse#f-209]] · [[Semantic-Rerank#overengineering-assessment]]
 
 ---
 
@@ -169,13 +175,13 @@ Additionally, IA now stamps `nativeRank` from position in the merged metadata+FT
 |---|---|---|---|---|
 | D1 | IA downloads inflate `citedBy` rank | Critical | **FIXED** | v0.35 |
 | D2 | IA popularity sort | Critical | **FIXED** | v0.35 |
-| D3 | Native relevance discarded | High | **FIXED** | v0.35 (both paths) |
-| D4 | Cross-query score incomparability | High | **FIXED** | v0.35 (RRF both paths) |
+| D3 | Native relevance discarded | High | **FIXED (client) / OPEN (server)** | v0.35 client; server = [[#f-209\|F-209]] |
+| D4 | Cross-query score incomparability | High | **FIXED (client) / OPEN (server)** | v0.35 client; server = [[#f-209\|F-209]] |
 | D5 | Diacritic/transliteration fragmentation | Medium | **FIXED** | v0.35 |
 | D6 | Surname-as-content collision | Medium | **DEFERRED** | future sprint |
 | D7 | Non-deterministic coverage | Medium | **OPEN** | adapter hygiene sprint |
-| — | Always-dead adapters (SCIELO/OPENNEURO/ENA) | High | **OPEN** | adapter hygiene sprint |
-| — | Server two-input RRF (native+lexical) | — | **FIXED** | v0.35 (api/search.js:349-364) |
+| F-208 | Always-dead adapters (SCIELO/OPENNEURO/ENA) | High | **FIXED** | v0.38 (quarantine + circuit-breaker) |
+| F-209 | Server `/api/search` uses BM25F-only (no RRF) | Med | **OPEN** | not started — ~5-line fix |
 
 ## See also
 

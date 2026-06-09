@@ -18,3 +18,10 @@ pnpm-debug.log*
 # Obsidian per-user vault/workspace state (open the docs/wiki/ folder as a vault locally).
 # The wiki *content* is tracked; this is just editor UI state.
 .obsidian/
+
+# Local probe/debug scratch artifacts (adapter testing) — never commit.
+/Tempia_fts.json
+/*unpaywall_probe.json
+/Usersshahb*Temp*.json
+*_fts.json
+*_probe.json

@@ -27,8 +27,8 @@ tags: [overview, dataflow, search]
 1. **Request** hits [[04-Backend-API/Search-Endpoint|api/search.js]] with body per `apiContract` (shared with [[06-MCP-Server/MCP-Server|MCP]]).
 2. **Auth** — API key or session-admin (`apiAuth` / `resolveSessionAdmin`). Non-admin cannot reach `debug=1`/`simple=1`. See [[04-Backend-API/Auth-Sessions]].
 3. **Rate limit** (KV leaky-bucket; fail-open, [[09-Audit/Security#f-403]]) → **cache** check (charge-on-hit).
-4. **Pre-authorize credits** → **fan-out** same adapters (`serverInjectedKeys` supplies backend source keys) → **scoring + RRF** (server RRF is live, [[09-Audit/What-We-Did-Well#f-209]]; **no semantic** server-side, [[09-Audit/Duplication-and-Reuse#f-205]]).
-5. **Coverage** computed (sub-band → discount); the 3 dead adapters force `partial` here ([[09-Audit/Bugs#f-208]]).
+4. **Pre-authorize credits** → **fan-out** same adapters (`serverInjectedKeys` supplies backend source keys) → **scoring only** — ⚠ the server sorts by BM25F `_score` and does **not** apply RRF ([[03-Search-Pipeline/Known-Defects#f-209]]); RRF + semantic are browser-only ([[09-Audit/Duplication-and-Reuse#f-205]]). API/MCP result *order* therefore differs from the SPA.
+5. **Coverage** computed; the 3 dead adapters were quarantined in v0.38 so `failedCount` can now reach 0 → band `full` ([[09-Audit/Bugs#f-208]]).
 6. **Settle / refund** credits → serialize via `publicResult` (origin-blind) or `debugResult` (admin). See [[05-Billing/Billing-Credits]].
 
 ## Where to change what
