@@ -96,6 +96,18 @@ function termFreq(term, tokens) {
   return count;
 }
 
+// F-200 (accepted residual): IDF is computed over the micro-pool (typically 14–45 docs),
+// not a real corpus. This makes IDF values statistically noisy — a term's apparent "rarity"
+// reflects pool composition, not true corpus frequency.
+//
+// MITIGATION (in place): RRF fusion weights local BM25F at most 30–50% depending on pool
+// size (nativeWeight≈0.7 at pool<20 → localWeight≈0.3; nativeWeight≈0.5 at pool≥50). The
+// full-corpus native signal (OpenAlex relevance_score, Crossref Solr score, etc.) dominates
+// when the pool is small — exactly when IDF is most degenerate.
+//
+// TO ELIMINATE: corpus-level IDF priors (a background stats endpoint), or rely entirely on
+// native+semantic when available. Not a priority at current traffic.
+// See: docs/wiki/03-Search-Pipeline/Known-Defects.md#d3 · F-200
 function idf(term, docsFieldTokens) {
   const N = docsFieldTokens.length;
   let df = 0;

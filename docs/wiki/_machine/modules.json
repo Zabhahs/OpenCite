@@ -492,7 +492,7 @@
   {
     "id": "adapters.extensions.met",
     "path": "src/adapters/extensions/met.js",
-    "loc": 60,
+    "loc": 62,
     "deps": [
       "constants.defaults",
       "constants.vocabulary"
@@ -777,7 +777,7 @@
   {
     "id": "adapters.extensions.pangaea",
     "path": "src/adapters/extensions/pangaea.js",
-    "loc": 104,
+    "loc": 113,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -830,7 +830,7 @@
   {
     "id": "adapters.extensions.rijksmuseum",
     "path": "src/adapters/extensions/rijksmuseum.js",
-    "loc": 351,
+    "loc": 364,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -2215,7 +2215,7 @@
   {
     "id": "components.admin.ScoreExplainer",
     "path": "src/components/admin/ScoreExplainer.jsx",
-    "loc": 213,
+    "loc": 221,
     "deps": [],
     "kind": "component",
     "runtime": "client",
@@ -2347,7 +2347,7 @@
   {
     "id": "components.Layout",
     "path": "src/components/Layout.jsx",
-    "loc": 401,
+    "loc": 428,
     "deps": [
       "constants.app",
       "constants.themes",
@@ -2383,7 +2383,7 @@
   {
     "id": "components.Panels",
     "path": "src/components/Panels.jsx",
-    "loc": 561,
+    "loc": 573,
     "deps": [
       "adapters.shared.base",
       "adapters.shared.normalize",
@@ -3153,7 +3153,7 @@
   {
     "id": "lib.dedup",
     "path": "src/lib/dedup.js",
-    "loc": 50,
+    "loc": 131,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -3162,11 +3162,13 @@
       "doiKey",
       "titleFingerprint",
       "dedupFirstWins",
-      "dedupHighestScore"
+      "dedupHighestScore",
+      "mergeRecords"
     ],
     "status": "healthy",
     "findings": [
-      "F-206"
+      "F-206",
+      "F-210"
     ],
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
     "tags": [
@@ -3174,7 +3176,15 @@
       "identity",
       "pipeline"
     ],
-    "notes": "Confirmed sound by v0.36 diagnostic. The dedupHighestScore indexOf is O(n) per replacement — acceptable at pool sizes ≤50."
+    "notes": "v0.42: dedupHighestScore replacement is now O(1) via a posMap (F-206), and a collision ENRICHES the survivor with the loser's better fields via mergeRecords (F-210, the sprint's \"F-208\") instead of discarding it. Pooled path only — dedupFirstWins (streaming) cannot merge. Covered by src/lib/dedup.test.js."
+  },
+  {
+    "id": "lib.dedup.test",
+    "path": "src/lib/dedup.test.js",
+    "loc": 144,
+    "deps": [
+      "lib.dedup"
+    ]
   },
   {
     "id": "lib.goldSetMetrics",
@@ -3392,7 +3402,7 @@
   {
     "id": "lib.scoring",
     "path": "src/lib/scoring.js",
-    "loc": 278,
+    "loc": 290,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -3468,7 +3478,7 @@
   {
     "id": "lib.synonyms",
     "path": "src/lib/synonyms.js",
-    "loc": 94,
+    "loc": 125,
     "deps": [],
     "kind": "lib",
     "runtime": "client",
@@ -3486,7 +3496,7 @@
       "expansion",
       "pipeline"
     ],
-    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON) — first-load parse is synchronous on main thread."
+    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
   },
   {
     "id": "main",
@@ -3869,5 +3879,26 @@
       "pipeline"
     ],
     "notes": "Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
+  },
+  {
+    "id": "workers.synonyms.worker",
+    "path": "src/workers/synonyms.worker.js",
+    "loc": 26,
+    "deps": [],
+    "kind": "worker",
+    "runtime": "client",
+    "purpose": "Fetches and JSON-parses Moby Thesaurus shards off the main thread; caches parsed shards in-worker and replies with an entries array the main thread rebuilds into a Map.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [
+      "F-207"
+    ],
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "tags": [
+      "worker",
+      "synonyms",
+      "pipeline"
+    ],
+    "notes": "Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
   }
 ]

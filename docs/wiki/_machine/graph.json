@@ -1177,6 +1177,10 @@
       "launchers._factory"
     ],
     [
+      "lib.dedup.test",
+      "lib.dedup"
+    ],
+    [
       "lib.goldSetMetrics.test",
       "lib.goldSetMetrics"
     ],
@@ -1583,7 +1587,8 @@
     ],
     "lib.dedup": [
       "api.search",
-      "hooks.useSearch"
+      "hooks.useSearch",
+      "lib.dedup.test"
     ],
     "api.shared.kv": [
       "api.shared.cache",

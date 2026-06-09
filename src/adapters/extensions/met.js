@@ -22,8 +22,10 @@ export const MET_ADAPTER = {
     if (!r.ok) throw new Error(`Met ${r.status}`);
     const data = await r.json();
     const allIds = data.objectIDs || [];
-    // Fetch a wider slice then relevance-filter, so we can fill the page even after filtering
-    const fetchSlice = allIds.slice(offset, offset + pageSize * 3);
+    // Fetch a wider slice then relevance-filter, so we can fill the page even after filtering.
+    // F-113: 1.5× (was 3×) caps peak concurrency at 15 (initial) / 30 (load-more) instead of
+    // 30 / 60. The relevance filter accepts ~50% of fetched items, so 1.5× still fills the page.
+    const fetchSlice = allIds.slice(offset, offset + Math.ceil(pageSize * 1.5));
     const items = await Promise.all(fetchSlice.map(async id => {
       try {
         const ir = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`);

@@ -65,7 +65,16 @@ export const PANGAEA_ADAPTER = {
     const hits = data.hits?.hits || [];
     const total = data.hits?.total?.value ?? data.hits?.total ?? hits.length;
 
-    const rawResults = await Promise.all(hits.map(async (h, i) => {
+    // F-116: only fire a per-hit RIS fetch for hits that already have a usable title in the
+    // ES _source. Hits with no ES title are dropped post-RIS anyway (see the !title guard
+    // below), so the RIS round-trip for them is pure waste. RIS still runs for title-bearing
+    // hits because it may carry a richer title/abstract/DOI.
+    const titleHits = hits.filter(h => {
+      const s = h._source || {};
+      return !!(s["agg-datasetname"] || s["title"]);
+    });
+
+    const rawResults = await Promise.all(titleHits.map(async (h, i) => {
       const s = h._source || {};
       const numericId = h._id || "";
       const uri = s.URI || "";

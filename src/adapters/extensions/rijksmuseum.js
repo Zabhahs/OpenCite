@@ -61,6 +61,11 @@ import { proxiedFetch } from "../_shared/proxy.js";
 const SEARCH_BASE = "https://data.rijksmuseum.nl/search/collection";
 const RESOLVE_BASE = "https://data.rijksmuseum.nl/";
 
+// F-115: session cache for resolved image URLs. The 2-hop image resolve (VisualItem →
+// DigitalObject) is stable per object, so cache by obj.id and skip the re-fetch on repeat
+// loads. Empty string ("" = known-missing) is cached too, so misses aren't retried.
+const _imageCache = new Map(); // obj.id → resolved image URL ("" when none)
+
 // Derive the integer path segment from an id.rijksmuseum.nl URI, so we can call
 // data.rijksmuseum.nl/<N> directly without needing a redirect.
 function resolvePathFromId(uri) {
@@ -139,35 +144,43 @@ function extractYear(produced_by) {
 // Each stub URI requires its own dereference (Accept: application/ld+json).
 // Returns the image URL string, or "" on any failure or missing link.
 async function resolveImage(obj) {
+  const cacheKey = obj.id;
+  if (cacheKey && _imageCache.has(cacheKey)) return _imageCache.get(cacheKey);
+
+  // miss() caches the empty result and returns "" — used for all failure/missing-link paths.
+  const miss = () => { if (cacheKey) _imageCache.set(cacheKey, ""); return ""; };
+
   try {
     // Hop 1: HumanMadeObject.shows[0].id → VisualItem
     const showsId = obj.shows?.[0]?.id;
-    if (!showsId) return "";
+    if (!showsId) return miss();
 
     const viRes = await proxiedFetch(
       showsId,
       { headers: { Accept: "application/ld+json" } },
       { adapterId: "RIJKS" }
     );
-    if (!viRes.ok) return "";
+    if (!viRes.ok) return miss();
     const viData = await viRes.json();
 
     // Hop 2: VisualItem.digitally_shown_by[0].id → DigitalObject
     const doId = viData.digitally_shown_by?.[0]?.id;
-    if (!doId) return "";
+    if (!doId) return miss();
 
     const doRes = await proxiedFetch(
       doId,
       { headers: { Accept: "application/ld+json" } },
       { adapterId: "RIJKS" }
     );
-    if (!doRes.ok) return "";
+    if (!doRes.ok) return miss();
     const doData = await doRes.json();
 
     // Hop 3 (inline read): DigitalObject.access_point[0].id → final image URL
-    return doData.access_point?.[0]?.id || "";
+    const url = doData.access_point?.[0]?.id || "";
+    if (cacheKey) _imageCache.set(cacheKey, url);
+    return url;
   } catch {
-    return "";
+    return miss();
   }
 }
 

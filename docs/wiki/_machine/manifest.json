@@ -1,38 +1,38 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-09T22:17:57.170Z",
+  "generatedAt": "2026-06-09T22:33:57.496Z",
   "counts": {
-    "modules": 160,
-    "curated": 151,
-    "edges": 307,
-    "findings": 71,
+    "modules": 162,
+    "curated": 152,
+    "edges": 308,
+    "findings": 72,
     "reuse": 26
   },
   "byRuntime": {
     "both": 35,
-    "client": 57,
+    "client": 58,
     "server": 42,
-    "unspecified": 9,
+    "unspecified": 10,
     "shared": 7,
     "build": 4,
     "infra": 6
   },
   "byStatus": {
-    "healthy": 128,
+    "healthy": 129,
     "degraded": 7,
     "buggy": 3,
     "keyed": 8,
     "quarantined": 5,
-    "unspecified": 9
+    "unspecified": 10
   },
   "findingsBySeverity": {
     "low": 43,
-    "med": 23,
+    "med": 24,
     "high": 5
   },
   "findingsByType": {
     "dup": 3,
-    "bug": 15,
+    "bug": 16,
     "debt": 11,
     "deadcode": 8,
     "ux": 10,

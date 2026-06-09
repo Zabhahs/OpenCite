@@ -1,6 +1,6 @@
 ---
 machine_ids: [lib.scoring, lib.rrf, adapters.extensions.internetArchive]
-findings: [F-200, F-201, F-202, F-203, F-204, F-205, F-206, F-207, F-208, F-209]
+findings: [F-200, F-201, F-202, F-203, F-204, F-205, F-206, F-207, F-208, F-209, F-210]
 runtime: shared
 status: mixed
 tags: [defects, relevance, audit, pipeline]
@@ -182,6 +182,11 @@ Additionally, IA now stamps `nativeRank` from position in the merged metadata+FT
 | D7 | Non-deterministic coverage | Medium | **OPEN** | adapter hygiene sprint |
 | F-208 | Always-dead adapters (SCIELO/OPENNEURO/ENA) | High | **FIXED** | v0.38 (quarantine + circuit-breaker) |
 | F-209 | Server `/api/search` uses BM25F-only (no RRF) | Med | **OPEN** | not started — ~5-line fix |
+| F-201 | Cross-query score incomparability (admin debug cards) | Low | **FIXED** | v0.42 (normalized 0–100 display, raw kept) |
+| F-206 | `dedupHighestScore` O(n) `indexOf` replacement | Low | **FIXED** | v0.42 (posMap → O(1)) |
+| F-207 | Moby shard `JSON.parse` janks main thread | Low | **FIXED** | v0.42 (off-thread `synonyms.worker`) |
+| F-210 | dedup discards the duplicate's metadata (sprint "F-208") | Med | **FIXED** | v0.42 (field-merge on collapse — `mergeRecords`) |
+| F-205 | Semantic signal absent server-side (API/MCP) | Med | **SPIKE-COMPLETE** | spike: [[Semantic-Server-Spike]] — prototype deferred to v0.43+ |
 
 ## See also
 

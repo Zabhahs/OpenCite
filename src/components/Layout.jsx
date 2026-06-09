@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { THEMES } from "../constants/themes.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { useBilling } from "../contexts/BillingContext.jsx";
 import { APP_VERSION, APP_NAME } from "../constants/app.js";
 
 // ---------- AuthButton + SyncTooltip ----------
@@ -110,6 +111,23 @@ function AuthButton() {
   );
 }
 
+// ---------- CreditsChip ----------
+// F-311: live monthly-search balance. Reads BillingContext (mounted in App.jsx via
+// BillingProvider, v0.41 F-300). Anonymous users / any DB-fetch failure fall back to
+// the Infinity stub → chip renders nothing. Finite balance → shows "N left".
+function CreditsChip() {
+  const { credits } = useBilling();
+  if (credits === Infinity || credits == null) return null;
+  return (
+    <span
+      className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"
+      title="Remaining searches this month"
+    >
+      {credits} left
+    </span>
+  );
+}
+
 // ---------- Header ----------
 
 export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onLogoClick, libraryCount, historyCount, admin }) {
@@ -135,6 +153,7 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, on
           <button onClick={onPlans} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ◇ plans
           </button>
+          <CreditsChip />
           <button onClick={onSettings} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ⚙ settings
           </button>
@@ -203,6 +222,8 @@ export function ThemeStrip({ themeKey, onChange }) {
       <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">Theme</span>
       {Object.entries(THEMES).map(([key, t]) => (
         <button key={key} onClick={() => onChange(key)}
+          aria-label={t.label}
+          aria-pressed={themeKey === key}
           title={t.label}
           className={`w-5 h-5 border-2 transition ${themeKey === key ? "border-stone-900" : "border-transparent hover:border-stone-400"}`}
           style={{ background: t.swatch }} />
@@ -255,6 +276,30 @@ export function KofiOverlay() {
 
 export function AuthModal({ onDismiss }) {
   const { signIn } = useAuth();
+  // F-312: focus trap (WCAG 2.1.2). Contain Tab/Shift+Tab within the modal, close on
+  // Escape, and restore focus to the triggering element on unmount. Manual (no dependency)
+  // since the modal has only two interactive buttons.
+  const modalRef = useRef(null);
+  useEffect(() => {
+    const el = modalRef.current;
+    if (!el) return;
+    const prev = document.activeElement;
+    const focusable = el.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    focusable[0]?.focus();
+    const trap = (e) => {
+      if (e.key === "Escape") { onDismiss(); return; }
+      if (e.key !== "Tab" || !focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
+    };
+    el.addEventListener("keydown", trap);
+    return () => { el.removeEventListener("keydown", trap); prev?.focus?.(); };
+  }, [onDismiss]);
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
@@ -262,6 +307,7 @@ export function AuthModal({ onDismiss }) {
       onClick={onDismiss}
     >
       <div
+        ref={modalRef}
         className="bg-amber-50 border-2 border-stone-900 p-8 max-w-sm w-full mx-4"
         onClick={e => e.stopPropagation()}
       >

@@ -71,6 +71,21 @@
     "notes": "Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
   },
   {
+    "id": "workers.synonyms.worker",
+    "path": "src/workers/synonyms.worker.js",
+    "kind": "worker",
+    "runtime": "client",
+    "loc": 24,
+    "purpose": "Fetches and JSON-parses Moby Thesaurus shards off the main thread; caches parsed shards in-worker and replies with an entries array the main thread rebuilds into a Map.",
+    "exports": [],
+    "deps": [],
+    "status": "healthy",
+    "findings": ["F-207"],
+    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "tags": ["worker", "synonyms", "pipeline"],
+    "notes": "Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
+  },
+  {
     "id": "hooks.useSemanticRerank",
     "path": "src/hooks/useSemanticRerank.js",
     "kind": "hook",
@@ -96,14 +111,15 @@
       "doiKey",
       "titleFingerprint",
       "dedupFirstWins",
-      "dedupHighestScore"
+      "dedupHighestScore",
+      "mergeRecords"
     ],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-206"],
+    "findings": ["F-206", "F-210"],
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
     "tags": ["dedup", "identity", "pipeline"],
-    "notes": "Confirmed sound by v0.36 diagnostic. The dedupHighestScore indexOf is O(n) per replacement — acceptable at pool sizes ≤50."
+    "notes": "v0.42: dedupHighestScore replacement is now O(1) via a posMap (F-206), and a collision ENRICHES the survivor with the loser's better fields via mergeRecords (F-210, the sprint's \"F-208\") instead of discarding it. Pooled path only — dedupFirstWins (streaming) cannot merge. Covered by src/lib/dedup.test.js."
   },
   {
     "id": "lib.groupResults",
@@ -167,12 +183,12 @@
     "loc": 94,
     "purpose": "Score-side term expansion (original query to APIs unchanged): 16 hand-curated academic clusters (synchronous) + Moby Thesaurus II letter-keyed shards (async, CDN-fetched, shard-cached).",
     "exports": ["expandTerms"],
-    "deps": [],
+    "deps": ["workers.synonyms.worker"],
     "status": "healthy",
     "findings": ["F-207"],
     "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
     "tags": ["synonyms", "expansion", "pipeline"],
-    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON) — first-load parse is synchronous on main thread."
+    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
   },
   {
     "id": "lib.goldSetMetrics",

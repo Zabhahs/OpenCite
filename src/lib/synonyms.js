@@ -45,19 +45,50 @@ for (const cluster of ACADEMIC) {
 const shardCache = new Map();  // letter → Map<root, synonyms[]>
 const MAX_MOBY_SYNS = 24;      // cap per root to keep scoring tight
 
+// ── Off-thread shard loader (F-207) ────────────────────────────────
+// Moby shards (esp. 'c', ~4MB) are fetched + JSON-parsed inside a Web Worker so the parse
+// never janks the main thread. Mirrors the embed-worker pattern in src/lib/semantic.js.
+// Falls back to a synchronous main-thread fetch in environments without Worker (SSR/tests).
+let synWorker = null;
+let synMsgId = 0;
+const synPending = new Map();
+
+function getSynWorker() {
+  if (synWorker) return synWorker;
+  synWorker = new Worker(new URL("../workers/synonyms.worker.js", import.meta.url), { type: "module" });
+  synWorker.onmessage = ({ data }) => {
+    const p = synPending.get(data.id);
+    if (!p) return;
+    const map = new Map(data.entries);
+    shardCache.set(data.letter, map);
+    p.resolve(map);
+    synPending.delete(data.id);
+  };
+  return synWorker;
+}
+
 async function loadShard(letter) {
   if (shardCache.has(letter)) return shardCache.get(letter);
-  try {
-    const resp = await fetch(`/synonyms/${letter}.json`);
-    if (!resp.ok) throw new Error(resp.status);
-    const data = await resp.json();
-    const map = new Map(Object.entries(data));
-    shardCache.set(letter, map);
-    return map;
-  } catch {
-    shardCache.set(letter, new Map());
-    return shardCache.get(letter);
+
+  // Fallback: no Worker (SSR/test) → original inline fetch + parse.
+  if (typeof Worker === "undefined") {
+    try {
+      const resp = await fetch(`/synonyms/${letter}.json`);
+      if (!resp.ok) throw new Error(resp.status);
+      const map = new Map(Object.entries(await resp.json()));
+      shardCache.set(letter, map);
+      return map;
+    } catch {
+      shardCache.set(letter, new Map());
+      return shardCache.get(letter);
+    }
   }
+
+  return new Promise((resolve) => {
+    const id = ++synMsgId;
+    synPending.set(id, { resolve });
+    getSynWorker().postMessage({ id, letter });
+  });
 }
 
 async function mobyLookup(term) {

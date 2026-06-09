@@ -24,7 +24,7 @@
     "modules": [
       "lib.scoring"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "03-Search-Pipeline/Known-Defects.md#d4",
     "fix_hint": "Normalise _score to 0-100 relative to top hit in the admin debug card renderer, or hide raw _score and show only _fused rank."
   },
@@ -82,7 +82,7 @@
       "lib.semantic",
       "workers.embed.worker"
     ],
-    "status": "open",
+    "status": "spike-complete",
     "wiki": "03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment",
     "fix_hint": "Not easily fixable without a separate embedding service or switching to a smaller synchronous model. Acceptable architectural constraint. Document clearly for API consumers."
   },
@@ -96,7 +96,7 @@
     "modules": [
       "lib.dedup"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md#correctness-notes",
     "fix_hint": "Replace the indexOf scan with a second Map<key, outIndex>. Low priority at current pool sizes."
   },
@@ -110,7 +110,7 @@
     "modules": [
       "lib.synonyms"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes",
     "fix_hint": "Move shard loading to a Web Worker, or use a streaming JSON parser. Low priority — synonym expansion is optional and jank is one-time (shards are cached)."
   },
@@ -143,5 +143,19 @@
     "status": "open",
     "wiki": "03-Search-Pipeline/Known-Defects.md#f-209",
     "fix_hint": "Wire server RRF: import { buildNativeRanks, nativeWeight, rrfScores } from ../src/lib/rrf.js into api/search.js, stamp nativeRank/nativeScore on adapter results (as the browser path does), fuse native+lexical, and sort by the fused score instead of raw _score (line 351). ~5-line change reusing the existing 13-LOC rrf.js. Semantic arm stays browser-only (Web Worker + 23MB MiniLM can't run in Vercel Functions — see F-205), so server fusion is native+lexical two-input; document that residual gap for API/MCP consumers."
+  },
+  {
+    "id": "F-210",
+    "type": "bug",
+    "severity": "med",
+    "title": "dedup discards the duplicate's metadata — keeps highest-scored copy but throws the loser's superior fields away (sprint prose: \"v0.42 F-208\")",
+    "detail": "dedupHighestScore kept the higher-_score copy of a duplicate and discarded the loser wholesale (the old out[out.indexOf(existing)] = r swap). When the same work arrives from two sources — e.g. Crossref (rich abstract, is-referenced-by-count) and OpenAlex (real cited_by_count, fuller authors) — collapsing to one record silently lost the other's better fields, degrading card quality (missing abstracts/authors) and weakening the citedBy signal the RRF fusion consumes. NOTE: the v0.42 sprint plan §2.13 calls this \"F-208\"; that id was already taken by the v0.38 adapter-health finding, so it is registered here as F-210 (machine twin keys findings by unique id). Algorithm provenance: merge_papers() in neuromechanist/opencite (MIT), clean-room re-implemented in JS.",
+    "path": "src/lib/dedup.js:33-49",
+    "modules": [
+      "lib.dedup"
+    ],
+    "status": "fixed",
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md#correctness-notes",
+    "fix_hint": "FIXED v0.42 (folded into the F-206 rewrite, one surgical change): added pure mergeRecords(keep, drop) and call it at the dedupHighestScore collision point so the survivor is ENRICHED, not replaced. Policy (reconciled against the real UnifiedResult in src/adapters/_shared/base.js — no sources[]/nativeScore/pmid exist): abstract→longer; authors/keywords/subjects/editors→union de-duped (casing + first-seen order preserved); citedBy→max (null-safe); isOA→OR; single-value scalars (doi/year/journal/publisher/volume/issue/pages/url/language)→canonical wins, fill-if-missing; _score→keep higher. Pooled path only — dedupFirstWins (streaming) cannot merge (later copies not yet arrived; scores not comparable across batches). Covered by src/lib/dedup.test.js (9 cases, all passing)."
   }
 ]

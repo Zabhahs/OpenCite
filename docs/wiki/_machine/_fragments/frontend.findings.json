@@ -43,7 +43,7 @@
     "detail": "src/components/Layout.jsx:210–218 renders theme swatches as 20px colored squares with only a `title` attribute tooltip. Screen readers get no useful label; colorblind users cannot distinguish Cream from Blue-grey. The title is shown on hover but not persistently accessible.",
     "path": "src/components/Layout.jsx:210",
     "modules": ["components.Layout"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/UI-Map.md#themestrip",
     "fix_hint": "Add aria-label={t.label} to each swatch button. Optionally show the label text on focus or below the active swatch."
   },
@@ -79,7 +79,7 @@
     "detail": "src/components/Panels.jsx:499 uses confirm(`Remove all ${items.length} items from your library?`). Native browser confirm() is unstyled, inaccessible (cannot be focused/trapped by screen readers in the same way), and inconsistent with the rest of the UI aesthetic.",
     "path": "src/components/Panels.jsx:499",
     "modules": ["components.Panels"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#panels--librarypanel",
     "fix_hint": "Replace with an inline confirmation UI (e.g., a two-step button: 'Clear all' → 'Are you sure? Confirm') consistent with the existing design system."
   },
@@ -139,7 +139,7 @@
     "detail": "BillingContext is a stub (F-300) so there is no client-side credit counter. The server gates usage at /api/search, but the UI gives no feedback before or after exhaustion. Free users (20 searches/month) have no visibility into their remaining balance until a server 402 (v0.37 plan, not yet shipped).",
     "path": "src/contexts/BillingContext.jsx",
     "modules": ["contexts.BillingContext", "components.Layout"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Contexts.md#billingcontext",
     "fix_hint": "Wire BillingProvider to a /api/credits GET on sign-in; surface remaining credits in the Header nav (e.g., near the Plans button)."
   },
@@ -151,7 +151,7 @@
     "detail": "src/components/Layout.jsx:264–325 renders AuthModal as a fixed full-screen div overlay. There is no focus trap: keyboard users can Tab behind the modal to the main page while the overlay is open. This is an accessibility failure (WCAG 2.1 SC 2.1.2).",
     "path": "src/components/Layout.jsx:264",
     "modules": ["components.Layout"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/UI-Map.md#header",
     "fix_hint": "Use a focus-trap library (e.g., focus-trap-react) or implement a manual focus trap: on mount, move focus to the first button inside the modal; on Tab/Shift-Tab, cycle within modal children only."
   },
@@ -163,7 +163,7 @@
     "detail": "See F-306. Filed against components.Panels for the module binding.",
     "path": "src/components/Panels.jsx:499",
     "modules": ["components.Panels"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#panels--librarypanel",
     "fix_hint": "Same as F-306."
   },

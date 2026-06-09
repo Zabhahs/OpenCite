@@ -2,7 +2,7 @@
 // SettingsPanel, HistoryPanel, LibraryPanel
 // v.19: SettingsPanel gains admin prop + debug log section
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { TAG_VOCAB, ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { DEFAULT_CURATED_JOURNALS, REGION_ORDER } from "../constants/defaults.js";
 import { ResultCard } from "./ResultCard.jsx";
@@ -466,6 +466,8 @@ export function HistoryPanel({ entries, onRerun, onRemove, onClear, historyMax }
 export function LibraryPanel({ items, onToggle, onClear, onCopy, copied }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
+  // F-306/F-313: two-step inline clear confirmation (replaces native confirm()).
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const toggleSelect = useCallback((key) => {
     setSelectedKeys(prev => {
@@ -479,6 +481,9 @@ export function LibraryPanel({ items, onToggle, onClear, onCopy, copied }) {
     setSelectMode(false);
     setSelectedKeys(new Set());
   };
+
+  // Reset the clear-confirmation if the user switches into select mode.
+  useEffect(() => { if (selectMode) setConfirmClear(false); }, [selectMode]);
 
   const selectedItems = items.filter(item => selectedKeys.has(libraryKey(item)));
   const hasSelection = selectedItems.length > 0;
@@ -494,7 +499,14 @@ export function LibraryPanel({ items, onToggle, onClear, onCopy, copied }) {
             <>
               <button onClick={() => exportBibliography(items)} className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition">↓ Export all</button>
               <button onClick={() => setSelectMode(true)} className="mono-font text-[10px] uppercase tracking-widest bg-stone-900 text-amber-50 px-3 py-1.5 hover:bg-red-900 transition">✓ Select to export</button>
-              <button onClick={() => { if (confirm(`Remove all ${items.length} items from your library?`)) onClear(); }} className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition">Clear all</button>
+              {!confirmClear ? (
+                <button onClick={() => setConfirmClear(true)} className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition">Clear all</button>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <button onClick={() => { onClear(); setConfirmClear(false); }} className="mono-font text-[10px] uppercase tracking-widest text-red-700 hover:text-red-900 transition">⚠ Confirm clear?</button>
+                  <button onClick={() => setConfirmClear(false)} className="mono-font text-[10px] uppercase tracking-widest text-stone-500 hover:text-stone-900 transition">Cancel</button>
+                </span>
+              )}
             </>
           )}
           {selectMode && <button onClick={exitSelectMode} className="mono-font text-[10px] uppercase tracking-widest text-stone-600 hover:text-red-900 transition">✕ Cancel</button>}

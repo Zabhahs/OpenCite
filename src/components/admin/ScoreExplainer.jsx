@@ -93,15 +93,20 @@ export function ScoreExplainer() {
           <p className="mono-font text-xs uppercase tracking-widest text-stone-600">
             Ranked Results
           </p>
-          {results.results.map((r, idx) => (
-            <ScoreCard
-              key={idx}
-              result={r}
-              rank={idx + 1}
-              expanded={expandedId === idx}
-              onToggleExpanded={() => toggleExpanded(idx)}
-            />
-          ))}
+          {(() => {
+            // F-201: normalize against the top hit so scores are comparable 0–100.
+            const maxScore = results.results[0]?._score || 1;
+            return results.results.map((r, idx) => (
+              <ScoreCard
+                key={idx}
+                result={r}
+                rank={idx + 1}
+                maxScore={maxScore}
+                expanded={expandedId === idx}
+                onToggleExpanded={() => toggleExpanded(idx)}
+              />
+            ));
+          })()}
         </div>
       )}
 
@@ -115,7 +120,7 @@ export function ScoreExplainer() {
 }
 
 // Single expandable score card
-function ScoreCard({ result, rank, expanded, onToggleExpanded }) {
+function ScoreCard({ result, rank, maxScore = 1, expanded, onToggleExpanded }) {
   const scoreBreakdown = result._scoreBreakdown || {};
   const gateColor = {
     kept: "bg-green-50 border-green-300",
@@ -157,9 +162,12 @@ function ScoreCard({ result, rank, expanded, onToggleExpanded }) {
         </div>
         <div className="text-right space-y-1">
           <p className="text-lg font-bold text-stone-900">
-            {(result._score ?? 0).toFixed(2)}
+            {/* F-201: normalized 0–100 (top hit = 100); raw BM25F kept in secondary text. */}
+            {Math.round(((result._score ?? 0) / maxScore) * 100)}/100
           </p>
-          <p className="mono-font text-xs text-stone-500">score</p>
+          <p className="mono-font text-xs text-stone-500">
+            raw {(result._score ?? 0).toFixed(2)}
+          </p>
         </div>
       </div>
 

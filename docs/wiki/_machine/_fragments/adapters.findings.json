@@ -193,7 +193,7 @@
     "modules": [
       "adapters.extensions.met"
     ],
-    "status": "open",
+    "status": "mitigated",
     "wiki": "02-Adapters/Extension-Adapters.md#met",
     "fix_hint": "Reduce fetchSlice multiplier or batch requests. Alternatively, use Met's ObjectID-only endpoint and fetch details lazily."
   },
@@ -221,7 +221,7 @@
     "modules": [
       "adapters.extensions.rijksmuseum"
     ],
-    "status": "open",
+    "status": "mitigated",
     "wiki": "02-Adapters/Extension-Adapters.md#rijksmuseum",
     "fix_hint": "Cache resolved image URLs per object number (localStorage or server-side KV). Or accept the latency — the adapter is otherwise correct."
   },
@@ -235,7 +235,7 @@
     "modules": [
       "adapters.extensions.pangaea"
     ],
-    "status": "open",
+    "status": "mitigated",
     "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
     "fix_hint": "Pre-filter by title presence from the ES hit before firing RIS fetches. Or batch RIS requests if the endpoint supports it."
   }
