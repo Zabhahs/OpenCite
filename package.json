@@ -12,7 +12,7 @@
     "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks')}catch(e){}\""
   },
   "dependencies": {
-    "@auth/core": "0.37.4",
+    "@auth/core": "0.41.2",
     "@auth/prisma-adapter": "2.11.2",
     "@prisma/client": "^6.6.0",
     "@vercel/analytics": "^2.0.1",
