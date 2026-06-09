@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { THEMES, DEFAULT_THEME } from "../constants/themes.js";
 
-const LIGHT_DEFAULT = "tan";
+// Light default is the SSOT theme key from themes.js (F-309 — was re-hardcoded "tan").
+const LIGHT_DEFAULT = DEFAULT_THEME;
 const DARK_DEFAULT  = "oled";
 
 function getInitialTheme() {

@@ -1,66 +1,23 @@
 // OpenCITE — useHistory
-// Auth-aware: signed-in users sync to DB via /api/history (fire-and-forget writes).
-// Anonymous users fall through to localStorage via lib/history.js — unchanged behaviour.
-//
-// Sync strategy mirrors useSettings:
-//   load()       — reads localStorage (fast, offline-safe), called once on mount
-//   syncFromDB() — called when user signs in; DB wins on conflict
-//   add/remove/clear — writes localStorage always + fire-and-forget POST if signed in
+// Auth-aware search history. Signed-in users sync to DB via /api/history
+// (fire-and-forget writes); anonymous users fall through to localStorage
+// (lib/history.js) unchanged. Shared localStorage↔DB plumbing lives in
+// useSyncedStore (v0.41 R-300); only the history-specific mutations are here.
 
-import { useState, useEffect, useRef } from "react";
+import { useSyncedStore } from "./useSyncedStore.js";
 import { history } from "../lib/history.js";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import { apiCall } from "../lib/api.js";
-
-const apiFetch = (method, body) => apiCall("/api/history", method, body);
+import { storage } from "../lib/storage.js";
 
 export function useHistory() {
-  const { user } = useAuth();
-  const [entries, setEntries] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  const { value: entries, setValue: setEntries, load, user, apiFetch } = useSyncedStore([], {
+    apiPath: "/api/history",
+    loadLocal: () => history.load(),
+    parse: (rows) => (rows && rows.length ? rows : null), // empty DB → first-time push
+    pushLocal: (local, push) => local.forEach(e => push("POST", { query: e.query })),
+    merge: (dbRows) => dbRows, // DB wins
+    persist: (rows) => storage.set("history", rows),
+  });
 
-  // Always-current ref so syncFromDB() never reads stale closure values
-  const entriesRef = useRef(entries);
-  entriesRef.current = entries;
-
-  // ── Sync from DB when user signs in (and local state is ready) ────────────
-  useEffect(() => {
-    if (user?.id && loaded) syncFromDB();
-  }, [user?.id, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── syncFromDB — fires once on sign-in ────────────────────────────────────
-  const syncFromDB = async () => {
-    try {
-      const res = await apiFetch("GET");
-      if (!res.ok) return;
-      const rows = await res.json();
-
-      if (!rows || rows.length === 0) {
-        // No DB record yet — push current localStorage entries up (first-time sync)
-        const local = entriesRef.current;
-        local.forEach(e => apiFetch("POST", { query: e.query })); // fire-and-forget
-        return;
-      }
-
-      // DB wins — update state and localStorage
-      setEntries(rows);
-      try {
-        const { storage } = await import("../lib/storage.js");
-        storage.set("history", rows);
-      } catch {}
-    } catch {
-      // Network error — stay on localStorage silently
-    }
-  };
-
-  // ── load — localStorage read (called once on mount by App.jsx) ─────────────
-  const load = () => {
-    const raw = history.load();
-    setEntries(raw);
-    setLoaded(true);
-  };
-
-  // ── add ───────────────────────────────────────────────────────────────────
   const add = (query) => {
     const next = history.add(query);
     setEntries(next);
@@ -68,7 +25,6 @@ export function useHistory() {
     return next;
   };
 
-  // ── remove ────────────────────────────────────────────────────────────────
   const remove = (query) => {
     const next = history.remove(query);
     setEntries(next);
@@ -76,7 +32,6 @@ export function useHistory() {
     return next;
   };
 
-  // ── clear ─────────────────────────────────────────────────────────────────
   const clear = () => {
     const next = history.clear();
     setEntries(next);

@@ -1189,6 +1189,31 @@
     "notes": "Stripe SDK dynamically imported so its absence can't break other routes. baseUrl accepts *.vercel.app — broad redirect origin pattern."
   },
   {
+    "id": "api.credits",
+    "path": "api/credits.js",
+    "loc": 45,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.auth",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "GET /api/credits → { credits, tier } for the signed-in user; session-cookie auth (browser counterpart to the API-key-gated /api/search). Read-only — never spends. Admins get { Infinity, 'admin' }.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "billing",
+      "credits",
+      "session-auth"
+    ],
+    "notes": "v0.41 (F-300): backs the client BillingProvider. Reads User.total_credits + User.plan (same columns billing.js settles). DB error degrades to the Infinity/'free' stub so the UI never blocks."
+  },
+  {
     "id": "api.history",
     "path": "api/history.js",
     "loc": 87,
@@ -2114,7 +2139,7 @@
   {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 472,
+    "loc": 484,
     "deps": [
       "adapters.index",
       "components.AdminConsole",
@@ -2129,6 +2154,7 @@
       "components.UnifiedResultList",
       "constants.defaults",
       "contexts.AuthContext",
+      "contexts.BillingContext",
       "hooks.useFilters",
       "hooks.useHistory",
       "hooks.useLibrary",
@@ -2150,8 +2176,6 @@
     ],
     "status": "healthy",
     "findings": [
-      "F-300",
-      "F-301",
       "F-302"
     ],
     "wiki": "01-Frontend/App-Shell.md",
@@ -2160,7 +2184,7 @@
       "shell",
       "state"
     ],
-    "notes": "BillingProvider never mounted here. SettingsContext never mounted here. resultsReady gate is the anti-reshuffle guard (v.31)."
+    "notes": "v0.41: BillingProvider now mounted inside AuthProvider (F-300) and PricingPanel reads useBilling().tier (F-315). resultsReady gate is the anti-reshuffle guard (v.31)."
   },
   {
     "id": "components.admin.GoldSetHarness",
@@ -2234,6 +2258,27 @@
     ]
   },
   {
+    "id": "components.BookGroupHeader",
+    "path": "src/components/BookGroupHeader.jsx",
+    "loc": 47,
+    "deps": [],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Parent-work header for a cluster of book chapters (chapter-count badge, year, container title, editors, publisher). Shared by SourceSection and UnifiedResultList.",
+    "exports": [
+      "BookGroupHeader"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md#bookgroupheader",
+    "tags": [
+      "component",
+      "results",
+      "reuse"
+    ],
+    "notes": "v0.41 (R-301/F-314): extracted from the verbatim-duplicated header block in SourceSection and UnifiedResultList."
+  },
+  {
     "id": "components.EagleTooltip",
     "path": "src/components/EagleTooltip.jsx",
     "loc": 72,
@@ -2302,11 +2347,12 @@
   {
     "id": "components.Layout",
     "path": "src/components/Layout.jsx",
-    "loc": 390,
+    "loc": 401,
     "deps": [
       "constants.app",
       "constants.themes",
-      "contexts.AuthContext"
+      "contexts.AuthContext",
+      "contexts.BillingContext"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2337,7 +2383,7 @@
   {
     "id": "components.Panels",
     "path": "src/components/Panels.jsx",
-    "loc": 563,
+    "loc": 561,
     "deps": [
       "adapters.shared.base",
       "adapters.shared.normalize",
@@ -2471,8 +2517,9 @@
   {
     "id": "components.SourceSection",
     "path": "src/components/SourceSection.jsx",
-    "loc": 143,
+    "loc": 117,
     "deps": [
+      "components.BookGroupHeader",
       "components.ResultCard",
       "lib.groupResults"
     ],
@@ -2496,9 +2543,10 @@
   {
     "id": "components.UnifiedResultList",
     "path": "src/components/UnifiedResultList.jsx",
-    "loc": 230,
+    "loc": 204,
     "deps": [
       "adapters.index",
+      "components.BookGroupHeader",
       "components.ResultCard",
       "lib.groupResults"
     ],
@@ -2659,53 +2707,54 @@
   {
     "id": "contexts.BillingContext",
     "path": "src/contexts/BillingContext.jsx",
-    "loc": 38,
-    "deps": [],
+    "loc": 54,
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api"
+    ],
     "kind": "context",
     "runtime": "client",
-    "purpose": "Stub billing context — Infinity credits, 'free' tier, no-op deduct(). Phase 2/3/4 hook point for credit metering. Never mounted.",
+    "purpose": "Billing context — exposes the signed-in user's credits + tier. Mounted in App.jsx (v0.41); fetches GET /api/credits on sign-in, falls back to Infinity/'free' stub when anonymous or on error. deduct() is still a no-op (spend stays server-side).",
     "exports": [
       "BillingProvider",
       "useBilling"
     ],
-    "status": "stub",
-    "findings": [
-      "F-300"
-    ],
+    "status": "healthy",
+    "findings": [],
     "wiki": "01-Frontend/Contexts.md#billingcontext",
     "tags": [
       "billing",
       "context",
-      "stub",
-      "dead"
+      "live"
     ],
-    "notes": "BillingProvider is never mounted in App.jsx. Real credit gating is server-side (api/_shared/billing.js)."
+    "notes": "v0.41 (F-300): mounted + wired to /api/credits. Real credit gating remains server-side (api/_shared/billing.js). Spend-side deduct() wiring is v0.42 (F-311)."
   },
   {
     "id": "contexts.SettingsContext",
     "path": "src/contexts/SettingsContext.jsx",
-    "loc": 16,
-    "deps": [
-      "hooks.useSettings"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "context",
     "runtime": "client",
-    "purpose": "Thin wrapper context for useSettings — provides SettingsProvider and useSettingsContext, but neither is mounted or consumed anywhere.",
+    "purpose": "Thin wrapper context for useSettings — provided SettingsProvider and useSettingsContext, but neither was ever mounted or consumed.",
     "exports": [
       "SettingsProvider",
       "useSettingsContext"
     ],
-    "status": "dead",
+    "status": "quarantined",
     "findings": [
+      "F-301",
       "F-308"
     ],
     "wiki": "01-Frontend/Contexts.md#settingscontext",
     "tags": [
       "settings",
       "context",
-      "dead"
+      "dead",
+      "quarantined"
     ],
-    "notes": "Fully dead — never mounted, never consumed. Should be deleted or activated."
+    "notes": "Quarantined + deleted in v0.41 (F-301/F-308) — never mounted, never consumed. Dossier: 99-Archive/_quarantine/context-settings.md."
   },
   {
     "id": "hooks.useEagleTooltip",
@@ -2751,11 +2800,11 @@
   {
     "id": "hooks.useHistory",
     "path": "src/hooks/useHistory.js",
-    "loc": 89,
+    "loc": 44,
     "deps": [
-      "contexts.AuthContext",
-      "lib.api",
-      "lib.history"
+      "hooks.useSyncedStore",
+      "lib.history",
+      "lib.storage"
     ],
     "kind": "hook",
     "runtime": "client",
@@ -2771,16 +2820,17 @@
       "localStorage",
       "DB-sync",
       "hook"
-    ]
+    ],
+    "notes": "v0.41 (R-300): shared localStorage↔DB plumbing extracted to hooks.useSyncedStore; only history-specific mutations remain here."
   },
   {
     "id": "hooks.useLibrary",
     "path": "src/hooks/useLibrary.js",
-    "loc": 90,
+    "loc": 45,
     "deps": [
-      "contexts.AuthContext",
-      "lib.api",
-      "lib.library"
+      "hooks.useSyncedStore",
+      "lib.library",
+      "lib.storage"
     ],
     "kind": "hook",
     "runtime": "client",
@@ -2801,7 +2851,7 @@
   {
     "id": "hooks.useSearch",
     "path": "src/hooks/useSearch.js",
-    "loc": 160,
+    "loc": 169,
     "deps": [
       "adapters.index",
       "lib.dedup",
@@ -2857,13 +2907,12 @@
   {
     "id": "hooks.useSettings",
     "path": "src/hooks/useSettings.js",
-    "loc": 154,
+    "loc": 121,
     "deps": [
       "adapters.index",
       "constants.defaults",
       "constants.vocabulary",
-      "contexts.AuthContext",
-      "lib.api",
+      "hooks.useSyncedStore",
       "lib.storage"
     ],
     "kind": "hook",
@@ -2885,9 +2934,34 @@
     ]
   },
   {
+    "id": "hooks.useSyncedStore",
+    "path": "src/hooks/useSyncedStore.js",
+    "loc": 79,
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Shared localStorage↔DB sync plumbing for the auth-aware hooks — load-on-mount, sync-from-DB on sign-in (DB wins), first-time push, and fire-and-forget mutation writes. Shapes injected via a config object.",
+    "exports": [
+      "useSyncedStore"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usesyncedstore",
+    "tags": [
+      "localStorage",
+      "DB-sync",
+      "hook",
+      "reuse"
+    ],
+    "notes": "v0.41 (R-300): extracted from the identical 4-step sync pattern in useHistory/useLibrary/useSettings."
+  },
+  {
     "id": "hooks.useTheme",
     "path": "src/hooks/useTheme.js",
-    "loc": 44,
+    "loc": 45,
     "deps": [
       "constants.themes"
     ],
@@ -2907,7 +2981,7 @@
       "localStorage",
       "hook"
     ],
-    "notes": "DEFAULT_THEME from themes.js imported but never used by this hook — hardcodes 'tan' and 'oled' directly."
+    "notes": "v0.41 (F-309): LIGHT_DEFAULT now aliases the imported DEFAULT_THEME from themes.js (SSOT); DARK_DEFAULT stays 'oled'."
   },
   {
     "id": "index",

@@ -573,6 +573,18 @@
       "api.shared.prisma"
     ],
     [
+      "api.credits",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.credits",
+      "api.shared.auth"
+    ],
+    [
+      "api.credits",
+      "api.shared.prisma"
+    ],
+    [
       "api.history",
       "api.shared.auth"
     ],
@@ -874,6 +886,10 @@
     ],
     [
       "App",
+      "contexts.BillingContext"
+    ],
+    [
+      "App",
       "hooks.useFilters"
     ],
     [
@@ -965,6 +981,10 @@
       "contexts.AuthContext"
     ],
     [
+      "components.Layout",
+      "contexts.BillingContext"
+    ],
+    [
       "components.Panels",
       "adapters.shared.base"
     ],
@@ -1030,6 +1050,10 @@
     ],
     [
       "components.SourceSection",
+      "components.BookGroupHeader"
+    ],
+    [
+      "components.SourceSection",
       "components.ResultCard"
     ],
     [
@@ -1039,6 +1063,10 @@
     [
       "components.UnifiedResultList",
       "adapters.index"
+    ],
+    [
+      "components.UnifiedResultList",
+      "components.BookGroupHeader"
     ],
     [
       "components.UnifiedResultList",
@@ -1053,8 +1081,12 @@
       "lib.auth-client"
     ],
     [
-      "contexts.SettingsContext",
-      "hooks.useSettings"
+      "contexts.BillingContext",
+      "contexts.AuthContext"
+    ],
+    [
+      "contexts.BillingContext",
+      "lib.api"
     ],
     [
       "hooks.useFilters",
@@ -1062,27 +1094,27 @@
     ],
     [
       "hooks.useHistory",
-      "contexts.AuthContext"
-    ],
-    [
-      "hooks.useHistory",
-      "lib.api"
+      "hooks.useSyncedStore"
     ],
     [
       "hooks.useHistory",
       "lib.history"
     ],
     [
-      "hooks.useLibrary",
-      "contexts.AuthContext"
+      "hooks.useHistory",
+      "lib.storage"
     ],
     [
       "hooks.useLibrary",
-      "lib.api"
+      "hooks.useSyncedStore"
     ],
     [
       "hooks.useLibrary",
       "lib.library"
+    ],
+    [
+      "hooks.useLibrary",
+      "lib.storage"
     ],
     [
       "hooks.useSearch",
@@ -1122,15 +1154,19 @@
     ],
     [
       "hooks.useSettings",
-      "contexts.AuthContext"
-    ],
-    [
-      "hooks.useSettings",
-      "lib.api"
+      "hooks.useSyncedStore"
     ],
     [
       "hooks.useSettings",
       "lib.storage"
+    ],
+    [
+      "hooks.useSyncedStore",
+      "contexts.AuthContext"
+    ],
+    [
+      "hooks.useSyncedStore",
+      "lib.api"
     ],
     [
       "hooks.useTheme",
@@ -1439,6 +1475,7 @@
     "api.shared.auth": [
       "api.auth.handler",
       "api.checkout",
+      "api.credits",
       "api.history",
       "api.keys",
       "api.library",
@@ -1449,6 +1486,7 @@
     "api.shared.prisma": [
       "api.auth.handler",
       "api.checkout",
+      "api.credits",
       "api.history",
       "api.keys",
       "api.library",
@@ -1481,6 +1519,10 @@
       "api.shared.apiAuth",
       "api.stripe.webhook"
     ],
+    "api.shared.apiAuth": [
+      "api.credits",
+      "api.search"
+    ],
     "api.shared.crypto": [
       "api.keys",
       "api.settings",
@@ -1507,9 +1549,6 @@
     "api.shared.adapterHealth": [
       "api.search",
       "api.shared.adapterHealth.test"
-    ],
-    "api.shared.apiAuth": [
-      "api.search"
     ],
     "api.shared.apiContract": [
       "api.search",
@@ -1584,9 +1623,12 @@
       "App",
       "components.AdminConsole",
       "components.Layout",
-      "hooks.useHistory",
-      "hooks.useLibrary",
-      "hooks.useSettings"
+      "contexts.BillingContext",
+      "hooks.useSyncedStore"
+    ],
+    "contexts.BillingContext": [
+      "App",
+      "components.Layout"
     ],
     "hooks.useFilters": [
       "App"
@@ -1604,8 +1646,7 @@
       "App"
     ],
     "hooks.useSettings": [
-      "App",
-      "contexts.SettingsContext"
+      "App"
     ],
     "hooks.useTheme": [
       "App"
@@ -1627,6 +1668,8 @@
     ],
     "lib.storage": [
       "components.admin.GoldSetHarness",
+      "hooks.useHistory",
+      "hooks.useLibrary",
       "hooks.useSettings",
       "lib.history",
       "lib.library"
@@ -1670,6 +1713,10 @@
     "hooks.useEagleTooltip": [
       "components.ResultCard"
     ],
+    "components.BookGroupHeader": [
+      "components.SourceSection",
+      "components.UnifiedResultList"
+    ],
     "lib.groupResults": [
       "components.SourceSection",
       "components.UnifiedResultList"
@@ -1678,6 +1725,10 @@
       "contexts.AuthContext"
     ],
     "lib.api": [
+      "contexts.BillingContext",
+      "hooks.useSyncedStore"
+    ],
+    "hooks.useSyncedStore": [
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSettings"

@@ -11,7 +11,7 @@
     ],
     "status": "open",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
-    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/."
+    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/. Plan: 02-Adapters/Shared-Utils-Plan.md (v0.41)."
   },
   {
     "id": "F-101",
@@ -25,7 +25,7 @@
     ],
     "status": "open",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs",
-    "fix_hint": "Same as F-100: shared package. Or accept and add lint comment."
+    "fix_hint": "Same as F-100: shared package (plan: 02-Adapters/Shared-Utils-Plan.md). Or accept and add lint comment."
   },
   {
     "id": "F-102",
@@ -394,7 +394,7 @@
     "modules": [
       "contexts.BillingContext"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Contexts.md#billingcontext",
     "fix_hint": "Mount BillingProvider inside AuthProvider in App.jsx once Phase 2 ships. Wire to /api/credits GET. Expose credit balance in Header nav."
   },
@@ -408,7 +408,7 @@
     "modules": [
       "contexts.SettingsContext"
     ],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/Contexts.md#settingscontext",
     "fix_hint": "Either delete the file, or mount SettingsProvider in App.jsx (replacing the useSettings() call) and migrate consumers to useSettingsContext()."
   },
@@ -422,7 +422,7 @@
     "modules": [
       "App"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/App-Shell.md",
     "fix_hint": "Derive a hasAllKeyedSources boolean from adapter state or settings, and use that instead of the raw europeanaKey check."
   },
@@ -450,7 +450,7 @@
     "modules": [
       "components.Panels"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/UI-Map.md#settingspanel",
     "fix_hint": "Remove the migration comment. The SearchControls location is documented in the wiki."
   },
@@ -464,7 +464,7 @@
     "modules": [
       "components.Layout"
     ],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/UI-Map.md#header",
     "fix_hint": "Remove Apple/Microsoft from PROVIDERS array until they are implemented. Re-add when the OAuth integration ships."
   },
@@ -492,7 +492,7 @@
     "modules": [
       "hooks.useSearch"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Hooks.md#usesearch",
     "fix_hint": "Add a searchId ref (useRef(0)), increment on each search() call, and check inside each async callback that the current searchId matches before calling setSectionStates."
   },
@@ -507,7 +507,7 @@
       "contexts.SettingsContext",
       "hooks.useSettings"
     ],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/Contexts.md#settingscontext",
     "fix_hint": "Same as F-301."
   },
@@ -522,7 +522,7 @@
       "constants.themes",
       "hooks.useTheme"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Hooks.md#usetheme",
     "fix_hint": "Import DEFAULT_THEME in useTheme.js and use it as LIGHT_DEFAULT, eliminating the duplicated constant."
   },
@@ -594,7 +594,7 @@
       "components.SourceSection",
       "components.UnifiedResultList"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
     "fix_hint": "Extract a <BookGroupHeader group={group} /> component in a shared file (e.g., components/BookGroupHeader.jsx) and import it in both SourceSection and UnifiedResultList."
   },
@@ -608,7 +608,7 @@
     "modules": [
       "components.Panels"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#panels--pricingpanel",
     "fix_hint": "Wire currentPlan to the actual user plan from BillingContext (once live) or from the server session. Pass the resolved plan as a prop from App.jsx."
   },

@@ -1,22 +1,15 @@
 // OpenCITE — useSettings
-// Auth-aware: signed-in users sync to DB via /api/settings (AES-256-GCM encrypted).
-// Anonymous users fall through to localStorage — unchanged behaviour.
-//
-// Sync strategy:
-//   load()       — reads localStorage (fast, offline-safe)
-//   syncFromDB() — called when user signs in; DB wins on conflict; pushes
-//                  localStorage settings up if DB is empty (first-time sync)
-//   save(next)   — writes localStorage always + fire-and-forget POST if signed in
+// Auth-aware user settings. Signed-in users sync to DB via /api/settings (the row is
+// AES-256-GCM encrypted server-side); anonymous users fall through to localStorage
+// unchanged. Shared localStorage↔DB plumbing lives in useSyncedStore (v0.41 R-300).
+// Settings-specific logic — legacy-key migration, the v.31 one-time defaults flip, the
+// DEFAULT_SETTINGS-spread merge, and adapter enable/toggle — stays here.
 
-import { useState, useEffect, useRef } from "react";
+import { useSyncedStore } from "./useSyncedStore.js";
 import { DEFAULT_SETTINGS, DEFAULT_CURATED_JOURNALS } from "../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../constants/vocabulary.js";
 import { ADAPTERS, isAdapterDefaultEnabled } from "../adapters/index.js";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import { apiCall } from "../lib/api.js";
 import { storage } from "../lib/storage.js";
-
-const apiFetch = (method, body) => apiCall("/api/settings", method, body);
 
 const LEGACY_KEYS = [
   "europeanaKey", "openAlexKey", "openAlexEmail", "crossrefEmail",
@@ -65,69 +58,43 @@ function migrateLegacyKeys() {
   }
 }
 
-export function useSettings() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [loaded, setLoaded]     = useState(false);
-  const { user }                = useAuth();
+// Single namespaced write — shared by load(), syncFromDB(), and save().
+const persistLocally = (next) => storage.set("settings", next);
 
-  // Always-current ref so syncFromDB() never reads stale closure values
-  const settingsRef = useRef(settings);
-  settingsRef.current = settings;
-
-  // ── Sync from DB when user signs in (and local state is ready) ────────────
-  useEffect(() => {
-    if (user?.id && loaded) syncFromDB();
-  }, [user?.id, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── load — reads namespaced storage; migrates legacy bare keys on first run ─
-  const load = () => {
-    try {
-      const stored = storage.get("settings");
-      let base;
-      if (stored && typeof stored === "object" && !Array.isArray(stored)) {
-        base = { ...DEFAULT_SETTINGS, ...stored };
-      } else {
-        const migrated = migrateLegacyKeys();
-        base = migrated ? { ...DEFAULT_SETTINGS, ...migrated } : { ...DEFAULT_SETTINGS };
-      }
-      // v.31 one-time: enable semantic + synonym ranking for existing users whose
-      // saved settings predate the always-on defaults. Flips on once, then respects
-      // any later toggle (the flag is persisted alongside their choice).
-      if (!base.searchDefaultsV31) {
-        base = { ...base, semanticSearch: true, synonyms: true, searchDefaultsV31: true };
-        persistLocally(base);
-      }
-      setSettings(base);
-    } catch {}
-    setLoaded(true);
-  };
-
-  // ── persistLocally — single namespaced write ──────────────────────────────
-  const persistLocally = (next) => {
-    storage.set("settings", next);
-  };
-
-  // ── syncFromDB — fires once on sign-in ────────────────────────────────────
-  const syncFromDB = async () => {
-    try {
-      const res = await apiFetch("GET");
-      if (!res.ok) return;
-      const { settings: dbSettings } = await res.json();
-
-      if (!dbSettings) {
-        // No DB record yet — push current localStorage settings up (first-time sync)
-        apiFetch("POST", { settings: settingsRef.current }); // fire-and-forget
-        return;
-      }
-
-      // DB wins on conflict — merge: defaults → localStorage → DB
-      const merged = { ...DEFAULT_SETTINGS, ...settingsRef.current, ...dbSettings };
-      setSettings(merged);
-      persistLocally(merged);
-    } catch {
-      // Network error — stay on localStorage silently
+// loadLocal — reads namespaced storage; migrates legacy bare keys on first run; applies
+// the v.31 one-time defaults. Returns the seed value, or undefined to keep DEFAULT_SETTINGS.
+function loadLocalSettings() {
+  try {
+    const stored = storage.get("settings");
+    let base;
+    if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+      base = { ...DEFAULT_SETTINGS, ...stored };
+    } else {
+      const migrated = migrateLegacyKeys();
+      base = migrated ? { ...DEFAULT_SETTINGS, ...migrated } : { ...DEFAULT_SETTINGS };
     }
-  };
+    // v.31 one-time: enable semantic + synonym ranking for existing users whose saved
+    // settings predate the always-on defaults. Flips on once, then respects any later
+    // toggle (the flag is persisted alongside their choice).
+    if (!base.searchDefaultsV31) {
+      base = { ...base, semanticSearch: true, synonyms: true, searchDefaultsV31: true };
+      persistLocally(base);
+    }
+    return base;
+  } catch {
+    return undefined; // keep DEFAULT_SETTINGS
+  }
+}
+
+export function useSettings() {
+  const { value: settings, setValue: setSettings, loaded, load, user, apiFetch } = useSyncedStore(DEFAULT_SETTINGS, {
+    apiPath: "/api/settings",
+    loadLocal: loadLocalSettings,
+    parse: (body) => body?.settings ?? null,                       // empty DB → first-time push
+    pushLocal: (local, push) => push("POST", { settings: local }), // single blob, not per-item
+    merge: (db, local) => ({ ...DEFAULT_SETTINGS, ...local, ...db }), // DB wins on conflict
+    persist: persistLocally,
+  });
 
   // ── save — always writes localStorage + DB if signed in ───────────────────
   const save = (next) => {

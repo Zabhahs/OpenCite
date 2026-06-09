@@ -5,10 +5,11 @@ import { APP_VERSION, APP_NAME } from "../constants/app.js";
 
 // ---------- AuthButton + SyncTooltip ----------
 
+// Only live OAuth providers. Apple/Microsoft were quarantined in v0.41 (F-305) —
+// they had no integration and rendered as dead "— soon" items. Revival dossier:
+// docs/wiki/99-Archive/_quarantine/oauth-apple-microsoft.md.
 const PROVIDERS = [
-  { id: "google",             label: "Google",    active: true  },
-  { id: "apple",              label: "Apple",     active: false },
-  { id: "microsoft-entra-id", label: "Microsoft", active: false },
+  { id: "google", label: "Google", active: true },
 ];
 
 const TOOLTIP_KEY = "opencite_sync_tooltip_dismissed";
@@ -95,22 +96,13 @@ function AuthButton() {
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 bg-white border-2 border-stone-900 min-w-[140px]">
           {PROVIDERS.map(p => (
-            p.active ? (
-              <button
-                key={p.id}
-                onClick={() => { setOpen(false); signIn(p.id); }}
-                className="block w-full text-left mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 hover:bg-stone-50 px-4 py-3 transition border-b border-stone-100 last:border-0"
-              >
-                ↳ {p.label}
-              </button>
-            ) : (
-              <div
-                key={p.id}
-                className="block w-full text-left mono-font text-xs uppercase tracking-widest text-stone-400 px-4 py-3 border-b border-stone-100 last:border-0 cursor-default select-none"
-              >
-                ↳ {p.label} <span className="text-[9px] tracking-wider">— soon</span>
-              </div>
-            )
+            <button
+              key={p.id}
+              onClick={() => { setOpen(false); signIn(p.id); }}
+              className="block w-full text-left mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 hover:bg-stone-50 px-4 py-3 transition border-b border-stone-100 last:border-0"
+            >
+              ↳ {p.label}
+            </button>
           ))}
         </div>
       )}

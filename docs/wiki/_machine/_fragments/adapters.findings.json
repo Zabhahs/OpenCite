@@ -11,7 +11,7 @@
     ],
     "status": "open",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
-    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/."
+    "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/. Plan: 02-Adapters/Shared-Utils-Plan.md (v0.41)."
   },
   {
     "id": "F-101",
@@ -25,7 +25,7 @@
     ],
     "status": "open",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-101--proxiedfetch-spoof-headers-duplicated-with-apiproxyjs",
-    "fix_hint": "Same as F-100: shared package. Or accept and add lint comment."
+    "fix_hint": "Same as F-100: shared package (plan: 02-Adapters/Shared-Utils-Plan.md). Or accept and add lint comment."
   },
   {
     "id": "F-102",

@@ -8,8 +8,18 @@
 > Read `architecture_report_v0_30.md` (project context) + the quarantine index at
 > `docs/wiki/99-Archive/_quarantine/_index.md` before executing.
 >
-> **Created:** 2026-06-08 · **Status:** PLANNED — not executed.
+> **Created:** 2026-06-08 · **Status:** EXECUTED 2026-06-09 (T1–T9 complete), NOT committed/deployed.
 > **Mode:** C (plan → approval → execute → checklist). No padding; precise execution.
+>
+> **Actuals (2026-06-09):** All 9 task groups done. Two plan corrections applied during execution:
+> (1) `findings.json` is **generated** from `_machine/_fragments/*.findings.json` (build-machine-map.mjs
+> concatenates them) — so statuses were set in the SSOT **fragments** + the map rebuilt, never the
+> generated file (CLAUDE.md SSOT rule). (2) `getSession(req)` returns the **flat** user object
+> (`{id,name,email}`), not `{user:{…}}` — `api/credits.js` uses `user.id` accordingly, plus a 405
+> guard and a graceful DB-error fallback to the Infinity/"free" stub. `useSyncedStore` interface
+> landed as `useSyncedStore(initialValue, { apiPath, loadLocal, parse, pushLocal, merge, persist })`.
+> Machine map rebuilt clean: 160 modules / 306 edges / 71 findings, zero warnings. F-300/302/304/307/
+> 309/314/315 → `fixed`; F-301/305/308 → `quarantined`; F-100/101 wiki pointer added (still `open`).
 
 ---
 

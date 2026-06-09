@@ -377,9 +377,7 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
           )}
         </div>
 
-        {/* v.31/v.37 — Synonym, Semantic, relevance slider, Author search AND Result layout
-            (Unified/Source) all live in the always-visible SearchControls under the search bar
-            (quick "Search settings" disclosure). Sources/keys/curated remain below. */}
+        {/* Relevance slider, synonyms, semantic, and layout controls live in SearchControls (under the search bar). */}
 
         <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>

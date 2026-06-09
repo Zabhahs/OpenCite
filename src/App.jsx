@@ -32,6 +32,7 @@ import { getPlatform } from "./lib/platform.js";
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext.jsx";
 import { useAuth } from "./contexts/AuthContext.jsx";
+import { BillingProvider, useBilling } from "./contexts/BillingContext.jsx";
 
 // v.19 — admin gate + debug log
 import { isAdmin } from "./lib/admin.js";
@@ -45,6 +46,7 @@ function OpenCITE() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchCount, setSearchCount] = useState(0);
   const { status, user } = useAuth();
+  const { tier } = useBilling(); // F-315 — drives PricingPanel's "Current" badge
 
   // v.19 — admin status drives debug logger install + UI exposure
   const admin = isAdmin(user);
@@ -149,6 +151,13 @@ function OpenCITE() {
 
   // ── Derived view-mode state (memoized — avoids recomputation on every render) ──
   const isUnified = (settings.viewMode || "unified") === "unified";
+
+  // F-302 — whether every user-keyed source has its key. Today the only client-keyed
+  // optional source is Europeana, so this is just its key presence; the empty-state hint
+  // reads this derived boolean instead of the raw setting.
+  // TODO(future): expand to `allKeyedAdapters.every(a => a.isServerKeyed || settings[a.keyField])`
+  //   once EUROPEANA_API_KEY env lands and europeanaKey is dropped (see useSettings.js TODO).
+  const hasAllKeyedSources = !!settings.europeanaKey;
   const enabledAdapters = useMemo(() => ADAPTERS.filter(isEnabled), [settings, isEnabled]);
   const allDone = useMemo(
     () => enabledAdapters.length > 0 && enabledAdapters.every(a => sectionStates[a.id] && !sectionStates[a.id].loading),
@@ -298,6 +307,7 @@ function OpenCITE() {
         {activePanel === "plans" && (
           <PricingPanel
             platform={getPlatform()}
+            currentPlan={tier}
             isAuthenticated={status === "authenticated"}
             onRequireAuth={() => setShowAuthModal(true)}
           />
@@ -441,7 +451,7 @@ function OpenCITE() {
                 </div>
               ))}
             </div>
-            {!settings.europeanaKey && (
+            {!hasAllKeyedSources && (
               <p className="mono-font text-[10px] uppercase tracking-widest text-amber-900 mt-6">
                 Visit &lsquo;Settings&rsquo; to learn how to enable supplemental sources and custom journals!
               </p>
@@ -462,10 +472,12 @@ function OpenCITE() {
 export default function App() {
   return (
     <AuthProvider>
-      <KofiOverlay />
-      <OpenCITE />
-      <Analytics />
-      <SpeedInsights />
+      <BillingProvider>
+        <KofiOverlay />
+        <OpenCITE />
+        <Analytics />
+        <SpeedInsights />
+      </BillingProvider>
     </AuthProvider>
   );
 }

@@ -1,35 +1,51 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useAuth } from "./AuthContext.jsx";
+import { apiCall } from "../lib/api.js";
 
 /**
- * BillingContext — Phase 3/4 hook point.
+ * BillingContext — surfaces the user's credit balance + tier to the client.
  *
- * Currently a stub with Infinity credits (all searches pass).
- * When Phase 2 (Rate Limiting) ships:
- *   - deduct() calls Vercel KV via /api/credits to decrement the leaky bucket
- *   - credits reflects the real balance from Postgres
- *   - tier gates which extension adapters are available to the user
- *
- * When Phase 3 (Stripe) ships:
- *   - tier is populated from the Stripe subscription status
- *   - credits refills on invoice.paid webhook
- *
- * When Phase 4 (Agent billing) ships:
- *   - deduct() routes to Base L2 micropayment for agent actors
- *   - useAuth().isAgent determines which deduction path to take
- *
- * The registry's runSearch() calls deduct() — adapter files are untouched.
+ * v0.41 (F-300): mounted in App.jsx and wired to GET /api/credits. On sign-in it
+ * reads the real balance/tier from Postgres; anonymous (or any failure) falls back
+ * to the Infinity/"free" stub so the UI never blocks. Credit gating itself stays
+ * server-side (api/_shared/billing.js); deduct() is still a no-op here — spend-side
+ * wiring is a later sprint (v0.42, F-311).
  */
-const STUB_VALUE = {
-  credits: Infinity,
-  tier: "free",
-  deduct: () => Promise.resolve(true),
-};
 
-const BillingContext = createContext(STUB_VALUE);
+// Stub fallback — anonymous users, or any fetch/DB failure. Infinity credits => UI
+// shows no limit; the server is the real gate.
+const STUB = { credits: Infinity, tier: "free" };
+
+const BillingContext = createContext({ ...STUB, deduct: () => Promise.resolve(true) });
 
 export function BillingProvider({ children }) {
-  // Phase 2+: replace STUB_VALUE with real KV credit balance + tier from auth
-  return <BillingContext.Provider value={STUB_VALUE}>{children}</BillingContext.Provider>;
+  const { user, status } = useAuth();
+  const [credits, setCredits] = useState(STUB.credits);
+  const [tier, setTier] = useState(STUB.tier);
+
+  useEffect(() => {
+    // Reset to the stub whenever the user is not authenticated.
+    if (status !== "authenticated") { setCredits(STUB.credits); setTier(STUB.tier); return; }
+    let cancelled = false;
+    apiCall("/api/credits", "GET")
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (cancelled || !data) return;
+        setCredits(data.credits);
+        setTier(data.tier);
+      })
+      .catch(() => {}); // network error → keep the stub
+    return () => { cancelled = true; };
+  }, [status, user?.id]);
+
+  // No-op for now — spend goes through the server. v0.42 wires real deduction.
+  const deduct = useCallback(() => Promise.resolve(true), []);
+
+  return (
+    <BillingContext.Provider value={{ credits, tier, deduct }}>
+      {children}
+    </BillingContext.Provider>
+  );
 }
 
 export function useBilling() {

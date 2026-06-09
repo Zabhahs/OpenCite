@@ -7,7 +7,7 @@
     "detail": "src/contexts/BillingContext.jsx exports BillingProvider and useBilling, but BillingProvider is never imported or mounted anywhere in the app tree (App.jsx:462–470 confirms). The stub returns Infinity credits and a no-op deduct(). All credit gating is server-side. Client UI cannot reflect credit status or show remaining-search counts to users without wiring this up.",
     "path": "src/contexts/BillingContext.jsx",
     "modules": ["contexts.BillingContext"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Contexts.md#billingcontext",
     "fix_hint": "Mount BillingProvider inside AuthProvider in App.jsx once Phase 2 ships. Wire to /api/credits GET. Expose credit balance in Header nav."
   },
@@ -19,7 +19,7 @@
     "detail": "src/contexts/SettingsContext.jsx wraps useSettings in a context and exports SettingsProvider + useSettingsContext, but neither is imported or used anywhere. All settings consumers call useSettings() directly from App.jsx with prop-drilling. The file is dead.",
     "path": "src/contexts/SettingsContext.jsx",
     "modules": ["contexts.SettingsContext"],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/Contexts.md#settingscontext",
     "fix_hint": "Either delete the file, or mount SettingsProvider in App.jsx (replacing the useSettings() call) and migrate consumers to useSettingsContext()."
   },
@@ -31,7 +31,7 @@
     "detail": "App.jsx:444 renders a 'Visit Settings to enable supplemental sources' banner conditioned on !settings.europeanaKey. This leaks key-management internal knowledge into the home-screen presentation layer. When europeanaKey is dropped (once the backend env key is provisioned, per defaults.js TODO), this check will silently show/hide incorrectly.",
     "path": "src/App.jsx:444",
     "modules": ["App"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/App-Shell.md",
     "fix_hint": "Derive a hasAllKeyedSources boolean from adapter state or settings, and use that instead of the raw europeanaKey check."
   },
@@ -55,7 +55,7 @@
     "detail": "src/components/Panels.jsx:380–382 comment says 'Synonym, Semantic, relevance slider, Author search AND Result layout all live in the always-visible SearchControls'. This is accurate — they were moved in v.31/v.36/v.37 — but reading the code without context the comment implies these existed in SettingsPanel, which is confusing. The comment is essentially a migration note that should be cleaned up.",
     "path": "src/components/Panels.jsx:380",
     "modules": ["components.Panels"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/UI-Map.md#settingspanel",
     "fix_hint": "Remove the migration comment. The SearchControls location is documented in the wiki."
   },
@@ -67,7 +67,7 @@
     "detail": "src/components/Layout.jsx:9–11 defines PROVIDERS array with Apple (active: false) and Microsoft (active: false). These render as greyed 'soon' items in the sign-in dropdown for every unauthenticated user. Only Google (active: true) is wired. The dead items create visual noise and false expectations.",
     "path": "src/components/Layout.jsx:9",
     "modules": ["components.Layout"],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/UI-Map.md#header",
     "fix_hint": "Remove Apple/Microsoft from PROVIDERS array until they are implemented. Re-add when the OAuth integration ships."
   },
@@ -91,7 +91,7 @@
     "detail": "src/hooks/useSearch.js:44 uses activeAdapters.forEach(async adapter => { … setSectionStates(prev => …) }). If the user fires a second search before a slow adapter from the first search resolves, that adapter's response will patch the new search's sectionStates via setSectionStates(prev => …). The prev-based merge means the stale response overwrites the correct loading:true state with stale results from the previous query.",
     "path": "src/hooks/useSearch.js:44",
     "modules": ["hooks.useSearch"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Hooks.md#usesearch",
     "fix_hint": "Add a searchId ref (useRef(0)), increment on each search() call, and check inside each async callback that the current searchId matches before calling setSectionStates."
   },
@@ -103,7 +103,7 @@
     "detail": "See F-301. Filed separately against hooks.useSettings to capture the dependency relationship: SettingsContext.jsx imports useSettings but is itself dead. Both records point to the same root cause.",
     "path": "src/contexts/SettingsContext.jsx",
     "modules": ["contexts.SettingsContext", "hooks.useSettings"],
-    "status": "open",
+    "status": "quarantined",
     "wiki": "01-Frontend/Contexts.md#settingscontext",
     "fix_hint": "Same as F-301."
   },
@@ -115,7 +115,7 @@
     "detail": "src/constants/themes.js:49 exports DEFAULT_THEME = 'tan'. src/hooks/useTheme.js never imports it — instead hardcodes LIGHT_DEFAULT = 'tan' and DARK_DEFAULT = 'oled' at lines 4–5. If DEFAULT_THEME is changed, useTheme will silently remain on 'tan'.",
     "path": "src/constants/themes.js:49",
     "modules": ["constants.themes", "hooks.useTheme"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Hooks.md#usetheme",
     "fix_hint": "Import DEFAULT_THEME in useTheme.js and use it as LIGHT_DEFAULT, eliminating the duplicated constant."
   },
@@ -175,7 +175,7 @@
     "detail": "The parent-work header block (chapter count badge, year, title h3, editors, publisher) is reproduced nearly verbatim at SourceSection.jsx:75–103 and UnifiedResultList.jsx:136–164 — approximately 30 lines of JSX each. Any change to the visual design must be applied in both places.",
     "path": "src/components/SourceSection.jsx:75",
     "modules": ["components.SourceSection", "components.UnifiedResultList"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
     "fix_hint": "Extract a <BookGroupHeader group={group} /> component in a shared file (e.g., components/BookGroupHeader.jsx) and import it in both SourceSection and UnifiedResultList."
   },
@@ -187,7 +187,7 @@
     "detail": "src/components/Panels.jsx:190 has defaultProps currentPlan='free'. App.jsx:299 passes no currentPlan prop, so it always defaults to 'free'. Paying subscribers will see the 'Current' badge on the Free card regardless of their actual subscription tier.",
     "path": "src/components/Panels.jsx:190",
     "modules": ["components.Panels"],
-    "status": "open",
+    "status": "fixed",
     "wiki": "01-Frontend/Components/_index.md#panels--pricingpanel",
     "fix_hint": "Wire currentPlan to the actual user plan from BillingContext (once live) or from the server session. Pass the resolved plan as a prop from App.jsx."
   }

@@ -21,12 +21,12 @@
     "loc": 471,
     "purpose": "Root orchestrator — owns all top-level state, calls every hook, and renders the full UI tree; wraps with AuthProvider + Vercel analytics.",
     "exports": ["default (App)", "OpenCITE (internal)"],
-    "deps": ["hooks.useTheme", "hooks.useSettings", "hooks.useHistory", "hooks.useLibrary", "hooks.useSearch", "hooks.useSemanticRerank", "hooks.useFilters", "contexts.AuthContext", "lib.admin", "lib.log", "lib.platform", "components.SearchInput", "components.SearchControls", "components.FilterBar", "components.SourceSection", "components.UnifiedResultList", "components.SearchStatusBar", "components.LauncherBlock", "components.Layout", "components.Panels", "components.AdminConsole", "adapters.index", "launchers.index", "constants.defaults", "constants.app"],
+    "deps": ["hooks.useTheme", "hooks.useSettings", "hooks.useHistory", "hooks.useLibrary", "hooks.useSearch", "hooks.useSemanticRerank", "hooks.useFilters", "contexts.AuthContext", "contexts.BillingContext", "lib.admin", "lib.log", "lib.platform", "components.SearchInput", "components.SearchControls", "components.FilterBar", "components.SourceSection", "components.UnifiedResultList", "components.SearchStatusBar", "components.LauncherBlock", "components.Layout", "components.Panels", "components.AdminConsole", "adapters.index", "launchers.index", "constants.defaults", "constants.app"],
     "status": "healthy",
-    "findings": ["F-300", "F-301", "F-302"],
+    "findings": ["F-302"],
     "wiki": "01-Frontend/App-Shell.md",
     "tags": ["orchestrator", "shell", "state"],
-    "notes": "BillingProvider never mounted here. SettingsContext never mounted here. resultsReady gate is the anti-reshuffle guard (v.31)."
+    "notes": "v0.41: BillingProvider now mounted inside AuthProvider (F-300) and PricingPanel reads useBilling().tier (F-315). resultsReady gate is the anti-reshuffle guard (v.31)."
   },
   {
     "id": "components.AdminConsole",
@@ -282,7 +282,34 @@
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#usehistory",
-    "tags": ["history", "localStorage", "DB-sync", "hook"]
+    "tags": ["history", "localStorage", "DB-sync", "hook"],
+    "notes": "v0.41 (R-300): shared localStorage↔DB plumbing extracted to hooks.useSyncedStore; only history-specific mutations remain here."
+  },
+  {
+    "id": "hooks.useSyncedStore",
+    "path": "src/hooks/useSyncedStore.js",
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "Shared localStorage↔DB sync plumbing for the auth-aware hooks — load-on-mount, sync-from-DB on sign-in (DB wins), first-time push, and fire-and-forget mutation writes. Shapes injected via a config object.",
+    "exports": ["useSyncedStore"],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usesyncedstore",
+    "tags": ["localStorage", "DB-sync", "hook", "reuse"],
+    "notes": "v0.41 (R-300): extracted from the identical 4-step sync pattern in useHistory/useLibrary/useSettings."
+  },
+  {
+    "id": "components.BookGroupHeader",
+    "path": "src/components/BookGroupHeader.jsx",
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Parent-work header for a cluster of book chapters (chapter-count badge, year, container title, editors, publisher). Shared by SourceSection and UnifiedResultList.",
+    "exports": ["BookGroupHeader"],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md#bookgroupheader",
+    "tags": ["component", "results", "reuse"],
+    "notes": "v0.41 (R-301/F-314): extracted from the verbatim-duplicated header block in SourceSection and UnifiedResultList."
   },
   {
     "id": "hooks.useFilters",
@@ -311,7 +338,7 @@
     "findings": ["F-309"],
     "wiki": "01-Frontend/Hooks.md#usetheme",
     "tags": ["theme", "localStorage", "hook"],
-    "notes": "DEFAULT_THEME from themes.js imported but never used by this hook — hardcodes 'tan' and 'oled' directly."
+    "notes": "v0.41 (F-309): LIGHT_DEFAULT now aliases the imported DEFAULT_THEME from themes.js (SSOT); DARK_DEFAULT stays 'oled'."
   },
   {
     "id": "hooks.useEagleTooltip",
@@ -346,15 +373,15 @@
     "path": "src/contexts/BillingContext.jsx",
     "kind": "context",
     "runtime": "client",
-    "loc": 37,
-    "purpose": "Stub billing context — Infinity credits, 'free' tier, no-op deduct(). Phase 2/3/4 hook point for credit metering. Never mounted.",
+    "loc": 56,
+    "purpose": "Billing context — exposes the signed-in user's credits + tier. Mounted in App.jsx (v0.41); fetches GET /api/credits on sign-in, falls back to Infinity/'free' stub when anonymous or on error. deduct() is still a no-op (spend stays server-side).",
     "exports": ["BillingProvider", "useBilling"],
-    "deps": [],
-    "status": "stub",
-    "findings": ["F-300"],
+    "deps": ["contexts.AuthContext", "lib.api", "api.credits"],
+    "status": "healthy",
+    "findings": [],
     "wiki": "01-Frontend/Contexts.md#billingcontext",
-    "tags": ["billing", "context", "stub", "dead"],
-    "notes": "BillingProvider is never mounted in App.jsx. Real credit gating is server-side (api/_shared/billing.js)."
+    "tags": ["billing", "context", "live"],
+    "notes": "v0.41 (F-300): mounted + wired to /api/credits. Real credit gating remains server-side (api/_shared/billing.js). Spend-side deduct() wiring is v0.42 (F-311)."
   },
   {
     "id": "contexts.SettingsContext",
@@ -362,14 +389,14 @@
     "kind": "context",
     "runtime": "client",
     "loc": 15,
-    "purpose": "Thin wrapper context for useSettings — provides SettingsProvider and useSettingsContext, but neither is mounted or consumed anywhere.",
+    "purpose": "Thin wrapper context for useSettings — provided SettingsProvider and useSettingsContext, but neither was ever mounted or consumed.",
     "exports": ["SettingsProvider", "useSettingsContext"],
     "deps": ["hooks.useSettings"],
-    "status": "dead",
-    "findings": ["F-308"],
+    "status": "quarantined",
+    "findings": ["F-301", "F-308"],
     "wiki": "01-Frontend/Contexts.md#settingscontext",
-    "tags": ["settings", "context", "dead"],
-    "notes": "Fully dead — never mounted, never consumed. Should be deleted or activated."
+    "tags": ["settings", "context", "dead", "quarantined"],
+    "notes": "Quarantined + deleted in v0.41 (F-301/F-308) — never mounted, never consumed. Dossier: 99-Archive/_quarantine/context-settings.md."
   },
   {
     "id": "launchers.factory",

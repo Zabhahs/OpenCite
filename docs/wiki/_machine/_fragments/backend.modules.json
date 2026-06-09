@@ -345,6 +345,19 @@
     "notes": "No auth. redirect:follow without re-validating destination hostname. No https: scheme enforcement."
   },
   {
+    "id": "api.credits",
+    "path": "api/credits.js",
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "GET /api/credits → { credits, tier } for the signed-in user; session-cookie auth (browser counterpart to the API-key-gated /api/search). Read-only — never spends. Admins get { Infinity, 'admin' }.",
+    "exports": ["default"],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": ["billing", "credits", "session-auth"],
+    "notes": "v0.41 (F-300): backs the client BillingProvider. Reads User.total_credits + User.plan (same columns billing.js settles). DB error degrades to the Infinity/'free' stub so the UI never blocks."
+  },
+  {
     "id": "api.history",
     "path": "api/history.js",
     "kind": "api-route",

@@ -32,6 +32,8 @@ the revival checklist, re-verify, and flip the machine record back to `healthy`/
 | [adapter-openneuro](adapter-openneuro.md) | v0.38 | Fetches 100 newest then client-filters → 0 hits; GraphQL errors | [Bugs](../../09-Audit/Bugs.md#f-107), [Bugs](../../09-Audit/Bugs.md#f-208) | Yes — needs a real search query/endpoint |
 | [adapter-ena](adapter-ena.md) | v0.38 | Wildcard-in-quotes syntax → HTTP 400 every query | [Bugs](../../09-Audit/Bugs.md#f-109), [Bugs](../../09-Audit/Bugs.md#f-208) | Yes — drop wildcard syntax, re-test |
 | [adapter-semanticscholar](adapter-semanticscholar.md) | v0.42 | Deregistered v0.27; approval-gated key + rate-limited; orphan descriptor | [Tech-Debt-Overengineering](../../09-Audit/Tech-Debt-Overengineering.md#f-105) | Yes — fix `protocol`, re-add key + registry |
+| [context-settings](context-settings.md) | v0.41 | Never mounted — prop-drilling used instead | F-301, F-308 | Yes — see revival checklist |
+| [oauth-apple-microsoft](oauth-apple-microsoft.md) | v0.41 | Inactive "soon" UI — no OAuth integration yet | F-305 | Yes — implement OAuth first |
 
 > **Why these three:** all `serverSafe:true`, so the `/api/search` fan-out counted them as failed →
 > forced `coverage:partial` on **every** search → the freeBelowBand discount fired on every paid query.

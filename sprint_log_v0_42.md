@@ -44,14 +44,15 @@ normalized 0–100 scores; a written spike report characterizes viable server em
 |---|---|---|---|
 | UX/accessibility | F-311, F-312, F-303, F-306/F-313 | med/low | 4.5 h |
 | Adapter perf | F-113, F-115, F-116 | med/low | 3.5 h |
-| Pipeline perf/quality | F-206, F-207, F-201, F-200 (doc only) | low/med | 3.0 h |
+| Pipeline perf/quality | F-206, **F-208**, F-207, F-201, F-200 (doc only) | low/med | 3.75 h |
 | Research spike (stretch) | F-205 | med | 1.5 h |
 | Test + cleanup | — | — | 1.5 h |
-| **Total** | | | **~14 h** |
+| **Total** | | | **~14.75 h** |
 
 **In scope:** F-311 (blocked on F-300 BillingProvider, dependency documented below),
-F-312, F-303, F-306/F-313, F-113, F-115, F-116, F-206, F-207, F-201, F-200 (mitigation
-doc), F-205 (spike only — no implementation committed).
+F-312, F-303, F-306/F-313, F-113, F-115, F-116, F-206, **F-208** (dedup field-merge —
+co-located with F-206 in the same `dedupHighestScore` rewrite, §2.13 / T3.1), F-207, F-201,
+F-200 (mitigation doc), F-205 (spike only — no implementation committed).
 
 **Out of scope:** F-300 BillingProvider full wiring (prerequisite for F-311 full
 implementation — delegated to v0.41 or its own task; see §2), dead-adapter quarantine
@@ -308,6 +309,68 @@ Spike questions to answer:
 (≤ 400 words + a go/no-go table). No new code. The spike informs a future sprint (v0.43+
 if warranted).
 
+### 2.13 — F-208 dedup keeps highest score but DISCARDS the duplicate's metadata
+
+> **Provenance:** lifted from `neuromechanist/opencite` (`src/opencite/dedup.py` →
+> `merge_papers()`), MIT-licensed. Algorithm only; clean-room re-implement in JS. Full
+> competitive teardown + merge-policy origin in `sprint_log_v0_43.md` Appendix A (§A.2/§A.3).
+
+`src/lib/dedup.js:33–49` (`dedupHighestScore`) keeps the highest-`_score` copy of a
+duplicate **and throws the loser away** — line 43–45 just swaps the array reference. The
+streaming path `dedupFirstWins` (`:22–30`) is worse: it drops every later copy with
+`.filter`. **In both paths, when the same work arrives from two sources, one source's
+fields are lost.**
+
+Concrete loss: a paper returned by both **Crossref** (rich `abstract`, `is-referenced-by-count`)
+and **OpenAlex** (real `cited_by_count`, fuller `authors`, `relevance_score`) collapses to a
+single record — whichever scored higher — silently discarding the other's superior fields.
+This degrades card quality (missing abstracts/authors) and weakens the `citedBy` rank signal
+the v0.35 RRF fusion consumes.
+
+**Fix — field-level merge on collapse, not wholesale discard.** Add a pure `mergeRecords(keep,
+drop)` helper and call it at the dedup collision point so the surviving record is *enriched*
+with the loser's better fields. Merge policy (ported from `merge_papers()`, mapped to our
+`UnifiedResult`):
+
+| Field class | Rule |
+|---|---|
+| Identifiers (`doi`, `pmid`, ids[]) + `sources`/origin tags | **union** (provenance — never drop an identifier) |
+| `abstract` | prefer the **longer** non-empty string |
+| `authors` | prefer the **longer** list (richer author set) |
+| `citedBy` / `nativeScore` | take the **max** |
+| Collection fields (keywords, subjects, image/pdf links) | **union, de-duplicated** |
+| Single-value scalars (`year`, `publisher`, `language`, `url`, `title`) | prefer **existing** (the higher-scored keeper is canonical) |
+| `_score` | keep the **higher** (unchanged — drives which record is canonical) |
+
+**Field-name caveat (no invention):** the exact `UnifiedResult` field set must be read from
+`src/adapters/base.js` before coding — implement the *policy* above against the real fields,
+do not assume field names not present there.
+
+**Source deep-read refinements (2026-06-09, `sprint_log_v0_43.md` Appendix B.4):**
+- **Fuzzy matcher decision — CLOSED: keep our BM25F.** Their `titles_similar` is Jaccard@0.7
+  (order-insensitive bag-of-words, uncalibrated `0.7`/`len≥3`), strictly weaker. Adopt nothing
+  from it; the merge keys stay `doiKey`/`titleFingerprint`.
+- **Safety flags merge by OR, not "prefer existing":** any boolean like `is_retracted` /
+  `is_oa` → `keep.flag || drop.flag` (any source flags retraction ⇒ retracted — asymmetric
+  with normal scalars, safety-critical). A conflicting **enum** (e.g. `oa_status`) can't OR →
+  pick by source-priority if we have one, else keep canonical, and log the disagreement.
+- **Collection-union preserves casing + order:** dedup key on `.toLowerCase()` but push the
+  **original-cased** value and keep insertion order (a naive `Set` loses one or the other);
+  dedup pdf/image links by `url` (first-seen wins), grants by `(funder, award_id)`.
+- **Authors — improve on source:** their rule takes the longer list wholesale and discards the
+  other; prefer **merging the author sets** (de-dup by normalized name) if scope allows, else
+  fall back to longer-list.
+
+**Why it lives here, not its own sprint:** F-206 (T3.1) already rewrites
+`dedupHighestScore`. Implementing the merge in a *separate* sprint would mean two sprints
+editing the same function → guaranteed conflict. **F-208 is folded into the F-206 rewrite
+(T3.1) as one surgical change.** It is the only *behavior* change in this otherwise
+polish-only sprint — gated and verified accordingly (§5 R7).
+
+**Decoupled dependency:** identifier canonicalization (DOI/PMID/PMCID normalization, the
+v0.43 #2 win) would tighten the *keys* that decide what merges. F-208 ships against today's
+keys (`doiKey`, `titleFingerprint`) and forward-benefits from v0.43 with no rework.
+
 ---
 
 ## 3. Execution plan
@@ -482,8 +545,46 @@ if warranted).
 
 ### T3 — Pipeline perf/quality fixes (~3 h)
 
-**T3.1 — dedupHighestScore O(1) for F-206 (~0.75 h)**
-- [ ] `src/lib/dedup.js:33–49`: replace the `indexOf` scan with a `posMap`:
+**T3.1 — dedupHighestScore O(1) + field-merge for F-206 & F-208 (~1.5 h)**
+
+*One rewrite covers both findings: the `posMap` removes the O(n) `indexOf` (F-206) and the
+`mergeRecords` call enriches the keeper instead of discarding the loser (F-208). Doing them
+together avoids two sprints touching the same function.*
+
+- [ ] **Step 0 (F-208 prerequisite):** read `src/adapters/base.js` to enumerate the real
+  `UnifiedResult` fields. Map the §2.13 merge-policy table onto the *actual* field names —
+  do not assume fields that aren't there.
+- [ ] Add a pure helper in `src/lib/dedup.js` (above `dedupHighestScore`):
+  ```js
+  // F-208: enrich the surviving record with the duplicate's better fields instead of
+  // discarding it. `keep` is canonical (higher _score); `drop` is the collapsed duplicate.
+  // Policy: §2.13. Field names below MUST be reconciled against src/adapters/base.js.
+  const _longer = (a, b) => ((b || "").length > (a || "").length ? b : a);
+  const _maxNum = (a, b) => Math.max(a || 0, b || 0);
+  const _union  = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
+  export function mergeRecords(keep, drop) {
+    if (!drop) return keep;
+    return {
+      ...keep,
+      // union identifiers + provenance (never drop an id)
+      sources:  _union(keep.sources, drop.sources),
+      // prefer richer text / lists
+      abstract: _longer(keep.abstract, drop.abstract),
+      authors:  (drop.authors?.length || 0) > (keep.authors?.length || 0) ? drop.authors : keep.authors,
+      // strongest citation/native signal wins
+      citedBy:     _maxNum(keep.citedBy, drop.citedBy),
+      nativeScore: _maxNum(keep.nativeScore, drop.nativeScore),
+      // single-value scalars: keep canonical; fill only if missing
+      doi:       keep.doi  || drop.doi,
+      year:      keep.year || drop.year,
+      publisher: keep.publisher || drop.publisher,
+      language:  keep.language  || drop.language,
+      url:       keep.url || drop.url,
+      // _score unchanged — keep is already the higher
+    };
+  }
+  ```
+- [ ] Rewrite `dedupHighestScore` (`:33–49`) with `posMap` (O(1)) **and** merge-on-collision:
   ```js
   export function dedupHighestScore(records, keyFn) {
     const byKey  = new Map(); // key → record
@@ -497,18 +598,28 @@ if warranted).
         posMap.set(key, out.length);
         byKey.set(key, r);
         out.push(r);
-      } else if ((r._score || 0) > (existing._score || 0)) {
-        out[posMap.get(key)] = r;
-        byKey.set(key, r);
-        // posMap entry unchanged — same index
+      } else {
+        // F-208: pick canonical by score, then enrich it with the loser's better fields.
+        const keep = (r._score || 0) > (existing._score || 0) ? r : existing;
+        const drop = keep === r ? existing : r;
+        const merged = mergeRecords(keep, drop);
+        const idx = posMap.get(key);     // F-206: O(1), no indexOf scan
+        out[idx] = merged;
+        byKey.set(key, merged);
       }
     }
     return out;
   }
   ```
-- [ ] Run existing unit tests for `dedup.js` (if any in `src/__tests__/`). Add a quick
-  console-time check in dev: `performance.now()` wrap around `dedupHighestScore` with a
-  synthetic 200-record pool. Confirm < 1 ms.
+- [ ] **Decide for the streaming path (`dedupFirstWins`, `:22–30`):** it cannot merge —
+  later copies haven't arrived when it runs and scores aren't comparable across batches
+  (the file header documents this). Leave it first-wins; add a one-line comment noting the
+  merge happens only in the pooled path. Do **not** retrofit merge into the streaming path
+  this sprint (out of scope — would need cross-batch buffering).
+- [ ] Unit test (`src/__tests__/dedup` or new): (a) two records, same `doiKey`, different
+  `_score` → output length 1, keeps higher `_score`, and the merged record has the longer
+  abstract + union of `sources` + max `citedBy`. (b) 200-record synthetic pool → assert no
+  `indexOf` on `out` and `performance.now()` delta < 1 ms.
 
 **T3.2 — Moby shard parse off-thread for F-207 (~1.5 h)**
 - [ ] Create `src/workers/synonyms.worker.js`:
@@ -645,12 +756,13 @@ if warranted).
   - F-115: `status: "mitigated"` (session cache).
   - F-116: `status: "mitigated"` (pre-filter).
   - F-206: `status: "fixed"`.
+  - F-208: `status: "fixed"` (field-merge on dedup collapse; pooled path only).
   - F-207: `status: "fixed"` (if option A shipped) or `"mitigated"` (if option B).
   - F-201: `status: "fixed"` (normalized display).
   - F-200: `status: "confirmed"` (comment added; accepted residual).
   - F-205: `status: "spike-complete"` or `"open"` (if T4 skipped).
 - [ ] T5.3 Commit with message:
-  `feat(v0.42): UX & perf polish — focus trap, credits chip, aria swatches, adapter fan-out, dedup O(1), synonym off-thread`
+  `feat(v0.42): UX & perf polish — focus trap, credits chip, aria swatches, adapter fan-out, dedup O(1)+field-merge, synonym off-thread`
 
 ---
 
@@ -671,7 +783,11 @@ if warranted).
 - [ ] PANGAEA: number of `/oai/provider` RIS fetches ≤ number of ES hits with a
   non-empty `agg-datasetname` or `title` field.
 - [ ] `dedupHighestScore`: no `indexOf` calls on `out` array; correctness unchanged
-  (verified by existing tests or a new synthetic 200-record test).
+  (verified by existing tests or a new synthetic 200-record test). **[F-206]**
+- [ ] On a same-`doi` collision, the surviving record is the higher-`_score` copy **enriched**
+  with the loser's longer abstract, richer author list, max `citedBy`, and unioned `sources`
+  — not the loser-discarded record. Single-value scalars keep the canonical record's values.
+  `dedupFirstWins` streaming path unchanged. **[F-208]**
 - [ ] Synonym shard parse for a 'c'-initial term does not produce a long task > 50 ms on
   the main thread (Chrome DevTools Performance trace).
 - [ ] Admin Score Explainer: top result shows "100/100"; scores are proportional within a
@@ -690,6 +806,7 @@ if warranted).
 | R4 | T3.2 F-207 | Synonyms worker `new Worker(...)` fails in test/SSR environments | Low | Low | Add `typeof Worker === 'undefined'` guard + synchronous fallback path |
 | R5 | T3.2 F-207 | Worker `Map` serialization (entries array) adds noticeable overhead for large shards | Low | Low | Entries array for 'c' shard is ~4 MB JSON → ~100 ms to re-serialize for postMessage. If overhead is > 200 ms on first load, fall back to option B (queueMicrotask) and document |
 | R6 | T4 F-205 | Spike overruns budget, crowds out T5 | Low | Med | T4 is explicitly stretch; skip if T1–T3 consume the session |
+| R7 | T3.1 F-208 | Field-merge is the only behavior change in a polish sprint — a wrong merge rule could corrupt cards (e.g. cross-paper field bleed if keys over-match) | Med | Med | Merge only fires on an *existing key collision* (same `doiKey`/`titleFingerprint` that already collapses today) — it changes what survives, never what matches. Scalars keep the canonical record. Covered by the unit test in T3.1; verify cards on the T5.1 baseline set show no mismatched author/abstract |
 
 ---
 
@@ -699,7 +816,7 @@ if warranted).
 - [ ] T5.1 manual test suite passes (no regression on 4 baseline queries).
 - [ ] T5.2 `findings.json` statuses updated for all in-scope findings.
 - [ ] T4 spike doc written, OR explicitly marked skipped with a note in this log.
-- [ ] Single commit `feat(v0.42): ...` on `sprint/v0.42-ux-perf-polish` branch, clean diff.
+- [ ] Single commit `feat(v0.42): ...` **directly to `main`** (no branch, per CLAUDE.md), clean diff, only on Shahbaz's request.
 - [ ] No new `console.error` output in the browser during a baseline search.
 
 ---

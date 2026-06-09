@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ResultCard } from "./ResultCard.jsx";
+import { BookGroupHeader } from "./BookGroupHeader.jsx";
 import { ADAPTERS } from "../adapters/index.js";
 import { groupByParentWork } from "../lib/groupResults.js";
 
@@ -134,34 +135,7 @@ export function UnifiedResultList({
           // Grouped book chapters — parent header + per-chapter source chips + indented cards
           return (
             <div key={`group-${gi}-${group.parentTitle}`} className="border border-stone-400 bg-stone-50/20">
-              {/* Parent work header */}
-              <div className="px-4 pt-4 pb-3 border-b border-stone-300">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="mono-font text-[9px] uppercase tracking-widest bg-stone-300 text-stone-700 px-2 py-0.5">
-                    {group.items.length} chapter{group.items.length !== 1 ? "s" : ""}
-                  </span>
-                  {group.year && (
-                    <span className="mono-font text-[10px] text-stone-500">{group.year}</span>
-                  )}
-                </div>
-                <h3
-                  className="display-font text-lg font-bold text-stone-900 leading-tight"
-                  style={{ letterSpacing: "-0.01em" }}
-                >
-                  {group.parentTitle}
-                </h3>
-                {group.editors?.length > 0 && (
-                  <p className="display-font italic text-sm text-stone-600 mt-1">
-                    Edited by {group.editors.slice(0, 3).join(", ")}
-                    {group.editors.length > 3 ? ", et al." : ""}
-                  </p>
-                )}
-                {group.publisher && (
-                  <p className="mono-font text-[10px] uppercase tracking-wider text-stone-500 mt-1">
-                    {group.publisher}
-                  </p>
-                )}
-              </div>
+              <BookGroupHeader group={group} />
 
               {/* Chapter cards — source chip per card (may differ across chapters) */}
               <div className="pl-3 pr-1 py-3 space-y-4">

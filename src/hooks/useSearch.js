@@ -12,11 +12,17 @@ export function useSearch(settings, isEnabled) {
   const seenDOIs = useRef(new Set());
   const seenTitles = useRef(new Set());
 
+  // F-307 — stale-response guard. Each search() gets a monotonic id; an adapter
+  // callback from a superseded search no longer matches the current id and silently
+  // discards its result instead of overwriting the new search's loading state.
+  const searchIdRef = useRef(0);
+
   const reset = useCallback(() => {
     setHasSearched(false);
     setSectionStates({});
     seenDOIs.current.clear();
     seenTitles.current.clear();
+    searchIdRef.current++; // invalidate any in-flight adapters from the cleared search
   }, []);
 
   const search = useCallback(async (query) => {
@@ -24,6 +30,7 @@ export function useSearch(settings, isEnabled) {
     setHasSearched(true);
     seenDOIs.current.clear();
     seenTitles.current.clear();
+    const thisId = ++searchIdRef.current;
 
     // v0.36 — raw diagnostic mode: skip dedup/score/gate, show adapter output as-is.
     const simple = !!settings.simpleSearch;
@@ -80,12 +87,14 @@ export function useSearch(settings, isEnabled) {
           ({ results: filtered, lowConfidence } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms)));
         }
 
+        if (searchIdRef.current !== thisId) return; // stale — a newer search superseded this one
         setSectionStates(prev => ({
           ...prev,
           // pageToken: stored generically; undefined for offset-based adapters (harmless).
           [adapter.id]: { loading: false, results: filtered, lowConfidence, error: null, hasMore, loadingMore: false, offset: filtered.length, pageToken: nextPageToken }
         }));
       } catch (err) {
+        if (searchIdRef.current !== thisId) return; // stale — discard the error too
         setSectionStates(prev => ({
           ...prev,
           [adapter.id]: { loading: false, results: null, error: err.message || "Search failed", hasMore: false, loadingMore: false, offset: 0, pageToken: undefined }
