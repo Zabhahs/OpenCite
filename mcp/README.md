@@ -1,14 +1,15 @@
 # OpenCITE MCP server
 
-Expose [OpenCITE](https://citation.today) to any MCP-compatible AI client as a
-single tool: **`search_scholarly_sources`**.
+Expose [OpenCITE](https://citation.today) to any MCP-compatible AI client as
+three tools: **`search_scholarly_sources`**, **`search_citations`**, and
+**`resolve_ids`**.
 
-One call returns verifiable, deduped, ranked, citation-ready results across many
-open-access scholarly sources. Results are **origin-blind** — every card carries
-real provenance (DOI, URL, journal, authors, formatted citations) but never
-discloses which upstream served it.
+Results are **origin-blind** — every card carries real provenance (DOI, URL,
+journal, authors, formatted citations) but never discloses which upstream served
+it. All tools accept the same `OPENCITE_API_KEY` and cost 1 credit per call
+(admin accounts are unmetered).
 
-## Tool
+## Tools
 
 ### `search_scholarly_sources`
 
@@ -24,6 +25,31 @@ Returns the JSON response envelope: `query`, `terms`, `coverage` band, `lowConfi
 
 The input schema is generated from the API contract SSOT
 (`api/_shared/apiContract.js`), so the tool never drifts from the REST endpoint.
+
+### `search_citations`
+
+Walk a paper's citation network in one call — no extra round-trips needed.
+
+| Arg | Type | Required | Description |
+|-----|------|----------|-------------|
+| `id` | string | yes | DOI (e.g. `10.1038/nbt.3642`) or OpenAlex work ID (e.g. `W2741809809`). |
+| `direction` | string | no | `cited-by` (default) — works citing this paper; `refs` — this paper's bibliography. |
+| `limit` | integer | no | Max edges to return, 1–200 (default 25). |
+| `minCitations` | integer | no | Cited-by only: drop citing works below this cited-by count. |
+| `sort` | string | no | `impact` (default, by cited-by count) · `year` (newest first). |
+
+Returns `{ id, direction, sort, count, tookMs, results[], meta }`.
+
+### `resolve_ids`
+
+Crosswalk scholarly identifiers (DOI ↔ PMID ↔ PMCID) in one batched call.
+Accepts any mix, up to 200 IDs total.
+
+| Arg | Type | Required | Description |
+|-----|------|----------|-------------|
+| `ids` | string[] | yes | Array of DOIs, PMIDs, and/or PMCIDs (any mix, max 200). |
+
+Returns `{ count, requested, tookMs, results: { [inputId]: { doi, pmid, pmcid } }, meta }`.
 
 ## Install
 

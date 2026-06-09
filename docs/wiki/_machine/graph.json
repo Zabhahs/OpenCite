@@ -573,6 +573,18 @@
       "api.shared.prisma"
     ],
     [
+      "api.citations",
+      "api.shared.citationGraph"
+    ],
+    [
+      "api.citations",
+      "api.shared.meter"
+    ],
+    [
+      "api.citations",
+      "api.shared.publicResult"
+    ],
+    [
       "api.credits",
       "api.shared.apiAuth"
     ],
@@ -595,6 +607,14 @@
     [
       "api.history",
       "api.shared.prisma"
+    ],
+    [
+      "api.ids",
+      "api.shared.meter"
+    ],
+    [
+      "api.ids",
+      "lib.idResolve"
     ],
     [
       "api.keys",
@@ -750,6 +770,10 @@
     ],
     [
       "api.search",
+      "lib.idResolve"
+    ],
+    [
+      "api.search",
       "lib.scoring"
     ],
     [
@@ -797,12 +821,40 @@
       "api.shared.kv"
     ],
     [
+      "api.shared.citationGraph",
+      "adapters.shared.parseOpenAlex"
+    ],
+    [
+      "api.shared.citationGraph",
+      "api.shared.adapterHealth"
+    ],
+    [
+      "api.shared.citationGraph",
+      "api.shared.cache"
+    ],
+    [
+      "api.shared.citationGraph",
+      "lib.idResolve"
+    ],
+    [
       "api.shared.debugResult",
       "api.shared.publicResult"
     ],
     [
       "api.shared.kv",
       "api.shared.log"
+    ],
+    [
+      "api.shared.meter",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.shared.meter",
+      "api.shared.billing"
+    ],
+    [
+      "api.shared.meter",
+      "api.shared.ratelimit"
     ],
     [
       "api.shared.publicResult",
@@ -1193,6 +1245,10 @@
       "lib.storage"
     ],
     [
+      "lib.idResolve.test",
+      "lib.idResolve"
+    ],
+    [
       "lib.library",
       "lib.storage"
     ],
@@ -1338,7 +1394,8 @@
     ],
     "adapters.shared.parseOpenAlex": [
       "adapters.core.curatedJournals",
-      "adapters.core.openalex"
+      "adapters.core.openalex",
+      "api.shared.citationGraph"
     ],
     "adapters.shared.proxy": [
       "adapters.extensions.base",
@@ -1523,9 +1580,28 @@
       "api.shared.apiAuth",
       "api.stripe.webhook"
     ],
+    "api.shared.citationGraph": [
+      "api.citations"
+    ],
+    "api.shared.meter": [
+      "api.citations",
+      "api.ids"
+    ],
+    "api.shared.publicResult": [
+      "api.citations",
+      "api.search",
+      "api.shared.debugResult"
+    ],
     "api.shared.apiAuth": [
       "api.credits",
-      "api.search"
+      "api.search",
+      "api.shared.meter"
+    ],
+    "lib.idResolve": [
+      "api.ids",
+      "api.search",
+      "api.shared.citationGraph",
+      "lib.idResolve.test"
     ],
     "api.shared.crypto": [
       "api.keys",
@@ -1552,7 +1628,8 @@
     ],
     "api.shared.adapterHealth": [
       "api.search",
-      "api.shared.adapterHealth.test"
+      "api.shared.adapterHealth.test",
+      "api.shared.citationGraph"
     ],
     "api.shared.apiContract": [
       "api.search",
@@ -1560,10 +1637,12 @@
     ],
     "api.shared.billing": [
       "api.search",
+      "api.shared.meter",
       "api.stripe.webhook"
     ],
     "api.shared.cache": [
-      "api.search"
+      "api.search",
+      "api.shared.citationGraph"
     ],
     "api.shared.coverage": [
       "api.search",
@@ -1572,12 +1651,9 @@
     "api.shared.debugResult": [
       "api.search"
     ],
-    "api.shared.publicResult": [
-      "api.search",
-      "api.shared.debugResult"
-    ],
     "api.shared.ratelimit": [
-      "api.search"
+      "api.search",
+      "api.shared.meter"
     ],
     "lib.citations": [
       "api.search",

@@ -41,6 +41,7 @@
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
+import { resolveIds } from "../src/lib/idResolve.js";
 import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { toPublicResult } from "./_shared/publicResult.js";
@@ -82,6 +83,29 @@ const sendJson = (res, status, body) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify(body));
 };
+
+// v0.43 T2.2 — pre-dedup DOI canonicalization (env-gated, DEFAULT-OFF). Resolving a PubMed
+// record's PMID to its DOI *before* dedup lets it share a doiKey with the DOI-only copy from
+// Crossref/OpenAlex, so the v0.42 F-208/F-210 field-merge unifies them — attacking the v0.35 D5
+// identifier-fragmentation defect. Cost-aware: only DOI-less PubMed records are resolved (the PMID
+// is read from the `ncbi-<pmid>` id; nothing with a DOI is touched). Best-effort — any resolver
+// failure leaves records unchanged. Mutates in place. Gated OFF until the added NCBI latency
+// (3 req/s budget) is measured against prod (sprint v0.43 R3); set IDRESOLVE_CANONICALIZE=1 to
+// enable. NOTE: records carry no generic pmid/pmcid field today, so PubMed is the only source
+// this can canonicalize — widen by threading pmid/pmcid through the adapter shape in a later sprint.
+async function canonicalizeDois(records, { apiKey, email } = {}) {
+  const NCBI_ID = /^ncbi-(\d+)$/;
+  const targets = records.filter((r) => !r.doi && r.source === "NCBI" && NCBI_ID.test(r.id || ""));
+  if (!targets.length) return;
+  const pmidOf = (r) => r.id.match(NCBI_ID)[1];
+  try {
+    const map = await resolveIds(targets.map(pmidOf), { apiKey, email });
+    for (const r of targets) {
+      const doi = map.get(pmidOf(r))?.doi;
+      if (doi) r.doi = doi;
+    }
+  } catch { /* best-effort — leave records unchanged on any failure */ }
+}
 
 // Race an adapter run against a timeout so one slow source can't hang the function.
 const withTimeout = (promise, ms, label) =>
@@ -326,6 +350,16 @@ export default async function handler(req, res) {
         tookMs: Date.now() - startMs,
         results: rawResults,
         note: "Unprocessed adapter output, in fan-out order. Developer diagnostic only.",
+      });
+    }
+
+    // v0.43 T2.2 — env-gated, default-off DOI canonicalization (see helper above). No-op in
+    // production until IDRESOLVE_CANONICALIZE is set; runs before scoring/dedup so a resolved
+    // DOI feeds doiKey and the F-208/F-210 merge. Skipped for simpleMode (returned above).
+    if (isTruthy(process.env.IDRESOLVE_CANONICALIZE)) {
+      await canonicalizeDois(allRaw, {
+        apiKey: process.env.NCBI_API_KEY || undefined,
+        email: settings.crossrefEmail,
       });
     }
 

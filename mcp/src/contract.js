@@ -19,6 +19,12 @@ export { API_CONTRACT, PARAMS, RESULT_FIELDS, RESPONSE_SHAPE, COVERAGE_BANDS };
 
 export const TOOL_NAME = "search_scholarly_sources";
 
+// Tool names for the two additional endpoints. These endpoints (/api/citations,
+// /api/ids) are NOT in the apiContract SSOT — their schemas are hand-written
+// inline in schema.js rather than derived from it.
+export const CITATIONS_TOOL_NAME = "search_citations";
+export const IDS_TOOL_NAME = "resolve_ids";
+
 // Agent-facing params, in display order. Each maps to a REST param in PARAMS.
 // `q` is exposed under the friendlier name `query`; the rest keep their names.
 // We surface the high-value subset an agent needs (query, limit, format) and
@@ -52,5 +58,26 @@ export function toRestQuery(args = {}) {
     if (v === undefined || v === null || v === "") continue;
     out[restName] = v;
   }
+  return out;
+}
+
+// Map search_citations agent args → /api/citations REST params.
+// `direction` (agent) → `dir` (REST); all other names are already aligned.
+export function toCitationsQuery(args = {}) {
+  const out = {};
+  if (args.id) out.id = args.id;
+  // Agent exposes `direction`; REST uses the shorter `dir`.
+  if (args.direction) out.dir = args.direction;
+  if (args.limit !== undefined && args.limit !== null) out.limit = String(args.limit);
+  if (args.minCitations !== undefined && args.minCitations !== null) out.minCitations = String(args.minCitations);
+  if (args.sort) out.sort = args.sort;
+  return out;
+}
+
+// Map resolve_ids agent args → /api/ids REST params.
+// `ids` is an agent-side array; REST expects a comma-joined string.
+export function toIdsQuery(args = {}) {
+  const out = {};
+  if (Array.isArray(args.ids) && args.ids.length) out.ids = args.ids.join(",");
   return out;
 }

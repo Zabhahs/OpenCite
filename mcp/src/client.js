@@ -7,7 +7,7 @@
 // Security (R15): TLS only — a non-https base URL is rejected. The customer's
 // API key is forwarded as the `x-api-key` header and is NEVER logged or echoed.
 
-import { toRestQuery } from "./contract.js";
+import { toRestQuery, toCitationsQuery, toIdsQuery } from "./contract.js";
 
 export const DEFAULT_BASE_URL = "https://citation.today";
 const REQUEST_TIMEOUT_MS = 30000;
@@ -70,4 +70,64 @@ export async function searchScholarlySources(args, { baseUrl, apiKey, signal } =
     throw new Error(msg);
   }
   return body;
+}
+
+// Shared fetch helper to avoid repeating the AbortController/timeout/error pattern.
+// `url` is fully-built; `label` is used in the thrown error message (no headers).
+async function _get(url, headers, label, signal) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  if (signal) signal.addEventListener("abort", () => controller.abort(), { once: true });
+
+  let res;
+  try {
+    res = await fetch(url, { method: "GET", headers, signal: controller.signal });
+  } catch (err) {
+    // Surface a clean message — never include headers (would leak the key).
+    throw new Error(`${label} request failed: ${err.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let body;
+  try {
+    body = JSON.parse(await res.text());
+  } catch {
+    throw new Error(`${label} returned non-JSON (HTTP ${res.status}).`);
+  }
+  if (!res.ok) {
+    const msg = (body && body.error) || `${label} failed (HTTP ${res.status}).`;
+    throw new Error(msg);
+  }
+  return body;
+}
+
+// Walk a paper's citation network. `args` are agent-facing (id, direction, limit,
+// minCitations, sort); they're mapped to REST params by toCitationsQuery.
+// Returns the parsed JSON response: { id, direction, sort, count, tookMs, results[], meta }.
+export async function getCitations(args, { baseUrl, apiKey, signal } = {}) {
+  const base = resolveBaseUrl(baseUrl);
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(toCitationsQuery(args))) {
+    params.set(name, String(value));
+  }
+  const url = `${base}/api/citations?${params.toString()}`;
+  const headers = { Accept: "application/json" };
+  if (apiKey) headers["x-api-key"] = apiKey; // forwarded, never logged
+  return _get(url, headers, "Citations", signal);
+}
+
+// Crosswalk scholarly identifiers (DOI ↔ PMID ↔ PMCID). `args.ids` is an array;
+// the REST endpoint expects a comma-joined `ids` param.
+// Returns the parsed JSON response: { count, requested, tookMs, results:{}, meta }.
+export async function resolveIds(args, { baseUrl, apiKey, signal } = {}) {
+  const base = resolveBaseUrl(baseUrl);
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(toIdsQuery(args))) {
+    params.set(name, String(value));
+  }
+  const url = `${base}/api/ids?${params.toString()}`;
+  const headers = { Accept: "application/json" };
+  if (apiKey) headers["x-api-key"] = apiKey; // forwarded, never logged
+  return _get(url, headers, "ID resolution", signal);
 }

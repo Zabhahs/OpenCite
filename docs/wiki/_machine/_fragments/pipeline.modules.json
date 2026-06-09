@@ -122,6 +122,20 @@
     "notes": "v0.42: dedupHighestScore replacement is now O(1) via a posMap (F-206), and a collision ENRICHES the survivor with the loser's better fields via mergeRecords (F-210, the sprint's \"F-208\") instead of discarding it. Pooled path only — dedupFirstWins (streaming) cannot merge. Covered by src/lib/dedup.test.js."
   },
   {
+    "id": "lib.idResolve",
+    "path": "src/lib/idResolve.js",
+    "kind": "lib",
+    "runtime": "isomorphic",
+    "purpose": "Isomorphic identifier resolution (detectIdType, resolveIds, canonicalDoi) over the NCBI PMC ID Converter, with a shared token-bucket limiter (key 'ncbi_eutils'); feeds the pre-dedup DOI canonicalizer (v0.43 T2.2, attacks v0.35 D5 fragmentation) and /api/ids.",
+    "exports": ["detectIdType", "normalizeId", "resolveIds", "canonicalDoi", "ncbiLimiter"],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
+    "tags": ["identifiers", "ncbi", "dedup", "isomorphic"],
+    "notes": "Clean-room from neuromechanist/opencite id_converter.py + base.py (MIT). No Node-only imports — fetch/performance.now are global in Node ≥18 and browsers. Mixed-type batches rejected by NCBI; inputs are split into homogeneous groups with explicit idtype before each request. 429 returned as a JSON body (not just HTTP status) — parsed defensively; the whole batch is treated as unresolved rather than throwing. Process-local token bucket: limits per warm Vercel instance, not globally (same caveat as adapterHealth.js)."
+  },
+  {
     "id": "lib.groupResults",
     "path": "src/lib/groupResults.js",
     "kind": "lib",

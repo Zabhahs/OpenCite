@@ -378,6 +378,20 @@ These surfaced repeatedly across dossiers. Full detail + exact field paths live 
 - **Discipline tags for our own faceting** are best from **OpenAlex concepts (Wikidata QIDs + scores)**, **NCBI/Europe PMC MeSH**, and **Northwestern/BnF (LCSH/Rameau)** — these are the sources to drive a cross-source discipline facet.
 - **OA-guarantee tiers**: whole-corpus-OA (DOAJ, OAPEN, OpenNeuro, BASE, IA) > reliable flag+filter (OpenAlex, Europe PMC, PANGAEA) > derive-from-license (Crossref, Gallica, BnF) > none. Unpaywall is the universal backstop.
 
+---
+
+## R-NAME — Distribution Name Decision (v0.43)
+
+The PyPI name `opencite` is already taken by Seyed Yahya Shirazi ("neuromechanist", v0.5.3,
+published 2026-06-05) — the same upstream author whose MIT code we clean-room-ported in v0.43.
+Additionally, OpenCitations.net (Bologna / I4OC) owns the head SEO term "open + citation".
+
+**Decision:** never ship a CLI or installable package under the dist name `opencite`.
+If we ever publish one, use a distinct name (e.g. `opencite-search`).
+Keep the product brand **OpenCITE** unchanged; add a non-affiliation line to docs/marketing
+making clear we are not affiliated with OpenCitations.net or the neuromechanist/opencite project.
+The name is descriptive and undefensible — do not contest either party.
+
 ## See also
 
 [[02-Adapters/Adapter-Architecture]] · [[02-Adapters/Adapter-Health-Matrix]] · [[02-Adapters/Core-Adapters]] · [[02-Adapters/Extension-Adapters]] · [[03-Search-Pipeline/Ranking-Scoring]]

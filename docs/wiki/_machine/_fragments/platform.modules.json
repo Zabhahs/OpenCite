@@ -25,7 +25,8 @@
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "server"]
+    "tags": ["mcp", "server"],
+    "notes": "v0.43: two new tools added — search_citations (wraps /api/citations, dir=cited-by|refs) and resolve_ids (wraps /api/ids, DOI↔PMID↔PMCID). Structural scan will pick up code; this note records the curated intent."
   },
   {
     "id": "mcp.client",
@@ -39,7 +40,8 @@
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "http-client"]
+    "tags": ["mcp", "http-client"],
+    "notes": "v0.43: extended with client functions for /api/citations and /api/ids (searchCitations, resolveIds). Structural scan will pick up the new exports."
   },
   {
     "id": "mcp.contract",

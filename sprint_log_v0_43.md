@@ -324,10 +324,48 @@ canonicalDoi(record)        → the record's DOI, resolving from pmid/pmcid if a
 
 ---
 
-## 11. Actuals (post-execution placeholder)
+## 11. Actuals (EXECUTED 2026-06-09 — NOT committed, NOT deployed)
 
-*Fill on completion: real file paths/lines, measured latencies (OpenCitations warm, NCBI
-budget headroom, canonicalization p95), final credit rates, prod verification curls.*
+**Status:** all in-scope tasks built; sits on top of the v0.42 commit `4beb92e`. Per CLAUDE.md, no
+commit and no deploy (both are Shahbaz's call). Acceptance criteria (§4) are gated on the live-prod
+smoke (T1.7/T2.4/T3.4) which requires deploy — not run locally.
+
+**Files (new):**
+- `src/lib/idResolve.js` — T2 isomorphic resolver (`detectIdType`, `normalizeId`, `resolveIds`,
+  `canonicalDoi`, `ncbiLimiter`); hand-ported token bucket (Appendix B.1), shared key `ncbi_eutils`.
+- `src/lib/idResolve.test.js` — pure unit tests (detect/normalize/token-bucket). **Written, NOT run**
+  (CLAUDE.md no-local-tests); `node src/lib/idResolve.test.js` when CI/Shahbaz wants them.
+- `api/_shared/citationGraph.js` — T1 `getReferences`/`getCitations`; OpenAlex backbone (reuses
+  `parseOpenAlexWork`/`OA_SELECT`), OpenCitations CC0 backward fallback (7-day KV cache), circuit
+  breaker with distinct ids `OPENALEX_GRAPH`/`OPENCITATIONS`. S2 NOT wired.
+- `api/citations.js` — T1.4/T1.5 endpoint, origin-blind via `toPublicResult`.
+- `api/ids.js` — T2.3 endpoint.
+- `api/_shared/meter.js` — DRY auth + rate-limit + two-phase charge for the two new endpoints.
+
+**Files (modified):** `api/search.js` (T2.2 `canonicalizeDois` + env-gated call, **default-OFF**);
+`mcp/src/{contract,schema,client,server}.js` + `mcp/README.md` (T1.6 tools `search_citations`,
+`resolve_ids`); `src/constants/app.js` (`APP_VERSION`→`v.43`); `docs/wiki/_machine/_fragments/*`
+(+5 module entries, machine map rebuilt — `build-machine-map.mjs --check` ✓ clean);
+`docs/wiki/02-Adapters/Adapter-Capability-Tiers.md` (R-NAME note). Memory: `project_v0_43_capability_raid`.
+
+**Live API facts verified by sanctioned smoke (pre-code, R1):** OpenAlex `cites:` forward
+(count 80,783 for `10.1038/nature14539`); `referenced_works[]` inline (53 refs); hydration
+`filter=openalex:|ids.openalex:|openalex_id:` all 200 — chose `openalex:`, chunk 25. NCBI idconv:
+mixed batch **400s** → homogeneous groups + explicit `idtype` mandatory; per-record `status:"error"`
++`errmsg`; 429 as JSON body. OpenCitations: slow/timeout-prone → kept best-effort + cached only.
+
+**New env (both optional):** `NCBI_API_KEY` (3→10 req/s), `IDRESOLVE_CANONICALIZE` (enables T2.2).
+Deploy still carries the v0.39 gate (`API_KEY_PEPPER`+`AUTH_SECRET`≥32) since v0.39 isn't deployed.
+
+**Unmeasured (deferred to prod):** OpenCitations warm latency, NCBI budget headroom, T2.2 p50/p95.
+Credit rate = 1 unit/call at band `full` (per T1.5).
+
+**Deviations from plan:** (1) `src/adapters/openalex.js` is at `src/adapters/core/openalex.js`
+(plan guessed root) and `relevance_score` is sort-only, not mapped — `parseOpenAlexWork`/`OA_SELECT`
+are the real reuse target. (2) Records carry no generic `pmid`/`pmcid` field, so T2.2 canonicalizes
+PubMed (`ncbi-<pmid>`) only — noted in-code for a future adapter-shape widening. (3) MCP tool names
+use snake_case (`search_citations`/`resolve_ids`) to match the existing `search_scholarly_sources`,
+not the dotted `opencite.*` form in §2.1.
 
 ---
 

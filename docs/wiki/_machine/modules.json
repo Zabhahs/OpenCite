@@ -1189,6 +1189,32 @@
     "notes": "Stripe SDK dynamically imported so its absence can't break other routes. baseUrl accepts *.vercel.app — broad redirect origin pattern."
   },
   {
+    "id": "api.citations",
+    "path": "api/citations.js",
+    "loc": 67,
+    "deps": [
+      "api.shared.citationGraph",
+      "api.shared.meter",
+      "api.shared.publicResult"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "GET /api/citations — origin-blind citation-graph endpoint (dir=cited-by|refs), metered like /api/search, returns toPublicResult cards.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md",
+    "tags": [
+      "api",
+      "citation-graph",
+      "origin-blind",
+      "billing"
+    ],
+    "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year)."
+  },
+  {
     "id": "api.credits",
     "path": "api/credits.js",
     "loc": 45,
@@ -1236,6 +1262,31 @@
       "crud"
     ],
     "notes": "Overflow trim is fire-and-forget (no await). BigInt ts converted to Number for JSON serialization."
+  },
+  {
+    "id": "api.ids",
+    "path": "api/ids.js",
+    "loc": 57,
+    "deps": [
+      "api.shared.meter",
+      "lib.idResolve"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "GET /api/ids — batched DOI↔PMID↔PMCID resolution via NCBI ID Converter; metered like /api/search.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "api",
+      "identifiers",
+      "ncbi",
+      "billing"
+    ],
+    "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak)."
   },
   {
     "id": "api.keys",
@@ -1556,7 +1607,7 @@
   {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 421,
+    "loc": 455,
     "deps": [
       "adapters.index",
       "api.shared.adapterHealth",
@@ -1573,6 +1624,7 @@
       "constants.defaults",
       "lib.citations",
       "lib.dedup",
+      "lib.idResolve",
       "lib.scoring"
     ],
     "kind": "api-route",
@@ -1809,6 +1861,35 @@
     "notes": "Cache key prefix oc:cache:v1:. TTL 6h. mailto excluded from key (polite-pool only). Debug/simple modes never read or write cache."
   },
   {
+    "id": "api.shared.citationGraph",
+    "path": "api/_shared/citationGraph.js",
+    "loc": 231,
+    "deps": [
+      "adapters.shared.parseOpenAlex",
+      "api.shared.adapterHealth",
+      "api.shared.cache",
+      "lib.idResolve"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Forward (cited-by) + backward (references) citation-graph traversal on an OpenAlex backbone with an OpenCitations CC0 fallback for bare-DOI backward lookups; clean-room port of neuromechanist/opencite citations.py (MIT).",
+    "exports": [
+      "getReferences",
+      "getCitations"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md",
+    "tags": [
+      "citation-graph",
+      "openalex",
+      "opencitations",
+      "origin-blind",
+      "enrichment"
+    ],
+    "notes": "Semantic Scholar deliberately NOT wired (keys approval-gated, 429s even when keyed — Appendix A.4). Pipeline-order invariant: dedup → sort → truncate — never truncate the raw unsorted list first. OpenAlex batch-by-id capped at 25/OR-group (live probe). Distinct circuit-breaker ids OPENALEX_GRAPH/OPENCITATIONS so graph health never collides with search-adapter streaks. OpenCitations TTL 7 days (lookup-only, slow ~900ms warm). TODO(reuse): swap inline OpenCitations fetch for an adopted OpenCitations adapter when one lands."
+  },
+  {
     "id": "api.shared.coverage",
     "path": "api/_shared/coverage.js",
     "loc": 74,
@@ -1932,6 +2013,37 @@
       "structured"
     ],
     "notes": "Duplicate of src/lib/log.js format — see R-400."
+  },
+  {
+    "id": "api.shared.meter",
+    "path": "api/_shared/meter.js",
+    "loc": 74,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.billing",
+      "api.shared.ratelimit"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Shared auth + rate-limit + two-phase credit charge scaffolding for the additive v0.43 endpoints (/api/citations, /api/ids); /api/search keeps its own inline path and is intentionally NOT refactored onto this.",
+    "exports": [
+      "authAndLimit",
+      "charge",
+      "sendJson",
+      "isTruthy",
+      "firstParam",
+      "meterMeta"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "billing",
+      "auth",
+      "ratelimit",
+      "dry"
+    ],
+    "notes": "Single-source endpoints (citations, ids) always pass band='full' to charge() → 1 credit. Admin plan.creditCost=0 → ledger untouched. charge() refunds on any thrown error — never bills a failed call."
   },
   {
     "id": "api.shared.parseBody",
@@ -3283,6 +3395,40 @@
     ]
   },
   {
+    "id": "lib.idResolve",
+    "path": "src/lib/idResolve.js",
+    "loc": 193,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "isomorphic",
+    "purpose": "Isomorphic identifier resolution (detectIdType, resolveIds, canonicalDoi) over the NCBI PMC ID Converter, with a shared token-bucket limiter (key 'ncbi_eutils'); feeds the pre-dedup DOI canonicalizer (v0.43 T2.2, attacks v0.35 D5 fragmentation) and /api/ids.",
+    "exports": [
+      "detectIdType",
+      "normalizeId",
+      "resolveIds",
+      "canonicalDoi",
+      "ncbiLimiter"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
+    "tags": [
+      "identifiers",
+      "ncbi",
+      "dedup",
+      "isomorphic"
+    ],
+    "notes": "Clean-room from neuromechanist/opencite id_converter.py + base.py (MIT). No Node-only imports — fetch/performance.now are global in Node ≥18 and browsers. Mixed-type batches rejected by NCBI; inputs are split into homogeneous groups with explicit idtype before each request. 429 returned as a JSON body (not just HTTP status) — parsed defensively; the whole batch is treated as unresolved rather than throwing. Process-local token bucket: limits per warm Vercel instance, not globally (same caveat as adapterHealth.js)."
+  },
+  {
+    "id": "lib.idResolve.test",
+    "path": "src/lib/idResolve.test.js",
+    "loc": 80,
+    "deps": [
+      "lib.idResolve"
+    ]
+  },
+  {
     "id": "lib.langNormalize",
     "path": "src/lib/langNormalize.js",
     "loc": 96,
@@ -3541,7 +3687,7 @@
   {
     "id": "mcp.client",
     "path": "mcp/src/client.js",
-    "loc": 74,
+    "loc": 134,
     "deps": [
       "mcp.contract"
     ],
@@ -3559,12 +3705,13 @@
     "tags": [
       "mcp",
       "http-client"
-    ]
+    ],
+    "notes": "v0.43: extended with client functions for /api/citations and /api/ids (searchCitations, resolveIds). Structural scan will pick up the new exports."
   },
   {
     "id": "mcp.contract",
     "path": "mcp/src/contract.js",
-    "loc": 57,
+    "loc": 84,
     "deps": [
       "api.shared.apiContract"
     ],
@@ -3596,7 +3743,7 @@
   {
     "id": "mcp.schema",
     "path": "mcp/src/schema.js",
-    "loc": 182,
+    "loc": 270,
     "deps": [
       "mcp.contract"
     ],
@@ -3622,7 +3769,7 @@
   {
     "id": "mcp.server",
     "path": "mcp/src/server.js",
-    "loc": 72,
+    "loc": 96,
     "deps": [
       "mcp.client",
       "mcp.contract",
@@ -3641,7 +3788,8 @@
     "tags": [
       "mcp",
       "server"
-    ]
+    ],
+    "notes": "v0.43: two new tools added — search_citations (wraps /api/citations, dir=cited-by|refs) and resolve_ids (wraps /api/ids, DOI↔PMID↔PMCID). Structural scan will pick up code; this note records the curated intent."
   },
   {
     "id": "package",
