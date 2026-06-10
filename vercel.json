@@ -4,6 +4,11 @@
       "source": "/api/auth/:path*",
       "destination": "/api/auth/handler"
     },
+    { "source": "/api/credits", "destination": "/api/user/credits" },
+    { "source": "/api/history", "destination": "/api/user/history" },
+    { "source": "/api/keys", "destination": "/api/user/keys" },
+    { "source": "/api/library", "destination": "/api/user/library" },
+    { "source": "/api/settings", "destination": "/api/user/settings" },
     {
       "source": "/((?!api).*)",
       "destination": "/index.html"

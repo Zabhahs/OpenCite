@@ -11,10 +11,10 @@
 // Dormant until WS3 ships: harmless if api_keys table is absent (calls just error
 // out under try/catch). No plaintext key is ever stored or logged.
 
-import { prisma } from "./_shared/prisma.js";
-import { setCorsHeaders, getSession } from "./_shared/auth.js";
-import { generateApiKey } from "./_shared/crypto.js";
-import { getPlan, DEFAULT_PLAN_ID } from "./_shared/plans.js";
+import { prisma } from "../prisma.js";
+import { setCorsHeaders, getSession } from "../auth.js";
+import { generateApiKey } from "../crypto.js";
+import { getPlan, DEFAULT_PLAN_ID } from "../plans.js";
 
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 

@@ -9,11 +9,11 @@
 // GET  /api/settings  → decrypt and return settings object
 // POST /api/settings  → encrypt and upsert settings object
 
-import { prisma } from "./_shared/prisma.js";
-import { setCorsHeaders, getSession } from "./_shared/auth.js";
+import { prisma } from "../prisma.js";
+import { setCorsHeaders, getSession } from "../auth.js";
 // AES-256-GCM encrypt/decrypt now live in the crypto SSOT (DRY-1). Blob layout is
 // unchanged ([12 IV][16 tag][ct] base64), so existing settings rows still decrypt.
-import { encrypt, decrypt } from "./_shared/crypto.js";
+import { encrypt, decrypt } from "../crypto.js";
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 

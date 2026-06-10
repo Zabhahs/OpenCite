@@ -7,9 +7,9 @@
 // POST   /api/library  → save item   { result: UnifiedResult }
 // DELETE /api/library  → remove one  { library_key } or clear all { clear: true }
 
-import { prisma } from "./_shared/prisma.js";
-import { setCorsHeaders, getSession } from "./_shared/auth.js";
-import { parseBody } from "./_shared/parseBody.js";
+import { prisma } from "../prisma.js";
+import { setCorsHeaders, getSession } from "../auth.js";
+import { parseBody } from "../parseBody.js";
 
 // ── Citation-essential fields — everything else stripped ──────────────────────
 

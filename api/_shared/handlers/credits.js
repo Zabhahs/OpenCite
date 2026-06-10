@@ -9,9 +9,9 @@
 //   - otherwise getSession(req) returns the flat Auth.js user ({ id, name, email }) or null.
 // Reads User.total_credits + User.plan (the same columns billing.js settles against).
 
-import { getSession } from "./_shared/auth.js";
-import { prisma } from "./_shared/prisma.js";
-import { resolveSessionAdmin } from "./_shared/apiAuth.js";
+import { getSession } from "../auth.js";
+import { prisma } from "../prisma.js";
+import { resolveSessionAdmin } from "../apiAuth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

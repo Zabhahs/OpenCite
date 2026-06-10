@@ -7,9 +7,9 @@
 // POST   /api/history  → add entry  { query }
 // DELETE /api/history  → remove one { query } or clear all { clear: true }
 
-import { prisma } from "./_shared/prisma.js";
-import { setCorsHeaders, getSession } from "./_shared/auth.js";
-import { parseBody } from "./_shared/parseBody.js";
+import { prisma } from "../prisma.js";
+import { setCorsHeaders, getSession } from "../auth.js";
+import { parseBody } from "../parseBody.js";
 
 export default async function handler(req, res) {
   setCorsHeaders(req, res, "GET, POST, DELETE, OPTIONS");
