@@ -129,4 +129,4 @@ Once dismissed, `localStorage["opencite_auth_prompted"] = "1"` suppresses all fu
 
 ## See also
 
-[Hooks](Hooks.md) · [Contexts](Contexts.md) · [State-Flow](State-Flow.md) · [UI-Map](UI-Map.md) · [_index](Components/_index.md) · [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md)
+[Hooks](Hooks.md) · [Contexts](Contexts.md) · [State-Flow](State-Flow.md) · [UI-Map](UI-Map.md) · [_index](Components/_index.md) · [[03-Search-Pipeline/Semantic-Rerank]]

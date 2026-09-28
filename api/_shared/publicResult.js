@@ -3,8 +3,8 @@
 // normalized record to the public card. It deliberately DROPS `source` (origin) and
 // replaces the upstream id with an opaque, deterministic `anonymizeId`.
 //
-// Origin-blindness invariant: scoring + dedup run on the internal record (which
-// still carries `source`/`id`); only this final map strips them. Never reintroduce
+// Origin-blindness invariant: dedup runs on the internal record (which still
+// carries `source`/`id`); only this final map strips them. Never reintroduce
 // `source` here. Reused by any future export route so the contract stays in one place.
 import { createHash } from "node:crypto";
 import { buildMLA, buildAPA, segmentsToPlain, exportAs } from "../../src/lib/citations.js";
@@ -19,7 +19,7 @@ export function anonymizeId(r) {
 }
 
 // Public, trimmed, origin-blind view: UnifiedResult fields (minus source) + opaque id
-// + score + citations. citeFormats = extra formats beyond the always-present mla/apa.
+// + citations. citeFormats = extra formats beyond the always-present mla/apa.
 export function toPublicResult(r, citeFormats = []) {
   const citations = {
     mla: segmentsToPlain(buildMLA(r)),
@@ -48,8 +48,6 @@ export function toPublicResult(r, citeFormats = []) {
     subjects: r.subjects,
     language: r.language,
     citedBy: r.citedBy ?? null,
-    score: Number((r._score ?? 0).toFixed(4)),
-    lowConfidence: !!r._lowConfidence,
     citations,
   };
 }

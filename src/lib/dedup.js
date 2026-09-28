@@ -1,12 +1,24 @@
 // Result identity & de-duplication — SSOT for collapsing the same work across sources.
 //
 // Two arrival models need different merge rules:
-//   - Streaming (per-adapter, each batch scored in isolation): first occurrence wins,
-//     since later sources haven't arrived yet and scores aren't comparable across batches.
-//   - Pooled (every source scored together): keep the highest-scored copy per key.
+//   - Streaming (per-adapter, client): first occurrence wins — later sources haven't
+//     arrived yet, so there's nothing to merge against.
+//   - Pooled (server, all sources fanned-in): first-wins + field-merge (mergeRecords).
+//
+// v0.44 (engine teardown): the BM25F `_score` field no longer exists anywhere in the
+// pipeline. dedupHighestScore's score comparison is retained but always sees 0 vs 0,
+// so it degrades to first-wins (the earlier copy stays canonical), per sprint D-2.
 
 // DOI is the strongest identity signal when present; null = no DOI, never dedup on it.
-export const doiKey = (r) => r.doi || null;
+// v0.44 (D-2): normalized — trim, lowercase, strip a leading doi.org URL prefix — so the
+// same work keyed as "10.1/X", " 10.1/x " and "https://doi.org/10.1/x" collapses to one key.
+export const doiKey = (r) => {
+  const d = String(r.doi || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//, "");
+  return d || null;
+};
 
 // Same-paper fingerprint for records registered under multiple DOIs — e.g. a JSTOR DOI
 // and a publisher DOI for the same Crossref article. Null when there's no title to key on.
@@ -19,9 +31,9 @@ export const titleFingerprint = (r) => {
 
 // Streaming first-wins dedup. Drops records whose key was already seen; mutates `seen`
 // so it persists across successive adapter batches / load-more pages. Null key = always kept.
-// NOTE: no field-merge here — later copies haven't arrived when each batch runs and scores
-// aren't comparable across batches, so there's nothing to merge against. The enrichment merge
-// (F-208) lives in the pooled dedupHighestScore path only.
+// NOTE: no field-merge here — later copies haven't arrived when each batch runs, so there's
+// nothing to merge against. The enrichment merge (F-208) lives in the pooled
+// dedupHighestScore path only.
 export function dedupFirstWins(records, keyFn, seen) {
   return records.filter((r) => {
     const key = keyFn(r);
@@ -35,20 +47,21 @@ export function dedupFirstWins(records, keyFn, seen) {
 // ── Field-merge on dedup collapse (F-208) ──────────────────────────────────────────────
 // ID note: the v0.42 sprint plan §2.13 calls this "F-208"; it is registered in the machine
 // twin as F-210 (the F-208 id was already taken by the v0.38 adapter-health finding).
-// When the same work arrives from two sources, dedupHighestScore keeps the higher-scored
-// copy. Discarding the loser wholesale loses the other source's better fields — e.g. a
+// When the same work arrives from two sources, dedupHighestScore keeps one canonical copy
+// (first-wins since v0.44 — no scores). Discarding the loser wholesale loses the other
+// source's better fields — e.g. a
 // Crossref record (rich abstract, is-referenced-by-count) collapsing into an OpenAlex record
 // (real cited_by_count, fuller authors) or vice-versa — degrading card quality and weakening
-// the citedBy rank signal RRF consumes. mergeRecords ENRICHES the survivor with the loser's
-// superior fields instead of dropping it.
+// the citedBy signal the explicit Citations sort consumes. mergeRecords ENRICHES the survivor
+// with the loser's superior fields instead of dropping it.
 //
 // Field set reconciled against the real UnifiedResult (src/adapters/_shared/base.js +
 // api/_shared/publicResult.js): there is no `sources[]`/`nativeScore`/`pmid` — only a
 // singular `source` (dropped downstream for origin-blindness) — so the §2.13 policy maps
 // onto the actual fields; nothing invented.
 //
-// `keep` is canonical: higher `_score`, authoritative for single-value scalars.
-// `drop` is the collapsed duplicate.
+// `keep` is canonical (first-arrived since v0.44; `_score` no longer exists) and
+// authoritative for single-value scalars. `drop` is the collapsed duplicate.
 
 // Collection union: dedup on the lowercased value but keep the ORIGINAL casing and the
 // first-seen insertion order (a naive Set would lose one or the other).
@@ -98,13 +111,14 @@ export function mergeRecords(keep, drop) {
     language:     keep.language || drop.language,
     previewImage: keep.previewImage || drop.previewImage,
     // title / type / source: keep canonical (untouched via spread).
-    // _score: unchanged — keep is already the higher-scored copy.
   };
 }
 
-// Pooled dedup keeping the highest-scored copy per key, enriched with the duplicate's better
-// fields (F-208). Null key = always kept. A `posMap` tracks each key's slot in `out[]`, so a
-// collision replaces in O(1) — no `indexOf` scan over `out` (F-206).
+// Pooled dedup keeping one canonical copy per key, enriched with the duplicate's better
+// fields (F-208). The `_score` comparison survives from the ranking era but the field no
+// longer exists (v0.44), so 0-vs-0 makes the first-arrived copy canonical (first-wins, D-2).
+// Null key = always kept. A `posMap` tracks each key's slot in `out[]`, so a collision
+// replaces in O(1) — no `indexOf` scan over `out` (F-206).
 export function dedupHighestScore(records, keyFn) {
   const byKey = new Map();   // key → current keeper record
   const posMap = new Map();  // key → index of that keeper in out[]

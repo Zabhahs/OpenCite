@@ -161,7 +161,7 @@ Delegates result parsing entirely to `parseOpenAlexWork()` from `_shared/parseOp
 
 ## See also
 
-[Adapter-Architecture](Adapter-Architecture.md) · [Extension-Adapters](Extension-Adapters.md) · [Adapter-Health-Matrix](Adapter-Health-Matrix.md) · [Ranking-Scoring](../03-Search-Pipeline/Ranking-Scoring.md)
+[Adapter-Architecture](Adapter-Architecture.md) · [Extension-Adapters](Extension-Adapters.md) · [Adapter-Health-Matrix](Adapter-Health-Matrix.md) · [[03-Search-Pipeline/Ranking-Scoring]]
 
 ---
 

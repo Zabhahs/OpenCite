@@ -14,11 +14,22 @@
       "normalizeForMatch"
     ],
     "deps": [],
-    "status": "healthy",
-    "findings": ["F-200", "F-201", "F-202", "F-203", "F-204"],
-    "wiki": "03-Search-Pipeline/Ranking-Scoring.md",
-    "tags": ["scoring", "bm25f", "relevance", "pipeline"],
-    "notes": "D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
+    "status": "quarantined",
+    "findings": [
+      "F-200",
+      "F-201",
+      "F-202",
+      "F-203",
+      "F-204"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "scoring",
+      "bm25f",
+      "relevance",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
   },
   {
     "id": "lib.rrf",
@@ -34,11 +45,19 @@
       "nativeWeight"
     ],
     "deps": [],
-    "status": "healthy",
-    "findings": ["F-200", "F-201"],
-    "wiki": "03-Search-Pipeline/RRF-Fusion.md",
-    "tags": ["rrf", "fusion", "ranking", "pipeline"],
-    "notes": "Used by hooks.useSemanticRerank (client). Not yet called by api.search (server) — F-209 open gap."
+    "status": "quarantined",
+    "findings": [
+      "F-200",
+      "F-201"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "rrf",
+      "fusion",
+      "ranking",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Used by hooks.useSemanticRerank (client). Not yet called by api.search (server) — F-209 open gap."
   },
   {
     "id": "lib.semantic",
@@ -47,13 +66,23 @@
     "runtime": "client",
     "loc": 68,
     "purpose": "Manages the embed.worker singleton, dispatches embedding jobs via a promise Map keyed by msgId, constructs the title+abstract+keywords input string within a 512-char budget, returns a cosine-similarity rank Map.",
-    "exports": ["computeSemanticRanks"],
-    "deps": ["workers.embed"],
-    "status": "healthy",
-    "findings": ["F-205"],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
-    "tags": ["semantic", "embeddings", "pipeline"],
-    "notes": "Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
+    "exports": [
+      "computeSemanticRanks"
+    ],
+    "deps": [
+      "workers.embed"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "semantic",
+      "embeddings",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
   },
   {
     "id": "workers.embed",
@@ -64,11 +93,17 @@
     "purpose": "Loads and runs all-MiniLM-L6-v2 via @xenova/transformers@2.17.2 from jsDelivr CDN; handles embed messages, returns L2-normalised embedding arrays.",
     "exports": [],
     "deps": [],
-    "status": "healthy",
-    "findings": ["F-205"],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
-    "tags": ["worker", "embeddings", "pipeline"],
-    "notes": "Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
+    "status": "quarantined",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "worker",
+      "embeddings",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
   },
   {
     "id": "workers.synonyms.worker",
@@ -79,11 +114,17 @@
     "purpose": "Fetches and JSON-parses Moby Thesaurus shards off the main thread; caches parsed shards in-worker and replies with an entries array the main thread rebuilds into a Map.",
     "exports": [],
     "deps": [],
-    "status": "healthy",
-    "findings": ["F-207"],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
-    "tags": ["worker", "synonyms", "pipeline"],
-    "notes": "Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
+    "status": "quarantined",
+    "findings": [
+      "F-207"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "worker",
+      "synonyms",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
   },
   {
     "id": "hooks.useSemanticRerank",
@@ -92,13 +133,26 @@
     "runtime": "client",
     "loc": 130,
     "purpose": "Two-phase React hook: expensive pass embeds query+corpus once per result set (builds lexical/semantic/native rank maps); cheap pass re-fuses on semanticWeight slider change without re-embedding.",
-    "exports": ["useSemanticRerank"],
-    "deps": ["lib.semantic", "lib.rrf", "adapters.index"],
-    "status": "healthy",
-    "findings": ["F-205"],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
-    "tags": ["hook", "rerank", "rrf", "pipeline"],
-    "notes": "CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
+    "exports": [
+      "useSemanticRerank"
+    ],
+    "deps": [
+      "lib.semantic",
+      "lib.rrf",
+      "adapters.index"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-205"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "hook",
+      "rerank",
+      "rrf",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
   },
   {
     "id": "lib.dedup",
@@ -116,9 +170,16 @@
     ],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-206", "F-210"],
+    "findings": [
+      "F-206",
+      "F-210"
+    ],
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
-    "tags": ["dedup", "identity", "pipeline"],
+    "tags": [
+      "dedup",
+      "identity",
+      "pipeline"
+    ],
     "notes": "v0.42: dedupHighestScore replacement is now O(1) via a posMap (F-206), and a collision ENRICHES the survivor with the loser's better fields via mergeRecords (F-210, the sprint's \"F-208\") instead of discarding it. Pooled path only — dedupFirstWins (streaming) cannot merge. Covered by src/lib/dedup.test.js."
   },
   {
@@ -127,12 +188,23 @@
     "kind": "lib",
     "runtime": "isomorphic",
     "purpose": "Isomorphic identifier resolution (detectIdType, resolveIds, canonicalDoi) over the NCBI PMC ID Converter, with a shared token-bucket limiter (key 'ncbi_eutils'); feeds the pre-dedup DOI canonicalizer (v0.43 T2.2, attacks v0.35 D5 fragmentation) and /api/ids.",
-    "exports": ["detectIdType", "normalizeId", "resolveIds", "canonicalDoi", "ncbiLimiter"],
+    "exports": [
+      "detectIdType",
+      "normalizeId",
+      "resolveIds",
+      "canonicalDoi",
+      "ncbiLimiter"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
-    "tags": ["identifiers", "ncbi", "dedup", "isomorphic"],
+    "tags": [
+      "identifiers",
+      "ncbi",
+      "dedup",
+      "isomorphic"
+    ],
     "notes": "Clean-room from neuromechanist/opencite id_converter.py + base.py (MIT). No Node-only imports — fetch/performance.now are global in Node ≥18 and browsers. Mixed-type batches rejected by NCBI; inputs are split into homogeneous groups with explicit idtype before each request. 429 returned as a JSON body (not just HTTP status) — parsed defensively; the whole batch is treated as unresolved rather than throwing. Process-local token bucket: limits per warm Vercel instance, not globally (same caveat as adapterHealth.js)."
   },
   {
@@ -142,12 +214,17 @@
     "runtime": "client",
     "loc": 38,
     "purpose": "Clusters book-chapter results under their container/book title for the source-view layout; non-chapter results pass through as single-item groups.",
-    "exports": ["groupByParentWork"],
+    "exports": [
+      "groupByParentWork"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "03-Search-Pipeline/Dedup-Grouping.md",
-    "tags": ["grouping", "render"],
+    "tags": [
+      "grouping",
+      "render"
+    ],
     "notes": "Render-time only — not called during scoring or dedup."
   },
   {
@@ -171,7 +248,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "03-Search-Pipeline/Citations.md",
-    "tags": ["citations", "formatting", "render"],
+    "tags": [
+      "citations",
+      "formatting",
+      "render"
+    ],
     "notes": "Never called at search time — only on render (MLA/APA display) and user action (export dispatcher)."
   },
   {
@@ -181,12 +262,17 @@
     "runtime": "shared",
     "loc": 96,
     "purpose": "Maps ISO 639-1, ISO 639-2, and full English language names to a canonical {code, display} pair; returns null for undetermined/undifferentiated codes.",
-    "exports": ["normalizeLanguage"],
+    "exports": [
+      "normalizeLanguage"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "03-Search-Pipeline/Citations.md",
-    "tags": ["language", "normalisation"],
+    "tags": [
+      "language",
+      "normalisation"
+    ],
     "notes": "Used by adapters to normalise language codes from API responses."
   },
   {
@@ -196,13 +282,23 @@
     "runtime": "client",
     "loc": 94,
     "purpose": "Score-side term expansion (original query to APIs unchanged): 16 hand-curated academic clusters (synchronous) + Moby Thesaurus II letter-keyed shards (async, CDN-fetched, shard-cached).",
-    "exports": ["expandTerms"],
-    "deps": ["workers.synonyms.worker"],
-    "status": "healthy",
-    "findings": ["F-207"],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
-    "tags": ["synonyms", "expansion", "pipeline"],
-    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
+    "exports": [
+      "expandTerms"
+    ],
+    "deps": [
+      "workers.synonyms.worker"
+    ],
+    "status": "quarantined",
+    "findings": [
+      "F-207"
+    ],
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "synonyms",
+      "expansion",
+      "pipeline"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
   },
   {
     "id": "lib.goldSetMetrics",
@@ -221,9 +317,13 @@
     "deps": [],
     "status": "healthy",
     "findings": [],
-    "wiki": "03-Search-Pipeline/Ranking-Scoring.md#gold-set-metrics",
-    "tags": ["metrics", "testing", "admin"],
-    "notes": "Unit-tested in goldSetMetrics.test.js. Imported by components/admin/GoldSetHarness.jsx — NOT orphaned. Not called during live search."
+    "wiki": "01-Frontend/Components/_index.md",
+    "tags": [
+      "metrics",
+      "testing",
+      "admin"
+    ],
+    "notes": "Unit-tested in goldSetMetrics.test.js. Imported by components/admin/GoldSetHarness.jsx — NOT orphaned. Not called during live search. v0.44: recall@k stays meaningful post-teardown; nDCG/MRR measure upstream order only."
   },
   {
     "id": "constant.vocabulary",
@@ -232,12 +332,18 @@
     "runtime": "shared",
     "loc": 46,
     "purpose": "Controlled-vocabulary enumerations: ADAPTER_CATEGORY (core/extension) and TAG_VOCAB (region/archiveType/contentType display labels).",
-    "exports": ["ADAPTER_CATEGORY", "TAG_VOCAB"],
+    "exports": [
+      "ADAPTER_CATEGORY",
+      "TAG_VOCAB"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
-    "tags": ["constants", "vocabulary"],
+    "wiki": "00-Overview/Glossary.md",
+    "tags": [
+      "constants",
+      "vocabulary"
+    ],
     "notes": "Not part of the scoring pipeline — used by adapters and UI tag system."
   }
 ]

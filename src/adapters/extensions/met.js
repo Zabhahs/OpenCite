@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const MET_ADAPTER = {
   id: "MET", name: "The Met",
@@ -18,7 +19,7 @@ export const MET_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const q = encodeURIComponent(query);
-    const r = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${q}&hasImages=true&artistOrCulture=true`);
+    const r = await fetchWithTimeout(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${q}&hasImages=true&artistOrCulture=true`);
     if (!r.ok) throw new Error(`Met ${r.status}`);
     const data = await r.json();
     const allIds = data.objectIDs || [];
@@ -28,7 +29,7 @@ export const MET_ADAPTER = {
     const fetchSlice = allIds.slice(offset, offset + Math.ceil(pageSize * 1.5));
     const items = await Promise.all(fetchSlice.map(async id => {
       try {
-        const ir = await fetch(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`);
+        const ir = await fetchWithTimeout(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${id}`);
         return ir.ok ? await ir.json() : null;
       } catch { return null; }
     }));

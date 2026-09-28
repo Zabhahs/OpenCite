@@ -11,6 +11,7 @@
 
 import { prisma } from "../prisma.js";
 import { setCorsHeaders, getSession } from "../auth.js";
+import { parseBody } from "../parseBody.js";
 // AES-256-GCM encrypt/decrypt now live in the crypto SSOT (DRY-1). Blob layout is
 // unchanged ([12 IV][16 tag][ct] base64), so existing settings rows still decrypt.
 import { encrypt, decrypt } from "../crypto.js";
@@ -48,7 +49,10 @@ export default async function handler(req, res) {
 
   // ── POST ────────────────────────────────────────────────────────────────────
   if (req.method === "POST") {
-    const { settings } = req.body ?? {};
+    // Size-capped body parse (64 KB → 413), same as history/library/checkout (F-405).
+    const body = await parseBody(req, res);
+    if (!body) return; // 413 already sent (F-400)
+    const { settings } = body;
     if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
       return res.status(400).json({ error: "settings must be a plain object" });
     }

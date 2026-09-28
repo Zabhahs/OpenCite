@@ -9,11 +9,10 @@
  * Consumers (v.18):
  *   - adapters/extensions/onb.js       (SRU/oai_dc)
  *   - adapters/extensions/bnfApi.js    (SRU/unimarcxchange)
- *   - api/search/mexicana.js           (OAI-PMH/oai_dc) — server-side copy
  *
- * NOTE: mexicana.js is a Vercel Edge route and cannot import from src/.
- * Keep api/search/mexicana.js's inline helpers in sync manually, or move
- * the route to a shared package if the monorepo grows to warrant it.
+ * (The former third consumer, the api/search/mexicana.js Edge route's manually
+ * synced inline copy, was quarantined with the Mexicana adapter in v0.44 T5 —
+ * see docs/wiki/99-Archive/_quarantine/v0_44_adapters/.)
  */
 
 // ---------------------------------------------------------------------------

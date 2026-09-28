@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 // ── Collection → type mapping ───────────────────────────────────────────────
 // IA collections that reliably signal a document type.
@@ -50,10 +51,12 @@ function toArray(val) {
 }
 
 // ── Expanded field list ─────────────────────────────────────────────────────
+// v0.44 T5: "downloads" dropped — download counts were being stuffed into citedBy
+// (popularity, not citations), polluting the public API's citedBy field and the citations sort.
 const FIELDS = [
   "identifier", "title", "creator", "date", "description",
   "mediatype", "collection", "subject", "language",
-  "downloads", "publisher", "year", "volume", "isbn",
+  "publisher", "year", "volume", "isbn",
   "licenseurl", "avg_rating", "num_reviews",
 ];
 
@@ -74,7 +77,6 @@ function mapMetadataDoc(d, offset, i) {
   const desc = Array.isArray(d.description) ? d.description[0] : (d.description || "");
   const subjects = toArray(d.subject);
   const collections = toArray(d.collection);
-  const downloads = typeof d.downloads === "number" ? d.downloads : parseInt(d.downloads, 10) || 0;
   const yearMatch = String(d.year || d.date || "").match(/\d{4}/);
   const type = inferTypeFromCollections(collections) || "textual";
 
@@ -97,7 +99,9 @@ function mapMetadataDoc(d, offset, i) {
     language: toArray(d.language)[0] || "",
     keywords: subjects,
     subjects,
-    citedBy: downloads > 0 ? downloads : null,
+    // v0.44 T5: citedBy intentionally null — IA has no citation data. Download counts
+    // previously emitted here are popularity, not citations.
+    citedBy: null,
     previewImage: d.identifier ? `https://archive.org/services/img/${d.identifier}` : "",
     _identifier: d.identifier || "",
   };
@@ -110,7 +114,6 @@ function mapFtsHit(h, query, offset, i) {
   const creator = toArray(f.meta_creator);
   const subjects = toArray(f.meta_subjectSorter);
   const collections = toArray(f.meta_collection);
-  const downloads = parseInt(toArray(f.meta_downloads)[0], 10) || 0;
   const yearMatch = String(toArray(f.meta_year)[0] || toArray(f.meta_date)[0] || "").match(/\d{4}/);
   const type = inferTypeFromCollections(collections) || "textual";
   const snippet = cleanSnippet(toArray(h.highlight && h.highlight.text)[0]);
@@ -138,7 +141,8 @@ function mapFtsHit(h, query, offset, i) {
     language: toArray(f.meta_languageSorter)[0] || "",
     keywords: subjects,
     subjects,
-    citedBy: downloads > 0 ? downloads : null,
+    // v0.44 T5: citedBy intentionally null — downloads are popularity, not citations.
+    citedBy: null,
     previewImage: identifier ? `https://archive.org/services/img/${identifier}` : "",
     _identifier: identifier,
   };
@@ -154,9 +158,9 @@ export const INTERNET_ARCHIVE_ADAPTER = {
   capability: {
     // Dual-endpoint: advancedsearch metadata + full-text "search inside" (OCR page text).
     protocol: "rest-json", fulltext: true, pagination: "page", totalCount: true, maxWindow: 10000, auth: "none",
-    // citedBy carries download counts, not citations — emitted for display only, NOT honored
-    // for rank (citedBy:false). Honoring it inflated high-download non-scholarly items over
-    // peer-reviewed work. Genuine-citation sources (OpenAlex/Crossref) keep citedBy:true.
+    // v0.44 T5: citedBy is no longer emitted at all (was download counts — popularity,
+    // not citations — which polluted the public API's citedBy field and the citations sort).
+    // Genuine-citation sources (OpenAlex/Crossref) keep citedBy:true.
     rankFields: { abstract: "full", subjects: "full", citedBy: false },
     serverSafe: true,
     corpusSize: 40000000, // ~40M texts (conservative); archive.org
@@ -174,7 +178,10 @@ export const INTERNET_ARCHIVE_ADAPTER = {
       : `(title:(${clean}) OR description:(${clean}) OR subject:(${clean}))`;
     const metaQ = `${scoped} AND mediatype:texts`;
     const flParams = FIELDS.map(f => `fl[]=${f}`).join("&");
-    const metaParams = `q=${encodeURIComponent(metaQ)}&${flParams}&sort=downloads+desc&rows=${pageSize}&page=${page}&output=json`;
+    // v0.44 T5: no sort= param — IA's native relevance order is returned as-is. The old
+    // downloads-descending sort surfaced popular-but-irrelevant items, which matters now
+    // that retrieval order IS display order (pass-through pipeline, no local re-ranking).
+    const metaParams = `q=${encodeURIComponent(metaQ)}&${flParams}&rows=${pageSize}&page=${page}&output=json`;
     const metaUrl = `https://archive.org/advancedsearch.php?${metaParams}`;
 
     // Metadata search alone misses books whose match lives only in the OCR'd page text
@@ -184,12 +191,12 @@ export const INTERNET_ARCHIVE_ADAPTER = {
     const ftsUrl = `${FTS_ENDPOINT}?q=${encodeURIComponent(clean)}&size=${pageSize}&from=${offset}`;
     const runFts = !settings.authorSearch && clean.length > 0;
 
-    const metaPromise = fetch(metaUrl).then(async (r) => {
+    const metaPromise = fetchWithTimeout(metaUrl).then(async (r) => {
       if (!r.ok) throw new Error(`Internet Archive ${r.status}`);
       return r.json();
     });
     const ftsPromise = runFts
-      ? fetch(ftsUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      ? fetchWithTimeout(ftsUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null)
       : Promise.resolve(null);
 
     const [metaData, ftsData] = await Promise.all([metaPromise, ftsPromise]);

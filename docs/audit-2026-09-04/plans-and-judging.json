@@ -1,0 +1,1347 @@
+{
+ "plans": [
+  {
+   "angle": "REVENUE-FIRST: one SKU (prepaid API/MCP credit packs for AI-agent developers), the web app demoted to a free marketing surface, everything that does not sit on the sign-in -> pay -> mint-key -> curl path is cut or deferred.",
+   "thesis": "OpenCITE's only sellable thing today is credits spendable on /api/search, /api/citations and /api/ids via an API key - and that path is missing exactly four cheap pieces (a live database, a key-mint UI, a pack->machine plan assignment, and a page that tells a developer the thing exists), plus three non-code prerequisites (Vercel Pro so payments are policy-legal, an OpenAlex project key so the flagship source does not go dark after ~50 queries/day, and a published ToS/privacy/refund surface so Stripe disputes are not automatic losses). Every other revenue lever is either fake (web subscriptions sell entitlements the browser already gives away free; Student is unpurchasable) or structurally expensive (routing web search through the meter costs ~16h and burns the OpenAlex budget for no reason-to-buy). So the bet is: delete the subscription/Student rail from the UI instead of building the gating it would need, reprice packs to cost-plus ($5/1k instead of $0.67-1.00/1k, still the cheapest metered scholarly search API), thread `limit` through to the adapters and drop the six dead-but-200 sources so a paid query is actually worth $0.005, then spend the last ten days of the month on distribution (npm-published MCP, served OpenAPI/docs, README rewritten around heritage/Islamicate breadth + citation formats + coverage-honest billing, a Show HN and 20 direct DMs). With zero traffic, the first dollar is a distribution event, not an engineering one - the engineering just has to stop the customer from bouncing off a 401, a 403, an empty result set, or a missing legal page. Target: first external $10 pack by day 21-30; ~54 founder-hours with Claude Code.",
+   "mvp_definition": "A developer who has never spoken to Shahbaz can, on citation.today: (1) sign in with Google (Supabase restored, sessions live); (2) open a Developers panel, buy a $10 pack (2,000 credits) through Stripe with a published ToS/privacy/refund page and consent checkbox; (3) land back on the Developers panel, see the credits, mint an API key (plaintext shown once); (4) run the curl snippet from that panel or `npx opencite-mcp` with the key and receive an interleaved, DOI-deduped, coverage-honest response of up to `limit` results from ~18 live serverSafe sources (OpenAlex on a project key; BASE/Met/PANGAEA/Thaqalayn/OpenContext/LA Referencia removed from the billable set); (5) see the balance decrement, with the buyer on plan=machine (all tier, 300/min). The web search app stays free, unmetered and unchanged; the Plans panel no longer shows Free/Student/Pro cards; main == prod at a known SHA; an uptime probe exercises a DB-touching route; Vercel is on Pro. No credit_events journal, no remote MCP, no account deletion, no engine - those are post-first-dollar.",
+   "first_dollar_path": "Day 1: Supabase dashboard -> Resume OpenC_Auth -> `supabase db dump` off-site -> add a DB-touching `health` resource + daily Vercel cron keepalive. Same day: Vercel -> upgrade team to Pro; close Dependabot PRs #6/#7/#8 and disable Git production deploys until main==prod. Day 2-3: create OPENALEX_API_KEY, inject via serverKeys.js, drop CURATED from the server's default eligible set; create three new Stripe Prices ($10/2,000, $50/12,000, $200/60,000) and update plans.js + pricing.js; webhook pack branch sets plan='machine' (never downgrading a subscriber) and gates on payment_status==='paid'. Day 4-8: Developers panel (GET/POST/DELETE /api/keys already exist server-side; UI lists prefixes, mints once-shown plaintext, revokes; curl + MCP quickstart), `?checkout=success` on mount opens that panel and polls /api/credits; hide Free/Student/Pro cards; ship public/legal/{terms,privacy,refunds,contact}.html + footer links + `consent_collection: {terms_of_service:'required'}` + `billing_address_collection:'required'` + USD label. Day 9-12: thread `limit` into adapter page size; flip serverSafe:false on the six dead-but-200 sources; empty-adapter guard; cache key includes `cite`; header-only keys; term cap; limiter before DB touch. Day 13: commit the tree to main (Shahbaz says go), `vercel --prod` from that SHA, then a REAL smoke with Shahbaz's own card in live mode: buy $10 pack -> credits appear -> mint key -> curl /api/search -> balance decrements -> refund self in Stripe Dashboard. Day 14-16: npm publish `opencite-mcp` (private:false), serve /openapi.json + /docs, list on Smithery/Glama/PulseMCP, rewrite README/OG/JSON-LD. Day 17-30: Show HN + r/LocalLLaMA + MCP Discord post, 20 direct DMs to devs building research/RAG agents with the pitch 'OpenAlex+Crossref+PubMed plus museum, manuscript and Islamicate archives in one MCP, citation-ready, $10 = 2,000 queries, you only pay for coverage delivered'. First external Stripe payout event = first dollar.",
+   "steps": [
+    {
+     "order": 1,
+     "name": "Restore the database and make it un-pausable",
+     "what": "Supabase dashboard: Resume OpenC_Auth (cjnmoupvlqcqigmabanq); verify counts on users/api_keys/processed_events/_prisma_migrations via MCP; immediately `supabase db dump` to an off-site file; reset pooler password if 'Tenant or user not found' persists. Add a `health` handler to api/user/[resource].js HANDLERS (prisma.$queryRaw`SELECT 1`, no auth, no new function file) and a daily Vercel cron in vercel.json hitting /api/user/health as keepalive (Hobby and Pro both allow daily crons). Skip migrate.mjs unless VERCEL_ENV==='production' and redact the connection string from its log line so the next prod build cannot print the password.",
+     "why": "Every user, key, credit balance and Stripe idempotency record lives only here; the one-click restore window most likely closes ~2026-09-15..22. Nothing downstream (sign-in, checkout, key mint) works without it, and a re-pause mid-launch would kill the first customer's session.",
+     "effort_hours": 2.5,
+     "depends_on": [],
+     "findings_addressed": [
+      "3",
+      "24",
+      "23",
+      "59"
+     ]
+    },
+    {
+     "order": 2,
+     "name": "Freeze the deploy footgun and go Vercel Pro",
+     "what": "Close Dependabot PRs #6/#7/#8 (do NOT merge); in Vercel Project Settings -> Git, disable production deploys from the GitHub integration (or set an Ignored Build Step that always exits 0) until main==prod. Upgrade team team_5dTC8ShmkJ46A18D9cgBQXre to Pro ($20/mo). Add one Vercel WAF rate-limit rule on path /api/proxy (per-IP, e.g. 60/min) from the dashboard.",
+     "why": "A single PR merge would ship the pre-v0.44 engine tree to production during launch week. Hobby fair-use forbids both Stripe checkout and Ko-fi, so the first dollar would be a policy violation; Pro also lifts the 12-function cap (needed for /api/mcp in the 90-day plan). The WAF rule is the 15-minute mitigation for the unmetered proxy relay that could otherwise exhaust transfer or run up a Pro overage.",
+     "effort_hours": 0.75,
+     "depends_on": [],
+     "findings_addressed": [
+      "7",
+      "25",
+      "15"
+     ]
+    },
+    {
+     "order": 3,
+     "name": "OpenAlex project key + single OpenAlex call per query",
+     "what": "Register an OpenAlex API key; add OPENALEX_API_KEY to api/_shared/serverKeys.js and pass `api_key` in src/adapters/core/openalex.js and curatedJournals.js when present (browser keeps mailto-only). In api/search.js exclude CURATED from the server's default eligible set (opt-in via ?sources=CURATED) so each paid query is ONE OpenAlex search call. Set OPENCITE_MAILTO in Vercel prod; append tool=opencite&email=&api_key=NCBI_API_KEY in ncbi.js; set an honest 'OpenCITE/<ver> (https://citation.today; mailto:)' UA in the server branch of fetchWithTimeout. Log X-RateLimit-Remaining-USD from OpenAlex into adapter telemetry.",
+     "why": "Keyless, prod exhausts OpenAlex's $0.10/day allowance after ~50 all-tier queries and then either discounts every query 50% or (after the breaker opens) charges full price for OpenAlex-less answers. A free key gives $1/day = ~1,000 queries/day at zero marginal cost; halving the calls doubles that. Polite-pool identification is a ToS requirement for NCBI/Crossref and stops Crossref throttling to 1 req/s.",
+     "effort_hours": 3,
+     "depends_on": [],
+     "findings_addressed": [
+      "8",
+      "10",
+      "99",
+      "55",
+      "56",
+      "63",
+      "90"
+     ]
+    },
+    {
+     "order": 4,
+     "name": "Collapse the offer to packs-only and reprice to cost-plus",
+     "what": "Create three new Stripe Prices (live mode): $10 -> 2,000 credits, $50 -> 12,000, $200 -> 60,000 ($5.00/$4.17/$3.33 per 1k). Update CREDIT_PACKS in api/_shared/plans.js and src/constants/pricing.js; set the three STRIPE_PRICE_PACK_* env vars. Remove the Free/Student/Pro subscription cards, the 'Verify & subscribe' CTA, the IAP/App Store rail and platform.js from Panels.jsx/pricing.js (keep PLANS definitions server-side, unused). Derive SOURCE_COUNT from ADAPTERS (serverSafe count) and delete the '20' literal in the search placeholder. New Plans copy: 'The web app is free and unlimited. Credits power the API and MCP server for your agents.' Remove the Ko-fi widget once pack checkout is live so there is one CTA.",
+     "why": "Subscriptions sell quotas and sources the browser already gives away unmetered, so they cannot convert; Student is unpurchasable by construction; pack pricing is below OpenAlex's metered cost at scale and 5-100x below every comparator. Deleting the fake rail closes six findings for 4 hours instead of building 16 hours of web gating, and gives the first customer an offer that is true.",
+     "effort_hours": 4,
+     "depends_on": [],
+     "findings_addressed": [
+      "1",
+      "5",
+      "9",
+      "17",
+      "20",
+      "26",
+      "34",
+      "65",
+      "97"
+     ]
+    },
+    {
+     "order": 5,
+     "name": "Webhook: pack buyers become plan=machine, only when paid",
+     "what": "In api/stripe/webhook.js checkout.session.completed pack branch: require `obj.payment_status === 'paid'` before incrementing credits (handle checkout.session.async_payment_succeeded identically); after the increment, `update({ plan: 'machine' })` only if the user's current plan is 'free' (never downgrade a subscriber). Scope the P2002 catch to the processed_events PK (v0.45 T3 shape) so a unique collision on stripe_customer_id does not swallow a paid grant with a 200. Use an idempotency key of userId on stripe.customers.create in checkout.js.",
+     "why": "Today a $10-$200 buyer stays on plan=free: core-only 4 sources at 30 req/min, which is not the product they were sold. A paid grant silently lost to a mis-scoped catch is a chargeback with no recourse.",
+     "effort_hours": 1.5,
+     "depends_on": [
+      4
+     ],
+     "findings_addressed": [
+      "13",
+      "33",
+      "84"
+     ]
+    },
+    {
+     "order": 6,
+     "name": "Developers panel: mint/list/revoke keys + post-checkout landing",
+     "what": "New src/components/DevelopersPanel.jsx wired into the existing panel system: GET /api/keys list (prefix, created, last used, revoke button with inline confirm), POST /api/keys mint with the plaintext shown exactly once in a copy box, balance from BillingContext, a curl snippet (`curl -H 'x-api-key: ...' 'https://citation.today/api/search?q=...&limit=25&cite=bibtex'`) and the MCP config block. On App mount read `checkout` from location.search: success -> open Developers panel and poll /api/credits 5x over 10s, cancel -> reopen Plans; history.replaceState to strip the param. CreditsChip label 'credits' for tier machine, tooltip no longer says 'this month'. Buy-pack CTA in the panel calls the existing goStripe. Footer link 'Developers'.",
+     "why": "This is the missing customer-facing half of the money path: server-side key management exists (handlers/keys.js) but no client calls it, and Stripe returns buyers to a URL the SPA ignores. Without this a buyer literally cannot spend what they bought.",
+     "effort_hours": 6,
+     "depends_on": [
+      1,
+      4,
+      5
+     ],
+     "findings_addressed": [
+      "2",
+      "18",
+      "83"
+     ]
+    },
+    {
+     "order": 7,
+     "name": "Publish the legal minimum and wire consent into checkout",
+     "what": "Static pages in public/legal/terms.html, privacy.html, refunds.html, contact.html (static files win over the SPA rewrite on Vercel; verify with curl md5 != /). Terms: finalize the draft (source-available product, API credits, 14-day refund of unused credits, USD, governing law); Privacy: name Google OAuth, Supabase, Stripe, Vercel Analytics/Speed Insights, upstream sources, retention, deletion-by-email until an endpoint exists; Refunds: policy + manual clawback statement; Contact: role mailbox + DMCA agent. Footer links + AuthModal link. api/checkout.js: `consent_collection: { terms_of_service: 'required' }`, `billing_address_collection: 'required'`, `custom_text` pointing at refund policy; set Stripe Dashboard public details/policy URLs. Decide LICENSE posture in one line (add mcp/LICENSE MIT, carve mcp/ out of root LICENSE definition).",
+     "why": "Stripe's website checklist (ToS, privacy, refund, contact, currency) is the difference between winning and automatically losing every dispute, and a privacy policy is a hard gate for any MCP directory listing later. Counsel review is desirable but not a first-dollar blocker for a $10 pack.",
+     "effort_hours": 6,
+     "depends_on": [],
+     "findings_addressed": [
+      "11",
+      "28",
+      "30",
+      "62",
+      "64"
+     ]
+    },
+    {
+     "order": 8,
+     "name": "Make a paid query worth paying for: limit threading + drop dead sources",
+     "what": "Thread `opts.pageSize = Math.min(limit, adapterMax)` from api/search.js through runSearch into every adapter (adapters use it when present, else keep the 3/5 browser defaults). Flip `serverSafe:false` (and remove corpusSize from the coverage denominator) for BASE, MET, PANGAEA, THAQALAYN, OPENCONTEXT and LA_REFERENCIA - do not fix them now. Add `if (data.error) throw` in the shim adapters (gallica/opencontext/openedition/dpla/smithsonian) and in base.js. In api/search.js: return 503 if `adapters.length === 0` after key/breaker filtering; order interleave lanes with OPENALEX first and require all meaningful terms in hasContentMatch for Crossref; include `cite` in cacheKey. Guard AbortSignal.timeout with a fallback controller in src/adapters/_shared/proxy.js.",
+     "why": "Live probing shows a free-tier query returns at most ~9-12 records regardless of `limit`, Crossref's off-topic bibliographic hits sit at ranks 3/6/9, and >30% of the declared 'all' coverage weight is unreachable but billed as covered. A developer's first curl is the demo; if it returns 9 results with 3 irrelevant ones, they do not buy the second pack. Dropping dead sources is 1h; fixing them is 8h+ with no revenue delta.",
+     "effort_hours": 7,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "6",
+      "14",
+      "21",
+      "22",
+      "32",
+      "42",
+      "46",
+      "47",
+      "48",
+      "49",
+      "50",
+      "54",
+      "39"
+     ]
+    },
+    {
+     "order": 9,
+     "name": "Abuse hygiene on the metered path (cheapest subset of v0.45)",
+     "what": "api/search.js + meter.js: run a cheap per-IP KV limiter before any Prisma touch and apply it to the 401 path; reject keys not matching /^oc_live_[A-Za-z0-9_-]{32}$/ before hashing; drop `?key=` support (header only) and update mcp docs; cap `;` terms at 5 and q length at 512 in apiContract.js; key checkRateLimit on userId; debounce last_used_at to once per 60s. Change free-tier copy to '10 free credits to try the API' rather than building the monthly-grant sweep.",
+     "why": "Before onboarding strangers, an unauthenticated caller must not be able to drive unbounded Postgres traffic, leak bearer keys into request logs, or turn one credit into thousands of upstream calls against the OpenAlex budget that step 3 just bought. Renaming the free allowance closes the '20/month never granted' finding for 5 minutes instead of 2 hours.",
+     "effort_hours": 4,
+     "depends_on": [],
+     "findings_addressed": [
+      "36",
+      "37",
+      "38",
+      "81",
+      "12"
+     ]
+    },
+    {
+     "order": 10,
+     "name": "Commit v0.44 to main, deploy from the SHA, smoke with a real card",
+     "what": "Edit only the SSOT fragments needed for `node scripts/wiki/build-machine-map.mjs --check` to pass (delete the 14 dead module records, re-point F-106/F-408/F-409, restatus F-200/201/205/207/209 moot, F-405 fixed, add contentMatch record) so the pre-commit hook is green; then, on Shahbaz's explicit go, `git add -A` + one commit on main and `vercel --prod` from that SHA (re-enable Git production deploys only after main==prod is confirmed). Fill sprint_log_v0_44.md Actuals with SHA + deploy id. Live smoke in Stripe live mode with Shahbaz's own card: sign in -> buy $10 pack -> Developers panel shows 2,000 credits -> mint key -> curl /api/search with limit=25 and cite=bibtex -> balance decrements -> /api/citations and /api/ids -> refund self in Stripe Dashboard and confirm the webhook logs. Verify /legal/terms.html md5 != / and the OpenAlex key is honored (X-RateLimit headers in telemetry).",
+     "why": "Prod is currently a mid-sprint snapshot that no git ref reproduces; every step above changes the money path and must ship from a known SHA and be proven end-to-end against live before an outsider touches it (operating rules: no local builds, verify on prod). The fragment fix is the cheapest way through the hook without --no-verify.",
+     "effort_hours": 4.5,
+     "depends_on": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+     ],
+     "findings_addressed": [
+      "16",
+      "31",
+      "41",
+      "67",
+      "104"
+     ]
+    },
+    {
+     "order": 11,
+     "name": "Monitoring that would actually have caught the outage",
+     "what": "Enable Vercel Web Analytics in the dashboard (component already mounted). UptimeRobot/Better Stack free tier, 5-min interval: GET /api/user/health must be 200; GET /api/credits must be 401 (5xx = DB down); GET /api/search/openedition?q=test must be 200 without 'error'. Route log.err for /api/auth/handler and /api/stripe/webhook 5xx to a Discord/Slack webhook. Forward Supabase org email to a monitored inbox.",
+     "why": "The auth/DB outage ran for weeks undetected because nothing exercises a DB-touching route; the first paying customer's failed checkout must page Shahbaz within minutes, not be discovered by the next audit.",
+     "effort_hours": 1,
+     "depends_on": [
+      1,
+      10
+     ],
+     "findings_addressed": [
+      "24",
+      "96"
+     ]
+    },
+    {
+     "order": 12,
+     "name": "Publish the MCP and serve the API reference",
+     "what": "mcp/package.json: private:false, name `opencite-mcp` (PyPI `opencite` is taken - never ship a CLI under it), description 'native-order, interleaved', version 0.44.x, add mcp/LICENSE; fix mcp/README auth section (key required, 1 credit/call), delete lowConfidence/score dead branches in schema.js and the 'Ranked'/'when key auth is enabled' strings; fix the Windows import.meta.url guard so print-schemas runs. `npm publish`. Commit a generated public/openapi.json (from openApiSpec(), security header-only, covering /api/search, /api/citations, /api/ids) and a public/docs/index.html quickstart (get key -> curl -> claude_desktop_config block), both static so they bypass the SPA rewrite. Add `version: '2'` to API_CONTRACT and echo X-OpenCITE-API-Version. List on Smithery, Glama and PulseMCP.",
+     "why": "An agent developer cannot install what is npm-private or find a contract that returns the SPA shell; this is the entire acquisition surface for the SKU chosen in step 4. The MCP docs currently promise a key-optional API that 401s and fields that never arrive.",
+     "effort_hours": 4,
+     "depends_on": [
+      10
+     ],
+     "findings_addressed": [
+      "27",
+      "40",
+      "79",
+      "80",
+      "75"
+     ]
+    },
+    {
+     "order": 13,
+     "name": "Rewrite the front door around the real differentiators",
+     "what": "README.md: one paragraph, live link citation.today, API/MCP quickstart pointer, 'sources = see registry', honest analytics line, correct clone URL, delete the v.13 roadmap/$2.99 prices/opencite.app link, non-affiliation line re OpenCitations. index.html: replace the three literal '...' JSON-LD blocks with one real WebApplication block, add og:/twitter:/canonical tags, a prerendered hero paragraph + source list + 'API for agents' blurb, sitemap.xml + robots Sitemap line. Lead copy everywhere: 'the only agent search that reaches museum, manuscript and Islamicate archives alongside 250M papers', 'citation-ready in 5 formats + citation graph + ID resolution', 'pay only for coverage we delivered'. Drop 'origin-blind', 'ranked', 'zero AI tokens'. Redirect opencite.space -> citation.today.",
+     "why": "Discovery is the actual bottleneck (0 stars, unindexed beyond the SPA root, no OG tags) and the current copy leads with the weakest claims while eight free MIT MCPs already wrap OpenAlex; the pitch must be the breadth and billing honesty that competitors lack.",
+     "effort_hours": 3,
+     "depends_on": [
+      12
+     ],
+     "findings_addressed": [
+      "43",
+      "61",
+      "74"
+     ]
+    },
+    {
+     "order": 14,
+     "name": "Launch and hand-sell the first packs",
+     "what": "Show HN ('Show HN: OpenCITE - one MCP for 250M papers plus museum/manuscript/Islamicate archives, citation-ready, $10 = 2,000 queries'), r/LocalLLaMA and r/ClaudeAI posts, MCP Discord + Cursor forum, and 20 direct DMs to developers shipping research/RAG agents (scan GitHub for repos depending on paper-search-mcp/openalex MCPs). Offer: 100 free credits on sign-in + $10 pack. Track every signup and pack in a spreadsheet; reply to every comment within the hour with the live curl. Keep 100% of the first week's feedback in one issue.",
+     "why": "With zero traffic the first dollar cannot come from code; it comes from putting the working curl in front of 200-2,000 developers in a week. Everything before this step exists so the first person who tries does not bounce.",
+     "effort_hours": 6,
+     "depends_on": [
+      10,
+      11,
+      12,
+      13
+     ],
+     "findings_addressed": [
+      "60"
+     ]
+    },
+    {
+     "order": 15,
+     "name": "90-day: money-path journal, refunds/disputes, portal",
+     "what": "Execute the remainder of sprint_log_v0_45.md: credit_events append-only journal, orphan reconciliation cron, applyMonthlyGrant race, outage billing for citations/ids (band 'limited' when all legs fail), ApiKey.plan drop, meta.requestId; add charge.refunded / charge.dispute.created clawback (floor at 0, flag account), Stripe Customer Portal link, ApiUsage writer, basil-safe `line.pricing.price_details.price` in priceIdFromInvoice (needed only if subscriptions return), Stripe Tax when non-US sales appear.",
+     "why": "Once real money flows, every dispute needs an itemized record and a refund must claw credits back; these are worth building after the first ten customers exist, not before the first one.",
+     "effort_hours": 12,
+     "depends_on": [
+      14
+     ],
+     "findings_addressed": [
+      "4",
+      "28",
+      "33",
+      "82",
+      "62"
+     ]
+    },
+    {
+     "order": 16,
+     "name": "90-day: remote MCP endpoint + directory listings + account deletion",
+     "what": "Add /api/mcp (Streamable HTTP, x-api-key auth; Node slot available on Pro) so Cursor/Claude custom connectors work without a local install; add DELETE /api/user/account (Prisma cascade + Stripe customer delete) and a JSON export; then apply to the Claude directory (MCPB or remote) and evaluate ChatGPT (note it bans in-app checkout links - sell on-site). Bump @auth/core 0.41.3, @auth/prisma-adapter 2.11.3, mcp sdk 1.30.0 in-tree and deploy via CLI.",
+     "why": "Directories are the scalable channel after hand-selling proves the offer; they require a remote HTTPS endpoint, a privacy policy (done in step 7) and a deletion path. The dependency bumps are security hygiene that must never go via the Dependabot PRs.",
+     "effort_hours": 14,
+     "depends_on": [
+      14,
+      15
+     ],
+     "findings_addressed": [
+      "27",
+      "30",
+      "86"
+     ]
+    },
+    {
+     "order": 17,
+     "name": "90-day: harden the unauthenticated edge and fix the browser-side dead sources",
+     "what": "api/proxy.js: byte budget (2 MB) + AbortSignal.timeout(10s) + Edge-variant internal-origin check + trim ALLOWED_DOMAINS to hosts actually reached via proxiedFetch (11 live hosts incl. BnF/ONB/Northwestern) while adding data.rijksmuseum.nl/api.core.ac.uk/ndl.iitkgp.ac.in; per-IP limiter on the keyed DPLA/Smithsonian shims; fix Gallica with the xmlUtils SRU regex helpers (move under api/_shared); exact-list trusted origins instead of the opencite*.vercel.app regex; move admin allowlist server-side; ONB/BnF CQL `all` instead of phrase; flip CSP to enforcing.",
+     "why": "These are real abuse and correctness holes but none block the first dollar; after Pro they cost overage money rather than an outage, so they follow revenue. Browser-only adapters are marketing polish for the free app.",
+     "effort_hours": 12,
+     "depends_on": [
+      14
+     ],
+     "findings_addressed": [
+      "15",
+      "35",
+      "89",
+      "91",
+      "53",
+      "58",
+      "78",
+      "87",
+      "85",
+      "103",
+      "51",
+      "100",
+      "108",
+      "19"
+     ]
+    },
+    {
+     "order": 18,
+     "name": "90-day: docs to a single truthful state note; decide web Pro later",
+     "what": "Replace Health-Dashboard, Adapter-Health-Matrix and the ten stale sprint-log headers with one generated docs/wiki/10-Sprints/Index.md (sprint -> SHA -> deploy id -> status) plus a dated live-probe script output; regenerate docs/wiki-gh; delete .claude/memory from the repo; move sprint logs; tag archive/v0.35-tip. Only after >=10 paying developers, revisit a human 'Pro' tier built on features the free app lacks (cloud sync already exists; add exports, citation graph UI) - never on 'searches/month'.",
+     "why": "Documentation debt is large (findings 66-76) but has zero revenue impact; a single truthful index is enough to stop agents and Shahbaz from mis-reading state. Web subscriptions are re-evaluated only with demand evidence.",
+     "effort_hours": 8,
+     "depends_on": [
+      14
+     ],
+     "findings_addressed": [
+      "66",
+      "68",
+      "69",
+      "70",
+      "71",
+      "72",
+      "73",
+      "76",
+      "77",
+      "101",
+      "105",
+      "106",
+      "107",
+      "109",
+      "92",
+      "93",
+      "94"
+     ]
+    }
+   ],
+   "cut_list": [
+    "STOP selling Free/Student/Pro subscriptions on the web: remove the cards, the 'Verify & subscribe' CTA and all 'N searches/month' / 'All 22 databases' copy; keep PLANS in plans.js dormant (closes 1/5/9/17/34/65 by deletion, not by building gating)",
+    "DO NOT route browser search through /api/search or add plan-based source gating to the SPA (~16h, burns the OpenAlex budget, creates no reason-to-buy); the web app stays free and unmetered as the marketing surface",
+    "DO NOT build student verification (SheerID etc.) or any institutional/invoicing path in the next 90 days",
+    "DO NOT fix the dead adapters (BASE, Met, PANGAEA, Thaqalayn, Open Context, LA Referencia) - flip serverSafe:false and move on; Gallica fix deferred to 90-day",
+    "DO NOT execute the v0.45 credit_events journal / reconciliation cron / requestId before the first ten paying customers exist",
+    "DO NOT merge or rebase the three Dependabot PRs; close them and bump in-tree via CLI deploy later",
+    "DELETE the IAP/App Store rail, platform.js and the '20 searches/month' free copy; delete the three literal '...' JSON-LD blocks",
+    "REMOVE the Ko-fi widget once pack checkout is live so there is a single CTA",
+    "DO NOT restore the ranking engine (BM25F/RRF/semantic/synonyms/gate) or the v0.35 branch; only tag the dangling tip for archival",
+    "DO NOT rewrite the wiki / machine twin / wiki-gh mirror beyond the minimal fragment edits needed to pass the pre-commit hook; no Health-Dashboard or Adapter-Health-Matrix rewrite until 90-day",
+    "DO NOT pursue Claude/ChatGPT directory listings in the 30-day window (need remote OAuth MCP + deletion endpoint); do npm + Smithery/Glama/PulseMCP instead",
+    "DO NOT do the a11y/nag/perf polish (44, 45, 98), ResultCard memo (94), dedup test rewrite (93), progressive reveal (95) or the Rijksmuseum/CORE/NDLI proxy allowlist (51) before first revenue",
+    "DO NOT enable Stripe Tax registrations until a non-US sale actually occurs (capture billing address only)",
+    "DO NOT keep the multi-term `;` syntax unbounded or the `?key=` query form - remove/cap rather than document",
+    "DO NOT upgrade Supabase to Pro yet; the daily keepalive cron is enough while there are <100 users, and the weekly dump is the backup",
+    "STOP writing new sprint logs with status headers; the 10-Sprints index (90-day) becomes the only status surface"
+   ],
+   "risks": [
+    "Supabase one-click restore window may close ~2026-09-15..22 (90-day rule); if it has already lapsed the path is download-.backup + new project + rewrite POSTGRES_* env vars and ops_credentials memory (+3h) and every user must re-login. Step 1 is date-critical and must run before anything else.",
+    "Zero traffic means the first dollar is a distribution outcome: if Show HN/DMs do not convert in the first two weeks, the 30-day target slips regardless of code quality. Mitigation: hand-sell to 20 named developers, offer 100 free trial credits, iterate the pitch weekly.",
+    "OpenAlex key budget is $1/day (~1,000 single-call queries) on a free key and Vercel egress IPs are shared; a single abusive or enthusiastic customer can exhaust it for everyone in an afternoon. Mitigation: per-user rate limits (step 9), telemetry on X-RateLimit-Remaining-USD, and prepaid OpenAlex top-ups budgeted against pack revenue.",
+    "Fixed costs rise to ~$20/mo (Vercel Pro) before revenue; at $10 packs the breakeven is 2 packs/month. Do not add Supabase Pro ($25/mo) until users exist.",
+    "Legal pages shipped without counsel review; the ToS/refund policy may need revision. Acceptable for $10 packs; revisit before any $200 pack sale to an EU customer or any institutional deal.",
+    "Prod is a mid-sprint snapshot that no git ref reproduces (BillingContext credits shape differs); deploying the committed tree may change client behaviour subtly. Mitigation: the real-card smoke in step 10 and bundle-marker diff before announcing.",
+    "Pre-commit hook currently blocks the commit (32 machine-map problems); if the fragment fix balloons, the fallback is a documented `--no-verify` commit with Shahbaz's explicit authorization, not silently skipping hooks.",
+    "Stripe endpoint API version (basil vs acacia) is unverified; irrelevant while only one-time packs are sold, but the invoice-line parsing must be fixed (step 15) before subscriptions are ever re-enabled.",
+    "No refund/dispute clawback until step 15: a refunded pack keeps its credits. Mitigation: manual procedure (revoke keys + set total_credits) documented in refunds.html, acceptable at <10 customers.",
+    "/api/proxy remains an unauthenticated relay until step 17; on Pro this is an overage-cost risk rather than an outage risk. The dashboard WAF rule in step 2 is the interim control.",
+    "Adapter coverage after dropping six sources is ~18 serverSafe; marketing must not claim '22' or '29' - derive counts from the registry (step 4) so copy cannot drift again.",
+    "Operating rules forbid local builds/tests, so the only verification is live prod; every step that touches the money path must be followed by the real-card smoke, which costs real Stripe fees on each iteration (~$0.60 per $10 test)."
+   ]
+  },
+  {
+   "angle": "RISK/STABILITY-FIRST — recover the data, make prod reproducible, make the ledger auditable, then sell exactly one SKU (developer credit packs) through one honest path.",
+   "thesis": "OpenCITE cannot take a dollar today without creating an incident: the only copy of every user/key/credit row sits in a paused Free-plan Supabase project whose one-click restore window closes in roughly 11-18 days; production is an unreproducible mid-sprint snapshot that any push to main would silently overwrite; the credit ledger is a single mutable number with no journal, a webhook that can swallow paid grants, and copy that promises entitlements the code never delivers. The bet is to spend the first ~10 days on zero new features — restore + off-site dump, commit-what-prod-runs, monitoring, Vercel Pro, and the v0.45/v0.46 money-path closure — and only then open a single revenue mechanism: developer/agent credit packs (plan=machine) sold with a Developers panel that mints API keys, priced cost-plus above OpenAlex's metered rate, behind published ToS/privacy/refund pages. Web search stays free and unlimited (it already is), subscriptions are hidden until the web has something to sell, and every dead-but-200 adapter is quarantined rather than fixed so the paid 'all' tier is honest. First dollar is a $10 pack from an MCP-directory or community developer who wants heritage/Islamicate/museum coverage plus citation formats and graph in one contract — the differentiators the free OpenAlex-wrapper MCPs lack.",
+   "mvp_definition": "MVP = a developer can (1) sign in with Google on citation.today, (2) buy a credit pack via Stripe Checkout with ToS/privacy/refund/contact visible and consent collected, (3) land on a confirmation that opens a Developers panel where they mint/list/revoke an API key (plaintext shown once) and copy a curl + MCP quickstart, (4) call /api/search, /api/citations, /api/ids (or install the published npm `opencite-mcp`) as plan=machine and receive ≥10 records per single-term query from sources that actually answer, charged per delivered coverage with every credit movement journaled and orphan-reconciled, (5) on a production deployment that equals a git commit on main, backed by a Supabase project that is not pausable and has a weekly off-site dump, with an external uptime probe that exercises the DB. The web app remains free/unlimited with no plan copy that promises anything it does not gate; Student/Pro cards are hidden; the 'all' tier contains only serverSafe adapters that live-probe green.",
+   "first_dollar_path": "(1) Resume Supabase OpenC_Auth, verify row counts, take off-site dump, add daily keepalive cron. (2) Set Vercel 'Ignored Build Step' so main cannot auto-ship; re-status the findings fragments until build-machine-map --check is green; `git add -A && git commit` the v0.44 tree (Shahbaz says go); CLI-deploy that commit; diff live bundle markers. (3) Upgrade Vercel to Pro (commercial use + lifts 12-function cap). (4) Execute v0.45 T3→T4→T1→T2→T6→T5→T7→T8→T9 plus the v0.46 closure (basil price shape, pack→machine, payment_status gate + refund clawback, empty-adapter guard, cite-in-cache-key, lazy free grant, per-user limiter, key-only-in-header, term cap). (5) Provision OPENALEX_API_KEY server-side, fold CURATED out of the API default set, reprice packs to $10/2k, $50/12k, $200/60k. (6) Hide Student/Pro cards; packs become the only CTA; derive source counts from the registry. (7) Ship Developers panel (keys via existing /api/keys) + ?checkout=success handler + served /openapi.json + /docs. (8) Publish ToS/Privacy/Refund/Contact pages, footer links, consent_collection, Stripe Tax, DELETE /api/user/account. (9) Quarantine dead adapters (BASE, Met, PANGAEA, Thaqalayn, Open Context, LA Referencia), fix Gallica via xmlUtils, thread page size so limit is reachable, tighten Crossref match, OpenAlex-first lanes. (10) Shahbaz performs one real live $10 purchase end-to-end (key mint → MCP call → credit_events rows → Stripe payout), then refunds it to test clawback. (11) `npm publish opencite-mcp`, list on Smithery/Glama/PulseMCP, post on r/ClaudeAI + HN 'Show' with the heritage/Islamicate + citation-graph angle. (12) First stranger buys the $10 pack — verify the `purchase` journal row and the Stripe payout; that is dollar one.",
+   "steps": [
+    {
+     "order": 1,
+     "name": "Restore Supabase and take the first off-site backup",
+     "what": "Dashboard → OpenC_Auth → Resume; wait ACTIVE_HEALTHY; verify counts for users/api_keys/processed_events/library_items/search_history/_prisma_migrations (expect 3 migration rows); `supabase db dump` to a location outside Vercel/Supabase; add a daily Vercel cron (Hobby allows daily) hitting a tiny Prisma `SELECT 1` handler folded into api/user/[resource].js to keep the project awake; decide Supabase Pro ($25/mo, no pausing, 7-day PITR) vs keepalive. Also confirm the pooler tenant password after resume; if 'Tenant or user not found' persists, rotate and update POSTGRES_* in Vercel + ops_credentials memory.",
+     "why": "Free-plan one-click restore expires ~90 days after pause (est. 2026-09-15..22). Everything else in this plan is moot if the ledger is lost.",
+     "effort_hours": 1.5,
+     "depends_on": [],
+     "findings_addressed": [
+      "F3",
+      "F24 (keepalive half)"
+     ]
+    },
+    {
+     "order": 2,
+     "name": "Neutralise the main→prod footgun",
+     "what": "Vercel → Project → Git → set 'Ignored Build Step' to `exit 0` for production (or disconnect production from Git) until main == prod; close the three Dependabot PRs with a comment; do NOT merge them. Bump @auth/core 0.41.3, @auth/prisma-adapter 2.11.3, mcp sdk 1.30.0 in the working tree instead (ships in step 4's commit).",
+     "why": "A single PR merge click ships the pre-v0.44 engine tree (28.6 MB synonyms, old contract, loopback getSession) to production.",
+     "effort_hours": 0.5,
+     "depends_on": [],
+     "findings_addressed": [
+      "F7",
+      "F86"
+     ]
+    },
+    {
+     "order": 3,
+     "name": "Green the machine map and re-status the ledger (v0.44 T7 as written)",
+     "what": "Edit SSOT fragments only: delete/quarantine the 14 dead module records; add contentMatch.js; re-point F-106/F-408/F-409; re-status F-200/F-201/F-202/F-204/F-205/F-207/F-209 → moot (fixed_in v0.44, wiki → Known-Defects), F-405 → fixed, F-100 → moot; mint a finding for the Gallica DOMParser route; run `node scripts/wiki/build-machine-map.mjs --check` until 0 problems; regenerate docs/wiki-gh via the hook; git mv sprint logs to docs/wiki/10-Sprints; delete stray root files (_verify_ia.mjs, Tempia_fts.json, Users…unpaywall_probe.json); fill sprint_log_v0_44 Actuals with dpl_2ZTVC6KJHiFH9NKFBvdHni3q82P3.",
+     "why": "The active pre-commit hook blocks any commit that touches docs/wiki until --check passes; committing with --no-verify would ship a stale twin. This is the gate to step 4.",
+     "effort_hours": 3,
+     "depends_on": [],
+     "findings_addressed": [
+      "F31",
+      "F41",
+      "F67",
+      "F66",
+      "F78",
+      "F92",
+      "F104"
+     ]
+    },
+    {
+     "order": 4,
+     "name": "Commit the v0.44 tree and redeploy prod from that commit",
+     "what": "Before the commit: fix scripts/migrate.mjs to never log the URL (pass via env, redact), skip migrate unless VERCEL_ENV==='production', gate the fallback on P3005 text; add scripts/preflight.mjs asserting AUTH_SECRET/API_KEY_PEPPER/SETTINGS_ENCRYPTION_KEY/POSTGRES_* in production; fix goldSetMetrics.test.js pathToFileURL guard and add a `test` script (run by Shahbaz/CI only); add AbortSignal.timeout polyfill in src/adapters/_shared/proxy.js. Then, on Shahbaz's explicit go: `git add -A`, one commit on main via Bash heredoc, `vercel --prod` from that commit, record SHA + deploy id in sprint_log_v0_44 Actuals; verify live bundle markers (`unlimited`, `Unlimited searches`, absence of `credits:1/0`) and that /api/search/gallica still fails-soft, /api/credits → 401 anon.",
+     "why": "Prod is a mid-sprint snapshot no git ref reproduces; the next production build would print the DB password into the build log if migrate fails; a green Vercel build currently proves nothing.",
+     "effort_hours": 2.5,
+     "depends_on": [
+      1,
+      2,
+      3
+     ],
+     "findings_addressed": [
+      "F16",
+      "F23",
+      "F59",
+      "F102",
+      "F106",
+      "F39"
+     ]
+    },
+    {
+     "order": 5,
+     "name": "Minimum monitoring",
+     "what": "Enable Vercel Web Analytics in the dashboard (component already mounted); create UptimeRobot/Better Stack free checks: GET /api/user/health (new DB-touching handler from step 1) must 200, GET /api/credits must 401, GET /api/search/opencontext?q=test body must not contain 'error'; route log.err for /api/auth/handler and /api/stripe/webhook to a Discord/email webhook; forward Supabase org mail to a monitored inbox.",
+     "why": "An auth outage ran for weeks undetected; no monitor can catch a DB outage unless it touches the DB.",
+     "effort_hours": 1.5,
+     "depends_on": [
+      1,
+      4
+     ],
+     "findings_addressed": [
+      "F24",
+      "F96 (partial: surface degraded state to ops, not yet UI)"
+     ]
+    },
+    {
+     "order": 6,
+     "name": "Vercel Pro upgrade",
+     "what": "Upgrade team_5dTC8ShmkJ46A18D9cgBQXre to Pro ($20/mo). Remove the Ko-fi widget until then (or keep once on Pro). Fold $20/mo + Supabase cost into the pricing floor used in step 10.",
+     "why": "Hobby fair-use forbids both Stripe checkout and donations; Pro also lifts the 12-function cap that blocks a remote MCP route later.",
+     "effort_hours": 0.5,
+     "depends_on": [],
+     "findings_addressed": [
+      "F25"
+     ]
+    },
+    {
+     "order": 7,
+     "name": "Execute sprint v0.45 (money-path hardening) as planned",
+     "what": "Order T3 (webhook P2002 scoping) → T4 (applyMonthlyGrant atomic UPDATE) → T1 (credit_events journal, same-tx writes) → T2 (orphan reconcile handler in [resource].js + daily cron + CRON_SECRET) → T6 (cache-hit single write) → T5 (citations/ids outage → band limited → free) → T7 (pre-auth per-IP limiter on search/meter/[resource]/checkout) → T8 (drop ApiKey.plan, two-step) → T9 (allowance copy). Confirm D-1..D-6 with Shahbaz first (recommendations in the log are sound). Verify each on live prod after CLI deploy; run migrations against a Supabase branch first.",
+     "why": "Nothing here should take real money until spend is itemizable, grants cannot be silently swallowed, and the 401 path is throttled.",
+     "effort_hours": 12,
+     "depends_on": [
+      4
+     ],
+     "findings_addressed": [
+      "F36",
+      "F82 (T1 writes the journal; ApiUsage decision folded into T1)"
+     ]
+    },
+    {
+     "order": 8,
+     "name": "v0.46 money-path closure (defects v0.45 misses)",
+     "what": "webhook.js: read `line.pricing?.price_details?.price` then `line.price?.id`, prefer subscription metadata.plan; pin the endpoint API version in Stripe dashboard and record it; gate pack grant on payment_status==='paid' and handle checkout.session.async_payment_succeeded; add charge.refunded + charge.dispute.created → decrement credits (floor 0) + flag; set User.plan='machine' on pack purchase when plan==='free'. billing/search: empty-adapter guard (adapters.length===0 → 503 before preAuthorize; coverage total 0 → 'limited'); include `cite` in cacheKey or cache pre-render records; lazy free grant on resolveApiKey/credits when credits_period != month (seed 20); key the limiter on userId; drop `?key=` support; cap `;` terms at 5 and q at 512 chars; ignore caller mailto on the metered API; silently intersect unknown `sources=` after rate limiting; Stripe customer create with idempotency key = userId.",
+     "why": "Each is a verified way a paying caller is over/under-charged, an entitlement is dropped, or credits survive a refund.",
+     "effort_hours": 8,
+     "depends_on": [
+      7
+     ],
+     "findings_addressed": [
+      "F4",
+      "F12",
+      "F13",
+      "F14",
+      "F32",
+      "F33",
+      "F81",
+      "F84",
+      "F37",
+      "F38",
+      "F90",
+      "F88",
+      "F28 (clawback half)"
+     ]
+    },
+    {
+     "order": 9,
+     "name": "Product contract: web free, packs are the product",
+     "what": "pricing.js/Panels.jsx: hide Student and Pro cards (keep code behind a flag), remove '20 searches/month' and 'All N databases' claims, keep Free card as 'Free — unlimited web search, library + history sync'; packs become the only CTA with copy 'API & MCP credits, plan=machine, all sources, 300 req/min'; delete IAP rail strings; derive SOURCE_COUNT from ADAPTERS registry; remove 'Bought on the web dashboard' until step 11 exists; add ALLOWANCE/coverage note. Checkout: return 400 for plan checkouts while hidden.",
+     "why": "Every paid web feature is already free and the web never meters; selling it is false copy and a chargeback. One SKU family minimizes billing surface for the first 90 days.",
+     "effort_hours": 3,
+     "depends_on": [
+      8
+     ],
+     "findings_addressed": [
+      "F1",
+      "F5",
+      "F9",
+      "F17",
+      "F34",
+      "F65",
+      "F20",
+      "F97"
+     ]
+    },
+    {
+     "order": 10,
+     "name": "OpenAlex key, CURATED fold-out, cost-plus repricing",
+     "what": "Register an OpenAlex project key; inject via serverKeys.js and pass api_key in openalex.js/curatedJournals.js server branch; exclude CURATED from the API default eligible set (opt-in via ?sources=CURATED + caller ISSNs); log X-RateLimit-Remaining-USD into adapter telemetry; update plans.js CREDIT_PACKS to $10/2,000 · $50/12,000 · $200/60,000 (≈$5/1k, ~2.5x OpenAlex cost with 1 call/query) and mirror in pricing.js; set OPENCITE_MAILTO in Vercel; charge 2 credits for all-tier fan-out is deferred (keep 1 credit, note in risks).",
+     "why": "Keyless server hits a $0.10/day OpenAlex budget (~50 queries) then charges full price for OpenAlex-less answers; current packs are priced below upstream cost.",
+     "effort_hours": 4,
+     "depends_on": [
+      4
+     ],
+     "findings_addressed": [
+      "F8",
+      "F10",
+      "F26",
+      "F99",
+      "F56"
+     ]
+    },
+    {
+     "order": 11,
+     "name": "Developers panel, post-checkout handling, served docs",
+     "what": "New `DevelopersPanel` (opened from Account menu + from checkout=success): GET/POST/DELETE against existing /api/keys (plaintext once, copy button, prefix list, revoke inline-confirm), curl example with x-api-key, MCP `claude_desktop_config.json` block, link to /openapi.json; App.jsx reads `checkout` param on mount → success opens Developers panel and polls /api/credits 3x over 10s, cancel reopens Plans, then history.replaceState; CreditsChip labels 'credits' for machine tier; serve /openapi.json + /docs as static files excluded from the SPA rewrite (generated from apiContract.js openApiSpec after deleting dead lowConfidence/score branches; add version:'2' + X-OpenCITE-API-Version header); include version in cacheKey.",
+     "why": "There is no self-serve path from payment to a usable key; a buyer currently receives nothing. This is the revenue mechanism.",
+     "effort_hours": 8,
+     "depends_on": [
+      9
+     ],
+     "findings_addressed": [
+      "F2",
+      "F18",
+      "F83",
+      "F40",
+      "F75",
+      "F79",
+      "F80"
+     ]
+    },
+    {
+     "order": 12,
+     "name": "Legal minimum behind checkout",
+     "what": "Publish ToS, Privacy (names Stripe, Vercel Analytics/Speed Insights, Supabase, Google OAuth, each upstream), Refund/Cancellation (14-day withdrawal for unused credits), Contact/DMCA agent as static /legal/*.html excluded from the catch-all; footer + AuthModal links; `consent_collection: { terms_of_service: 'required' }`, `automatic_tax`, `billing_address_collection`, `tax_id_collection`, 'USD' label; Stripe dashboard public details + policy URLs; DELETE /api/user/account (Prisma cascade + Stripe customer delete) and JSON export in [resource].js; Customer Portal link for future subs; add mcp/LICENSE (MIT) and carve mcp/ out of root LICENSE, fix GitHub description; README: replace 'No tracking' with the analytics disclosure. Counsel review of the ToS draft is the external gate.",
+     "why": "Stripe's checklist and dispute outcomes require a legal surface; personal data with no policy/deletion path is the largest non-technical liability.",
+     "effort_hours": 10,
+     "depends_on": [
+      6
+     ],
+     "findings_addressed": [
+      "F11",
+      "F30",
+      "F62",
+      "F64",
+      "F74",
+      "F28 (portal/refund policy half)",
+      "F103 (scrub example file)"
+     ]
+    },
+    {
+     "order": 13,
+     "name": "Unauthenticated edge abuse controls",
+     "what": "api/proxy.js: 2 MB byte budget with abort, AbortSignal.timeout(10s), trim ALLOWED_DOMAINS to hosts actually reached via proxiedFetch plus the four missing ones (data.rijksmuseum.nl, api.core.ac.uk, ndl.iitkgp.ac.in; drop BL/Mexicana/SciELO/OpenNeuro/BASE), Edge-compatible Sec-Fetch-Site soft guard; one Vercel WAF rate rule on /api/proxy and /api/search/*; per-IP KV limiter + short-TTL cache in api/search/[source].js and the three Edge shims; replace OWN_VERCEL_HOST_RE with an exact list.",
+     "why": "The proxy is an unmetered bandwidth relay that can exhaust the transfer cap and take the site down; keyed shims are burnable from curl.",
+     "effort_hours": 3.5,
+     "depends_on": [
+      4
+     ],
+     "findings_addressed": [
+      "F15",
+      "F35",
+      "F89",
+      "F91",
+      "F87",
+      "F51",
+      "F52"
+     ]
+    },
+    {
+     "order": 14,
+     "name": "Make the paid 'all' tier honest (quarantine, don't fix)",
+     "what": "Thread opts.pageSize into runSearch so `limit` is reachable (adapters honor it; browser keeps 3/5); throw on `data.error` in base.js, gallica/opencontext/openedition/dpla/smithsonian shim adapters; flip serverSafe:false and drop corpusSize for BASE, Thaqalayn, LA Referencia, Met, PANGAEA, Open Context (quarantine per v0.44 T5 pattern; also resolves the BASE/Thaqalayn ToS conflicts); replace DOMParser in api/search/gallica.js with xmlUtils-style regex (inline under api/_shared); ncbi.js tool/email/api_key + fallback mailto + honest 'OpenCITE/<ver>' UA in the server fetch branch; tighten hasContentMatch for Crossref to require ≥ceil(n/2) meaningful terms and order interleave lanes OpenAlex → Crossref → DOAJ → extensions; coverage.js: total===0 → 'limited'. Live-probe each remaining serverSafe adapter and record a dated probe artifact.",
+     "why": "Customers would pay full band for a tier where >30% of declared weight is unreachable; core-tier queries return ≤12 records regardless of limit; off-topic Crossref hits rank 3/6/9.",
+     "effort_hours": 10,
+     "depends_on": [
+      10
+     ],
+     "findings_addressed": [
+      "F6",
+      "F21",
+      "F22",
+      "F29",
+      "F42",
+      "F46",
+      "F47",
+      "F48",
+      "F49",
+      "F50",
+      "F53",
+      "F54",
+      "F55",
+      "F58",
+      "F63"
+     ]
+    },
+    {
+     "order": 15,
+     "name": "Launch: package, docs, positioning, first live purchase",
+     "what": "mcp/package.json private:false, name `opencite-mcp`, description 'native-order, interleaved', README auth section rewritten (key required, 1 credit/call), `npm publish`; list on Smithery/Glama/PulseMCP; README/index.html rewrite around the three differentiators (heritage/Islamicate/museum breadth alongside 250M papers; citation-ready in 5 formats + graph + ID resolution; pay only for delivered coverage), remove 'origin-blind', 'ranked', 'zero AI tokens', $2.99 roadmap, opencite.app; real JSON-LD + OG tags; Shahbaz performs one real $10 live purchase end-to-end (sign-in → pack → Developers panel → key → MCP query → credit_events rows → Stripe payout) then refunds it to exercise clawback; post Show HN / r/ClaudeAI / r/LocalLLaMA with a demo query that only OpenCITE answers.",
+     "why": "Zero discoverability today; the differentiators are buried; a self-purchase is the only way to prove the whole chain before a stranger pays.",
+     "effort_hours": 8,
+     "depends_on": [
+      11,
+      12,
+      13,
+      14
+     ],
+     "findings_addressed": [
+      "F27",
+      "F61",
+      "F43 (JSON-LD/OG half)",
+      "F74"
+     ]
+    },
+    {
+     "order": 16,
+     "name": "[Days 31-60] Remote MCP + directory prerequisites + trial funnel",
+     "what": "Add /api/mcp Streamable-HTTP route with API-key auth (function slot free on Pro); apply to Claude/Cursor connector directories once privacy policy is live; execute a trimmed v0.37: per-IP trial (5/week) on /api/search only after step 13's limiter exists, 402 with upgrade link (no in-app checkout links for ChatGPT); add OpenCitations adapter from citationGraph TODO(reuse); adopt Europe PMC as server-side biomedical source.",
+     "why": "Directory listing is the scalable acquisition channel; the trial converts anonymous agent discovery to signup.",
+     "effort_hours": 22,
+     "depends_on": [
+      15
+     ],
+     "findings_addressed": [
+      "F27 (remote MCP half)",
+      "F60"
+     ]
+    },
+    {
+     "order": 17,
+     "name": "[Days 31-60] Documentation integrity pass",
+     "what": "Delete Health-Dashboard (Rule 8) or reduce to generated counts; regenerate Adapter-Health-Matrix from the step-14 probe script; strip page-local statuses in Bugs/Security/Proxy/Shared-Modules/Auth-Sessions/Per-Source-Routes/Billing-Credits; prune Tech-Stack/Glossary/UI-Map/What-We-Did-Well engine references; Billing page 'where billing applies'; add wikilink/file:line/code-fence lint to --check; make 10-Sprints/Index the single sprint→SHA→deploy status table and point every log header at it; tag archive/v0.35-tip; git rm .claude/memory; delete stale feature branches.",
+     "why": "Four doc surfaces disagree with each other and with prod; the sprint logs cannot be used as a tracker.",
+     "effort_hours": 12,
+     "depends_on": [
+      4
+     ],
+     "findings_addressed": [
+      "F68",
+      "F69",
+      "F70",
+      "F71",
+      "F72",
+      "F73",
+      "F76",
+      "F77",
+      "F101",
+      "F105",
+      "F107",
+      "F109"
+     ]
+    },
+    {
+     "order": 18,
+     "name": "[Days 31-90] Funnel polish, security hygiene, web value",
+     "what": "Persistent 'N sources unavailable' disclosure + all-failed vs sparse distinction + progressive reveal after core settles; single post-value auth nag mentioning the API; a11y basics on search/filters/logo; degraded-state banner; fonts subset + Ko-fi deferred; flip CSP to enforcing after a violation review; move admin allowlist server-side (client learns isAdmin from /api/credits); unconditional first-wins dedup + rewritten tests; useCallback for ResultCard props; titleFingerprint null for 'Untitled'; ONB/BnF CQL AND operators; cap single-source coverage weight at 40%; then decide whether Pro returns as a web plan built around features the free app lacks (citation graph UI, exports, cloud sync) or stays hidden.",
+     "why": "These improve conversion and safety but none blocks the first dollar; sequenced after revenue exists.",
+     "effort_hours": 24,
+     "depends_on": [
+      15
+     ],
+     "findings_addressed": [
+      "F19",
+      "F44",
+      "F45",
+      "F96",
+      "F98",
+      "F108",
+      "F85",
+      "F93",
+      "F94",
+      "F95",
+      "F57",
+      "F100",
+      "F54 (weight cap)",
+      "F9 (Pro decision)"
+     ]
+    }
+   ],
+   "cut_list": [
+    "Do NOT merge any Dependabot PR or push to main until step 4 lands; take the bumps in-tree.",
+    "Do NOT sell Student or Pro subscriptions in the 30-day window: hide both cards; delete the Student verification idea (no SheerID/manual flow) until there is demand.",
+    "Do NOT build the mobile IAP rail or any native shell; remove the App Store/Google Play strings and platform.js from the bundle.",
+    "Do NOT route browser search through /api/search or add web metering/tier gating; the web stays free and unlimited (it burns no OpenAlex project budget and is the top-of-funnel).",
+    "Do NOT fix BASE, Thaqalayn, LA Referencia, Met, PANGAEA or Open Context; quarantine them (serverSafe:false, corpusSize dropped) exactly like BL/Mexicana in v0.44. No Vercel Secure Compute / BASE IP registration.",
+    "Do NOT revive BM25F/RRF/semantic/synonyms or build any ranking engine; the only ordering change is lane order + a stricter content match.",
+    "Do NOT execute the full v0.37 funnel (forced /auth/connect-ai, per-IP trial) before step 13's limiter and step 12's privacy policy exist; it is a day-31+ item.",
+    "Do NOT keep Ko-fi on Hobby; remove the widget until Vercel Pro is active.",
+    "Do NOT hand-maintain Health-Dashboard or Adapter-Health-Matrix; delete or generate them.",
+    "Do NOT ship a CLI, PyPI package, or anything under the name `opencite` (taken); npm name is `opencite-mcp`.",
+    "Do NOT pursue institutional/enterprise outreach, invoicing, or provenance features in the 90-day window.",
+    "Do NOT write a Python/Rust/Go rewrite, embeddings service, or hosted-model work; the app is IO-bound.",
+    "Do NOT add any new file under api/ that is not strictly needed (Pro lifts the cap, but keep the dispatcher pattern for reconcile/health/account).",
+    "Do NOT touch api/auth/handler.js beyond the dependency bump; the OAuth path is incident-prone and out of scope.",
+    "Stop writing sprint logs with self-declared status headers; status lives only in 10-Sprints/Index (sprint → SHA → deploy id)."
+   ],
+   "risks": [
+    "Supabase restore window: if the one-click window has already closed (est. 2026-09-15..22 but the pause date is unverified), recovery becomes download-.backup + new project, which changes the project ref and every POSTGRES_* var; do step 1 first, today.",
+    "Prod cannot be reproduced from any git ref: the step-4 redeploy will change behavior in at least BillingContext/Layout (credits contract) and possibly credits/settings handlers; verify live markers immediately and keep dpl_2ZTVC6KJHiFH9NKFBvdHni3q82P3 as the rollback target.",
+    "Pre-commit hook + 152-file dirty tree: a single `git add -A` commit is the plan, but staged/unstaged splits (renames into _quarantine) must be reviewed so main does not import deleted files; the commit itself only happens on Shahbaz's explicit instruction per CLAUDE.md.",
+    "Stripe webhook API version is unverifiable from the repo; if the endpoint is on basil, the first-invoice grant path is wrong until step 8 lands — do not enable prices before then.",
+    "OpenAlex economics: a free project key gives ~$1/day; above ~500 all-tier queries/day the margin goes negative even at $5/1k unless CURATED is folded out (step 10) and heritage fan-out is eventually priced at 2 credits; the 'all' tier must be watched via the new X-RateLimit-Remaining-USD telemetry.",
+    "Legal gating is external: counsel review of the ToS and the upstream ToS conflicts (Internet Archive scholarship-only, BnF attribution vs origin-blind stripping of source) are not closed by quarantining BASE/Thaqalayn; IA and BnF stay as documented-risk keeps and may need a 'Sources' attribution page that relaxes B1.",
+    "Fixed costs precede revenue: Vercel Pro $20/mo + Supabase Pro $25/mo (if chosen) + OpenAlex overage need ~5 packs/month to break even; the decision to go Pro on Supabase vs keepalive-only is Shahbaz's.",
+    "Demand is unproven (0 stars, 0 forks, zero traffic); the first-dollar path assumes directory listings and community posts produce at least one developer who values heritage/Islamicate coverage + citation graph over free OpenAlex MCPs. If two weeks after step 15 produce zero purchases, revisit whether the web-side Pro plan (step 18 decision) is the better SKU.",
+    "Solo capacity: the 30-day scope is ~78 h (steps 1-15) — feasible at ~3 h/day with Claude Code but with no slack; steps 12 and 14 are the ones to cut down (ship 2 legal pages + account deletion first; quarantine before fixing Gallica) if the schedule slips.",
+    "The 2026-07-05 sign-in failure ('iss' missing at OAuth-response stage) is a second, unexplained auth defect independent of the DB pause; step 5's monitor will catch a recurrence but the root cause should be checked on the first live sign-in after restore before any customer is sent through checkout."
+   ]
+  },
+  {
+   "angle": "USER/PRODUCT-FIRST — the one user is the AI-native humanities / area-studies researcher-developer (grad student, independent scholar, DH engineer) who already works inside Claude Desktop or Cursor and whose sources live in museum, library, manuscript and Islamicate catalogs that Google Scholar, OpenAlex and ChatGPT do not index. Their journey — discover → install the MCP in 2 minutes → get real, citation-ready sources across papers AND archives → run out of free credits → buy a pack — is the spine of the plan. The free web app is kept free and unmetered as the top-of-funnel; the only thing sold in the first 30 days is API/MCP credits.",
+   "thesis": "OpenCITE cannot win as a cheaper OpenAlex wrapper (free MIT MCPs already cover that, and OpenAlex now charges upstream). It can win as the only hosted, zero-install research tool an AI assistant can call that returns papers plus heritage/manuscript/Islamicate archive records in one contract, citation-ready in five formats, with a citation graph and ID resolution, and bills only for coverage actually delivered. The bet: stop selling web subscriptions that buy nothing, make the web app the free demo, and turn the existing (already-built, currently unreachable) metered API + MCP into a 2-minute Claude Desktop install with a self-serve key and a repriced $10 pack. Everything in the next 30 days either unblocks that single journey (DB restore, prod==main, Vercel Pro, key UI, plan=machine, legal pages, OpenAlex key) or makes the metered answer good enough to pay for (real result counts, honest coverage, dead sources removed). Everything else is cut or pushed to 90 days.",
+   "mvp_definition": "MVP = \"OpenCITE for your AI\". Concretely: (1) prod == main, Supabase restored, backed up off-site and kept alive; (2) a signed-in user opens a Developers panel, mints an API key (shown once), copies a Claude Desktop / Cursor config block, and `npx opencite-mcp` works within 2 minutes; (3) every metered /api/search call returns up to `limit` (≥20) interleaved results across the serverSafe set with OpenAlex-first lane ordering, no dead-but-200 sources in the coverage denominator, citation formats honored on cache hits, and no charge for zero-adapter fan-outs; (4) the free account carries 20 credits; a 402 links to Plans, where the ONLY purchasable SKUs are repriced credit packs ($10 = 2,000 · $50 = 12,500 · $200 = 60,000); a pack purchase flips the user to plan=machine (all tier, 300/min) only after payment_status=paid, and refunds/disputes claw credits back; (5) ToS, Privacy, Refund and Contact pages are published and linked from the footer, AuthModal and Stripe checkout; (6) the web app remains free and unmetered, with Plans copy that says so; Student and Pro subscription cards are hidden; (7) Vercel Pro, Web Analytics on, uptime probe on a DB-touching path, OpenAlex project key injected server-side, CURATED removed from the API default set. Done means Shahbaz completes the whole journey on a second Google account with a real $10 charge (then refunds it) against live prod.",
+   "first_dollar_path": "Day 1: Shahbaz resumes Supabase OpenC_Auth (before the ~Sep 15–22 one-click window closes), dumps it off-site, upgrades Vercel to Pro, enables Web Analytics. Days 2–4: make the tree committable (ledger restatus so --check passes), fill v0.44 Actuals, Shahbaz commits main == prod, bump @auth/core in-tree and close the Dependabot PRs. Days 5–14: ship the pack-only rail (hide Student/Pro, pack→plan=machine, lazy 20-credit grant, payment_status gate, basil price shape), reprice packs, inject OPENALEX_API_KEY, thread pageSize so limit works, precision-ordered lanes, quarantine the six dead adapters + fix Gallica, harden the metering edge (limiter before DB, header-only keys, term cap), publish legal pages, build the Developers panel + checkout-return handling, publish `opencite-mcp` to npm. Day 15: CLI deploy; Shahbaz signs in on a second Google account → Developers → mint key → paste config into Claude Desktop → ask Claude for sources on an Ottoman manuscript topic → burns 20 free credits → 402 → Buy $10 pack → webhook sets plan=machine → search resumes with all-tier sources → refund the test charge. Days 16–30: rewrite README/index.html around the real differentiators, serve /openapi.json + /docs, list on Smithery/Glama/PulseMCP, post Show HN + r/ClaudeAI + two DH communities, and DM 10 named researchers who already use Claude for archival work with a personal install link. First external $10 pack is expected from one of those 10 DMs or the Smithery listing; the 402→Plans link is the only conversion mechanism that needs to exist.",
+   "steps": [
+    {
+     "order": 1,
+     "name": "Restore Supabase, take the first off-site dump",
+     "what": "Supabase dashboard → OpenC_Auth → Resume; wait ACTIVE_HEALTHY; verify row counts for users/api_keys/processed_events/_prisma_migrations via MCP SQL; `supabase db dump` to a local + cloud location outside Vercel/Supabase; reset pooler password if 'Tenant or user not found' persists; confirm /api/auth/session no longer 500s on a real sign-in. Do NOT upgrade Supabase to Pro yet — a keepalive cron (step 15) is enough to prevent re-pause.",
+     "why": "Every user, key, credit balance and Stripe idempotency record lives only here; the one-click restore window most likely closes ~2026-09-15..22. Nothing downstream (sign-in, key mint, checkout, webhook) can be built or verified until this is done.",
+     "effort_hours": 1.5,
+     "depends_on": [],
+     "findings_addressed": [
+      "3"
+     ]
+    },
+    {
+     "order": 2,
+     "name": "Vercel Pro + dashboard-only safety rails",
+     "what": "Upgrade team to Vercel Pro ($20/mo); enable Web Analytics (component already mounted); add one WAF rate-limit rule on path /api/proxy (per-IP, 60/10min); in Project → Git, temporarily disable production deploys from the main branch until step 3 lands so a Dependabot merge cannot ship the pre-v0.44 engine; set OPENCITE_MAILTO and NCBI_API_KEY env vars while in the dashboard.",
+     "why": "Hobby fair-use forbids any payment or donation surface (already violated by Ko-fi + checkout), and Hobby's 12-function cap and transfer caps would be tripped by the proxy relay. Pro is the price of being allowed to take the first dollar.",
+     "effort_hours": 1,
+     "depends_on": [],
+     "findings_addressed": [
+      "25",
+      "24",
+      "15",
+      "7",
+      "56"
+     ]
+    },
+    {
+     "order": 3,
+     "name": "Make the v0.44 tree committable and commit it (main == prod)",
+     "what": "Edit SSOT fragments only: restatus F-200/201/202/204/205/207/209 → moot, F-405 → fixed, F-100/106/408/409 → quarantined; delete the 14 dead module records; add contentMatch.js; fix constants.vocabulary / lib.goldSetMetrics wiki refs; run `node scripts/wiki/build-machine-map.mjs --check` until green (hook then regenerates twin + wiki-gh). Fill sprint_log_v0_44.md §Actuals with dpl_2ZTVC6KJHiFH9NKFBvdHni3q82P3; delete the stray root files (_verify_ia.mjs, Tempia_fts.json, Users…unpaywall_probe.json); tag the dangling v0.35 tip `archive/v0.35-tip`. Then Shahbaz runs the single `git add -A && git commit` (explicit ask, per CLAUDE.md) and pushes; re-enable Git production deploys.",
+     "why": "Prod is a mid-sprint snapshot no git ref reproduces; every later step edits files that are uncommitted, and the pre-commit hook blocks the commit until the ledger is fixed. This is the only way to make 'deploy from main' safe again.",
+     "effort_hours": 3,
+     "depends_on": [
+      1
+     ],
+     "findings_addressed": [
+      "16",
+      "7",
+      "31",
+      "41",
+      "67",
+      "77",
+      "92",
+      "104"
+     ]
+    },
+    {
+     "order": 4,
+     "name": "Take the security bumps in-tree, close Dependabot PRs",
+     "what": "Bump @auth/core 0.41.3, @auth/prisma-adapter 2.11.3, @modelcontextprotocol/sdk 1.30.0 in package.json/mcp/package.json (Shahbaz runs the install per rules — no local npm by the agent); close PRs #6/#7/#8; add a one-line note in CONTRIBUTING/README that Dependabot PRs are never merged directly.",
+     "why": "CVE-2026-73420 (critical) is not exploitable in this config, but the hygiene bump must ride the normal CLI/commit path, never a PR merge that would have regressed prod.",
+     "effort_hours": 0.5,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "86"
+     ]
+    },
+    {
+     "order": 5,
+     "name": "Pack-only paid rail: fix the product contract",
+     "what": "src/constants/pricing.js + Panels.jsx: hide Student and Pro cards (keep code behind a `SUBSCRIPTIONS_ENABLED=false` flag), rewrite the Plans panel as two truths — 'Web app: free, all sources, no limits' and 'API & MCP credits for your AI' — derive SOURCE_COUNT from the adapter registry, delete the IAP/App Store rail strings. api/stripe/webhook.js pack branch: gate on `payment_status === 'paid'` (and handle checkout.session.async_payment_succeeded), set `plan:'machine'` when current plan is free. api/_shared: seed free users with 20 credits via a lazy grant in resolveApiKey/credits handler when credits_period != current month (FREE_MONTHLY_GRANT SSOT). Rename the chip label by tier ('credits' for machine, 'searches this month' otherwise).",
+     "why": "Today every paid SKU either buys nothing (subscriptions) or buys the wrong thing (packs land on core-only/30 rpm). Collapsing to one rail closes ten findings at once and removes the false '20 searches/month' web copy.",
+     "effort_hours": 4,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "1",
+      "5",
+      "9",
+      "13",
+      "17",
+      "34",
+      "65",
+      "20",
+      "12",
+      "33",
+      "97"
+     ]
+    },
+    {
+     "order": 6,
+     "name": "OpenAlex project key + reprice + drop CURATED from the API default",
+     "what": "Register a free OpenAlex API key, inject via serverKeys.js and pass `api_key` in openalex.js/curatedJournals.js; exclude CURATED from the API's default eligible set (opt-in via ?sources= with caller ISSNs) so one query = one OpenAlex search call; add X-RateLimit-Remaining-USD to adapter telemetry; reprice packs in plans.js + pricing.js to $10 = 2,000 · $50 = 12,500 · $200 = 60,000 (≈$0.005→$0.0033/query, cost-plus over $0.001 upstream); create the three new Stripe Prices and set STRIPE_PRICE_PACK_* env vars.",
+     "why": "At current prices every query loses money above ~500/day and the keyless allowance dies after ~50 all-tier queries/day shared across all customers — the product would go dark on its first real user.",
+     "effort_hours": 3,
+     "depends_on": [
+      5
+     ],
+     "findings_addressed": [
+      "8",
+      "10",
+      "26",
+      "99"
+     ]
+    },
+    {
+     "order": 7,
+     "name": "Developers panel + post-checkout return",
+     "what": "New `DevelopersPanel` (reuse Panels.jsx patterns, existing GET/POST/DELETE /api/keys): list keys (prefix, created, last used), 'Create key' shows plaintext once with copy button, revoke inline-confirm; a quickstart tab with a `curl -H x-api-key` example and a ready-to-paste `claude_desktop_config.json` / Cursor block for `npx -y opencite-mcp`; credits balance + 'Buy credits' → Plans. App.jsx: on mount read `?checkout=success|cancel`, open a confirmation panel (success → 'Credits added — create your key'), poll /api/credits 3× over 10 s, `history.replaceState` to strip the param. Footer link 'Developers'.",
+     "why": "This is the missing middle of the funnel: credits are only spendable via a key and no UI can mint one. Without it a paying customer receives nothing.",
+     "effort_hours": 6,
+     "depends_on": [
+      5
+     ],
+     "findings_addressed": [
+      "2",
+      "18",
+      "83"
+     ]
+    },
+    {
+     "order": 8,
+     "name": "Make the metered answer worth paying for",
+     "what": "Thread `opts.pageSize = Math.min(limit, adapterMax)` from api/search.js through runSearch into every adapter (keep browser 3/5 defaults); order interleave lanes by a static precision rank (OpenAlex, Crossref, DOAJ, Europe-PMC-style sources first, heritage after) instead of registry order; require ≥ceil(n/2) meaningful terms in hasContentMatch for Crossref; return 400/503 when `adapters.length === 0` before preAuthorize and map coverage total===0 → 'limited'; include `cite` in cacheKey (or cache pre-render records and render per request); add `version:'2'` to API_CONTRACT echoed as X-OpenCITE-API-Version and folded into the cache key.",
+     "why": "A free-tier query today returns ≤12 candidates regardless of limit, with off-topic Crossref hits at ranks 3/6/9 — an agent developer will churn on the first call. These four changes are what make 'citation-ready sources across papers + archives' true.",
+     "effort_hours": 6,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "6",
+      "21",
+      "14",
+      "32",
+      "40"
+     ]
+    },
+    {
+     "order": 9,
+     "name": "Adapter honesty: quarantine the dead, fix Gallica, unbreak the proxy",
+     "what": "Flip serverSafe:false / quarantine (v0.44 T5 pattern) BASE, THAQALAYN, LA_REFERENCIA, PANGAEA, OPENCONTEXT; fix MET by dropping artistOrCulture=true (0.5h); rewrite api/search/gallica.js to the xmlUtils regex SRU helpers (inline under api/_shared) so the heritage flagship works; make every shim adapter `throw` on `data.error` (mirror europeana.js:49); add data.rijksmuseum.nl, api.core.ac.uk, ndl.iitkgp.ac.in to ALLOWED_DOMAINS and remove the five quarantined hosts; add AbortSignal.timeout(10s) to api/proxy.js; treat upstream error bodies as adapter failures in base.js-style parsers.",
+     "why": "Six sources return 200-with-nothing and inflate the coverage band, so paying customers are charged 'full' for a library that is >30% unreachable, while the one heritage source developers will demo (Gallica) has never worked in prod.",
+     "effort_hours": 5,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "22",
+      "29",
+      "42",
+      "46",
+      "47",
+      "48",
+      "49",
+      "50",
+      "51",
+      "52",
+      "53",
+      "54",
+      "58",
+      "78",
+      "89",
+      "91"
+     ]
+    },
+    {
+     "order": 10,
+     "name": "Polite-pool identity and honest User-Agent",
+     "what": "Shared server fetch wrapper sets `User-Agent: OpenCITE/<APP_VERSION> (https://citation.today; mailto:<role address>)`; hard-code a fallback mailto when OPENCITE_MAILTO is unset; ncbi.js appends tool/email/api_key; drop the Chrome UA spoof in proxy.js server branch; ignore caller-supplied `mailto` on the metered API (always project identity).",
+     "why": "Crossref drops to 1 req/s without mailto (live-verified) and NCBI's 3 req/s shared budget guarantees 429s at machine-plan rates; also removes the ToS-violation surface with NCBI/Open Library.",
+     "effort_hours": 1.5,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "55",
+      "56",
+      "63",
+      "90"
+     ]
+    },
+    {
+     "order": 11,
+     "name": "Metering-edge hardening before onboarding paying callers",
+     "what": "Run a per-IP KV limiter before any DB touch on /api/search, /api/citations, /api/ids (apply to the 401 path); reject malformed keys by regex before hashing; move/debounce last_used_at (≥60 s); drop `?key=` query support (header only); cap `;` terms at 5 and q length at 512 in apiContract.js; key checkRateLimit on userId; cap /api/proxy streamed bytes at 2 MB with an Edge-style Sec-Fetch-Site soft guard; silently intersect unknown `sources=` ids instead of 400.",
+     "why": "An attacker with no credential can drive unbounded Postgres traffic through pgBouncer, a single credit can fan out thousands of upstream calls, and bearer keys would land in request logs — all cheap to fix now, expensive after the first customer.",
+     "effort_hours": 4,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "36",
+      "37",
+      "38",
+      "81",
+      "15",
+      "35",
+      "88"
+     ]
+    },
+    {
+     "order": 12,
+     "name": "Webhook correctness for real money",
+     "what": "priceIdFromInvoice reads `line.pricing?.price_details?.price` then `line.price?.id`, and prefers the subscription metadata plan (kept for when subscriptions return); pin the endpoint API version in the Stripe dashboard and record it in webhook.js; handle charge.refunded and charge.dispute.created by decrementing pack credits (floor 0) and logging; create Stripe customers with an idempotency key of userId; write an ApiUsage upsert per successful charge (or drop the model).",
+     "why": "Refunds and disputes must claw back credits before the first sale, and a version-shape mismatch would silently mis-grant the day subscriptions are re-enabled.",
+     "effort_hours": 2,
+     "depends_on": [
+      5
+     ],
+     "findings_addressed": [
+      "4",
+      "28",
+      "33",
+      "84",
+      "82"
+     ]
+    },
+    {
+     "order": 13,
+     "name": "Publish the legal surface",
+     "what": "De-draft Terms-of-Service.md into plain language (credits non-refundable after use; 14-day withdrawal on unused packs; pro-rata not needed with packs only); write Privacy (Google OAuth, Supabase, Stripe, Vercel Analytics/Speed Insights, each upstream named; deletion by email until step 21 ships), Refund/Cancellation, Contact + DMCA agent. Ship as static public/legal/*.html excluded from the SPA catch-all; link from Footer, AuthModal, Developers panel; set `consent_collection:{terms_of_service:'required'}` and Stripe Dashboard public-details URLs; show 'USD' by prices. Add mcp/LICENSE (MIT) and carve mcp/ out of the root LICENSE definition.",
+     "why": "Stripe's website checklist and every dispute hinge on these; Anthropic's connector directory later requires a privacy policy; the LICENSE contradiction blocks the npm publish in step 14.",
+     "effort_hours": 6,
+     "depends_on": [
+      2
+     ],
+     "findings_addressed": [
+      "11",
+      "30",
+      "28",
+      "64"
+     ]
+    },
+    {
+     "order": 14,
+     "name": "Publish opencite-mcp and fix the MCP contract",
+     "what": "mcp/package.json: private:false, name `opencite-mcp`, description 'native-order, interleaved', bin entry for `npx -y opencite-mcp`; mcp/README rewrite (key REQUIRED, 1 credit/call, quickstart copied from the Developers panel); delete lowConfidence/score branches in schema.js, fix openApiSpec security/description/401 text; move /api/citations and /api/ids descriptors into apiContract.js so the SSOT claim is true; fix the Windows import.meta.url guard; `npm publish`; submit to Smithery, Glama, PulseMCP.",
+     "why": "The install path for the target user is `npx` in Claude Desktop; today the package is npm-private and its docs tell developers the key is optional and promise fields that never arrive.",
+     "effort_hours": 3,
+     "depends_on": [
+      8,
+      13
+     ],
+     "findings_addressed": [
+      "27",
+      "40",
+      "79",
+      "80"
+     ]
+    },
+    {
+     "order": 15,
+     "name": "Ops safety net",
+     "what": "scripts/migrate.mjs: pass the URL via env, log a redacted command, skip entirely unless VERCEL_ENV==='production', gate the fallback on the P3005 text; scripts/preflight.mjs asserting AUTH_SECRET≥32, API_KEY_PEPPER, SETTINGS_ENCRYPTION_KEY, POSTGRES_*, AUTH_GOOGLE_*, OPENALEX_API_KEY in production builds; a daily Vercel cron (Pro allows it) hitting a health handler in api/user/[resource].js that runs `SELECT 1` (Supabase keepalive); UptimeRobot checks on that health path + /api/credits (expect 401) + /api/search/gallica?q=test (expect results, no 'error'); route log.err 5xx from auth/webhook to a Discord webhook.",
+     "why": "The last outage ran for weeks undetected and the next prod build while the DB is down would print the DB password into the build log.",
+     "effort_hours": 2.5,
+     "depends_on": [
+      1,
+      2
+     ],
+     "findings_addressed": [
+      "23",
+      "59",
+      "102",
+      "24",
+      "3"
+     ]
+    },
+    {
+     "order": 16,
+     "name": "Deploy and walk the journey end-to-end with real money",
+     "what": "CLI deploy from the committed main; on a second Google account: sign in → Developers → mint key → paste config into Claude Desktop → ask for sources on an Islamicate-manuscript topic → verify ≥20 interleaved results incl. Gallica/Europeana/DPLA → exhaust 20 credits → 402 with Plans link → buy the $10 pack → confirm webhook sets plan=machine and the chip shows credits → refund in Stripe and confirm clawback. Also run the v0.38 T2/T3 coverage verification against live with the admin key and record results in COVERAGE_VERIFICATION_v0_38.md.",
+     "why": "CLAUDE.md requires verification against live prod; this is the first time the whole money path has ever been exercised.",
+     "effort_hours": 2,
+     "depends_on": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+     ],
+     "findings_addressed": [
+      "16",
+      "109"
+     ]
+    },
+    {
+     "order": 17,
+     "name": "Top-of-funnel for the target user",
+     "what": "Rewrite README (one paragraph: 'the only research tool your AI can call that reaches museum, manuscript and Islamicate archives alongside 250M papers, citation-ready in 5 formats, billed only for coverage delivered'; citation.today link; Developers/MCP quickstart; sources = registry; drop opencite.app, $2.99 roadmap, 'origin-blind', 'ranked', 'zero AI tokens', 'No tracking'; add OpenCitations non-affiliation line). index.html: real WebApplication JSON-LD, og:/twitter:/canonical, prerendered hero + source list + API blurb, sitemap.xml. Serve static /openapi.json (from cleaned openApiSpec()) and a /docs page excluded from the SPA rewrite.",
+     "why": "Discovery is zero today; an agent developer searching for 'scholarly MCP' or a DH researcher searching 'search Gallica and OpenAlex together' finds nothing that names OpenCITE's actual edge.",
+     "effort_hours": 4,
+     "depends_on": [
+      14,
+      16
+     ],
+     "findings_addressed": [
+      "61",
+      "74",
+      "43",
+      "75",
+      "27"
+     ]
+    },
+    {
+     "order": 18,
+     "name": "Launch to the persona, measure, iterate",
+     "what": "Show HN + r/ClaudeAI + r/DigitalHumanities + the DH Slack / Humanist list + X thread, each with the 30-second Claude Desktop demo GIF on an archival query; 10 personal DMs to researchers/DH developers who have publicly written about using Claude/ChatGPT for archival work, each with a pre-minted install link and a free 200-credit grant (admin SQL); watch Vercel Analytics + api_usage; a weekly 1-hour review to pick the next fix from what the first 10 users hit.",
+     "why": "The revenue mechanism is a 402 that a real user reaches; nothing reaches it without traffic from the exact persona.",
+     "effort_hours": 4,
+     "depends_on": [
+      17
+     ],
+     "findings_addressed": [
+      "60"
+     ]
+    },
+    {
+     "order": 19,
+     "name": "[90-day] Remote MCP + connector directories",
+     "what": "Add a Streamable-HTTP /api/mcp Node route with API-key auth (function slots are unlimited on Pro), then an OAuth flow so it can be a Claude custom connector; apply to the Claude and ChatGPT directories with the published privacy policy and an upstream-sources disclosure page (drop the 'origin-blind' framing publicly; keep it a contract detail).",
+     "why": "Directory listing is the compounding acquisition channel for the persona; it needs remote HTTPS + policy pages that step 13 provides.",
+     "effort_hours": 12,
+     "depends_on": [
+      18
+     ],
+     "findings_addressed": [
+      "27"
+     ]
+    },
+    {
+     "order": 20,
+     "name": "[90-day] Give humans a reason to pay (only if data says so)",
+     "what": "Ship what the free app lacks: citation-graph explorer UI and BibTeX/CSV export on /api/citations + /api/ids (already built server-side), then re-enable a single Pro card sold on those features + a bundled key/credits — never on 'more searches' or 'more databases'. Decide from step 18 usage whether to enable at all.",
+     "why": "The only defensible human upsell is features, not quotas the free SPA already ignores.",
+     "effort_hours": 10,
+     "depends_on": [
+      18
+     ],
+     "findings_addressed": [
+      "9",
+      "1"
+     ]
+    },
+    {
+     "order": 21,
+     "name": "[90-day] Privacy and tax completeness",
+     "what": "DELETE /api/user/account (Prisma cascade, Stripe customer delete) + JSON export; Stripe Customer Portal link in Plans; `automatic_tax`, `billing_address_collection`, `tax_id_collection` on checkout; move VITE_ADMIN_EMAILS server-side and expose isAdmin via /api/credits; scrub .env.local.example.",
+     "why": "Required before EU sales and before any directory listing review; admin emails in the public bundle are a needless exposure.",
+     "effort_hours": 6,
+     "depends_on": [
+      16
+     ],
+     "findings_addressed": [
+      "30",
+      "62",
+      "28",
+      "85",
+      "103",
+      "87"
+     ]
+    },
+    {
+     "order": 22,
+     "name": "[90-day] Web app error visibility and a11y basics",
+     "what": "Persistent 'N sources unavailable — details' disclosure in Unified view; distinguish all-failed from few-results; progressive reveal (core first, extensions append) with a total per-adapter budget; single post-value auth nag mentioning the API; search input aria-label, button-ized logo, FilterBar ARIA, ≥12px critical text; AbortSignal.timeout polyfill; degraded-mode banner when /api/* 5xx.",
+     "why": "These improve the free funnel's trust but do not gate the first dollar, so they follow revenue.",
+     "effort_hours": 9,
+     "depends_on": [
+      18
+     ],
+     "findings_addressed": [
+      "19",
+      "44",
+      "45",
+      "95",
+      "96",
+      "39",
+      "94",
+      "98"
+     ]
+    },
+    {
+     "order": 23,
+     "name": "[90-day] Tier-A source adoption and retrieval polish",
+     "what": "Adopt Europe PMC (replace NCBI server-side), Unpaywall and OpenCitations (citationGraph TODO(reuse)); fix ONB/BnF phrase-quoting to per-term CQL; titleFingerprint returns null for 'Untitled'/short titles; consider a light RRF over native ranks if step 8's lane ordering proves insufficient on the gold set; complete the D6 upstream-ToS review for all serverSafe sources (IA documented-risk keep; BnF attribution via a Sources page).",
+     "why": "Raises answer quality for the biomedical and heritage halves of the persona's queries and closes the upstream-ToS exposure for the paid set.",
+     "effort_hours": 12,
+     "depends_on": [
+      16
+     ],
+     "findings_addressed": [
+      "29",
+      "57",
+      "100",
+      "21"
+     ]
+    },
+    {
+     "order": 24,
+     "name": "[90-day] Docs and ledger reconciliation",
+     "what": "docs/wiki/10-Sprints/Index.md becomes the single sprint→SHA→deploy-id status table; move sprint logs there; delete Health-Dashboard (Rule 8) and regenerate Adapter-Health-Matrix from a probe script; rewrite Billing-Credits/Tech-Stack/Glossary/UI-Map/What-We-Did-Well for the pass-through engine; strip page-local finding statuses; add wikilink/file:line lint to --check; regenerate wiki-gh; `git rm -r .claude/memory`; delete stale feature branches.",
+     "why": "Four documentation surfaces disagree; this matters for the next contributor and for directory reviewers, not for the first dollar.",
+     "effort_hours": 8,
+     "depends_on": [
+      3
+     ],
+     "findings_addressed": [
+      "66",
+      "68",
+      "69",
+      "70",
+      "71",
+      "72",
+      "73",
+      "76",
+      "101",
+      "104",
+      "105",
+      "109",
+      "107"
+     ]
+    },
+    {
+     "order": 25,
+     "name": "[90-day] Tests, CSP enforce, backups on a paid plan",
+     "what": "Add `npm test` running the four Node test files; fix goldSetMetrics.test.js pathToFileURL guard; replace dedupHighestScore with unconditional first-wins and rewrite its tests; add a test asserting every proxiedFetch host is allowlisted; review CSP report-only violations and flip to enforcing; once MRR > $50, move Supabase to Pro for daily backups and keep the weekly dump.",
+     "why": "Cheap correctness and posture items that become important once real users and real data exist.",
+     "effort_hours": 4,
+     "depends_on": [
+      16
+     ],
+     "findings_addressed": [
+      "93",
+      "106",
+      "108",
+      "51",
+      "3"
+     ]
+    }
+   ],
+   "cut_list": [
+    "Student plan: hide the card entirely; no verification provider in 90 days (findings 17/34/65).",
+    "Human Pro/Free subscription rail for the first 30 days: subscriptions sell nothing the free web app withholds; keep code behind a flag, decide at 90 days from usage (findings 1/5/9).",
+    "Routing browser searches through /api/search (metering the web app): the web stays free and unmetered by design; it is the demo, not the product.",
+    "v0.37 per-IP trial + forced /auth/connect-ai page: replace with the 20-credit signed-in grant + Developers panel; do not build IP-keyed trial state.",
+    "sprint_log_v0_45.md as written: its T1–T9 items are absorbed into steps 5/8/11/12; do not run it as a separate sprint, and do not build the credit_events journal before the first customer.",
+    "Any re-introduction of BM25F/RRF/semantic/synonyms engine work (findings 200-series are moot); at most a light lane ordering in step 8.",
+    "Merging any Dependabot PR; take the bumps in-tree (step 4).",
+    "BASE static-IP registration, LA Referencia negotiation, Thaqalayn/Open Context re-derivation, PANGAEA field fix: quarantine now, revisit only if a paying user asks.",
+    "Supabase Pro upgrade in the first 30 days (keepalive cron + weekly dump instead) — spend the $20/mo on Vercel Pro, which is mandatory.",
+    "Remote Streamable-HTTP MCP, OAuth, and Claude/ChatGPT directory applications before day 30 (step 19 at 90 days).",
+    "Institutional/library outreach, invoicing, provenance features: months away, no persona evidence.",
+    "Native app / IAP rail and App Store copy: delete the strings.",
+    "Full wiki/docs/ledger rewrite beyond making --check green (step 24 at 90 days).",
+    "a11y/nag/SEO polish beyond OG tags + JSON-LD + README (step 22 at 90 days).",
+    "Ko-fi widget: remove or keep, but stop treating it as a monetization surface; it is a Hobby-terms liability until Pro is active.",
+    "Stripe Tax and account-deletion endpoint before first sale (step 21 at 90 days; privacy policy names an email deletion path meanwhile).",
+    "Counsel review as a gate: publish plain-language ToS/Privacy/Refund now and book counsel review at 90 days if revenue appears.",
+    "Competing on price with OpenAlex wrappers: reprice up, sell heritage breadth + citation formats + coverage-honest billing."
+   ],
+   "risks": [
+    "Supabase one-click restore window (~2026-09-15..22) closes before step 1 runs → falls back to backup-download + new project + env rewrite, adding ~4 h and a new project ref.",
+    "Demand risk is unvalidated: 0 stars, 0 traffic, and free MIT MCPs (paper-search-mcp 2.6k stars) cover the paper half; the heritage/Islamicate edge may be too niche to convert 10 DMs into one $10 pack in 30 days.",
+    "OpenAlex economics: even with a free key the $1/day allowance caps ~1,000 search calls; one enthusiastic agent user can exhaust it and every later customer sees a 'partial' band that day until prepaid credits are added.",
+    "Vercel may act on the existing Hobby fair-use violation (Ko-fi + checkout in the live bundle) before the Pro upgrade lands.",
+    "The single `git add -A` commit is blocked by the pre-commit hook until the ledger fragments are fixed; if --check cannot be made green in 3 h the fallback is a documented `--no-verify` commit of the exact tree prod runs, which conflicts with the PowerShell tool's no-skip-hooks rule and must be Shahbaz's call.",
+    "Stripe API-version shape on the webhook endpoint is unverifiable from the repo; if it is basil, first-invoice handling is wrong the day subscriptions are re-enabled (mitigated in step 12).",
+    "Upstream ToS exposure remains for Internet Archive ('scholarship and research only') and BnF attribution in an origin-blind paid contract; a Sources/attribution page or serverSafe flip may be required if challenged.",
+    "Claude/ChatGPT directory requirements (upstream disclosure, no in-app checkout links) conflict with the 'origin-blind' positioning and the 402→Plans link; the 90-day directory step may require abandoning origin-blindness publicly.",
+    "Solo bandwidth: the 30-day plan is ~59 h of agent-assisted work plus dashboard tasks; any Supabase or Stripe incident consumes the buffer.",
+    "Legal pages written without counsel carry residual risk on refunds and consumer law in the EU/UK; mitigated by pack-only sales and a 14-day unused-credit withdrawal clause.",
+    "Persona mismatch: if early users are pure CS/bio developers rather than humanities researchers, the heritage differentiation will not drive conversion and the plan must pivot to citation-graph/ID-resolution as the lead feature."
+   ]
+  }
+ ],
+ "judged": [
+  {
+   "scores": [
+    {
+     "plan_index": 0,
+     "angle": "REVENUE-FIRST: one SKU (prepaid API/MCP credit packs), web app demoted to free marketing surface, everything off the sign-in→pay→mint→curl path cut or deferred",
+     "score": 7.4,
+     "strengths": "(a) Time-to-first-dollar 7/10: the most direct line to a working curl — Supabase restore day 1, deploy freeze + Pro same day, key UI by day 8, real-card smoke day 13, distribution days 14-30; the plan is explicit that with zero traffic 'the first dollar is a distribution event' and budgets 6h of hand-selling plus Show HN/DMs. (b) P0s 8/10: DB restore + off-site dump + keepalive + migrate.mjs password-redaction all in step 1; deploy footgun frozen in step 2 (Git prod deploys disabled, Dependabot PRs closed); key path (Developers panel on existing /api/keys) at step 6; pack→plan=machine + payment_status gate at step 5. (c) Effort 6/10: per-step estimates are individually plausible and the 30-day set (~54h) is itemized; sensible shortcuts (rename free allowance to '10 free credits' instead of building the grant sweep; flip serverSafe:false instead of fixing six dead adapters; minimal fragment edits to pass the pre-commit hook). (d) Market 6/10: reprices to $5/1k cost-plus, sells the three real differentiators, offers 100 trial credits, removes the fake subscription rail so the offer is true. (e) Cuts 9/10: the longest and sharpest cut list of the three — no web gating, no Student, no dead-adapter fixes, no v0.45 journal before ten customers, no directory listings before remote MCP exists, no wiki rewrite, no a11y/perf, Ko-fi removed, IAP rail deleted, `;`/`?key=` removed rather than documented. Correctly identifies that hiding the subscription cards closes six findings by deletion instead of 16h of gating.",
+     "weaknesses": "Commit of the 152-file dirty tree does not happen until step 10 (day 13), so ~12 days of money-path edits accrue on top of an already-unreproducible prod snapshot; a mistake or interruption before then leaves main even further from prod (mitigated only by the Git-deploy freeze in step 2). No refund/dispute clawback until the 90-day step 15 — a refunded $200 pack keeps 60k credits, covered only by a 'manual procedure documented in refunds.html'; Plan 2 shows this is a 2h item and should be in-window. Monitoring lands at step 11, after all the money-path code, though step 1's health handler + cron partially covers it. Step 8 is under-estimated: threading pageSize through ~28 adapter files + six serverSafe flips + five shim `throw`s + interleave lane reorder + Crossref match tightening + cache-key + AbortSignal polyfill is closer to 10-12h than 7h, so the true 30-day total is ~65-75h, not 54h. Free-tier developers get only the seeded 10 credits (advertised '20/month' finding closed by copy change, which is fine, but nothing itemizes adding an upgrade link to the bare `Insufficient credits.` 402 body, so the out-of-credits moment has no conversion hook). Legal step ships without counsel and with no Stripe Tax/billing-address capture beyond the address field — acceptable at $10 but noted. Step 12 targets Smithery/Glama/PulseMCP listing before any usage data; fine but it is the only distribution that does not require Shahbaz's time.",
+     "score_breakdown": "a=7 b=8 c=6 d=6 e=9 → 7.4 (weighted equally, rounded)"
+    },
+    {
+     "plan_index": 1,
+     "angle": "RISK/STABILITY-FIRST: recover data, make prod reproducible, make the ledger auditable, then sell one SKU (developer credit packs) through one honest path",
+     "score": 6.2,
+     "strengths": "(b) P0s 9/10: the cleanest P0 sequencing of the three — restore+dump (1), footgun neutralised (2), machine-map green (3), commit + CLI redeploy from a known SHA with bundle-marker verification (4), monitoring (5), Pro (6) all before any product change; step 4 bundles the migrate.mjs redaction, VERCEL_ENV guard, preflight env assertions, AbortSignal polyfill and test-runner fix into the same commit, which is exactly the right place for them. (c) Effort honesty 7/10: the only plan that states its real 30-day number (~78h, 'no slack') and names which steps to cut down if it slips (legal step 12 to two pages + deletion; quarantine before Gallica fix). Names the unexplained 2026-07-05 'iss missing' OAuth failure as a second auth defect to check on first live sign-in — a genuinely useful catch none of the others has. (d) Market 6/10: same repriced pack SKU, same three differentiators, self-purchase + refund test before a stranger pays. (a) 5/10 and (e) 5/10 see weaknesses.",
+     "weaknesses": "(a) Time-to-first-dollar 5/10: the key-mint UI (the missing half of the money path) is step 11 of 15, behind the entire v0.45 sprint (12h: credit_events journal, orphan-reconciliation cron + CRON_SECRET, cache single-write, ApiKey.plan drop) and a v0.46 closure (8h) — roughly 20h of ledger plumbing before a customer can obtain a key. The judge brief penalises adding engineering before the funnel works; a journal and reconciliation cron are valuable at ten customers and irrelevant at zero. Realistic first external dollar is day 35-45, not 30. (e) Cuts 5/10: pre-first-dollar scope includes Stripe Tax + tax_id_collection, DELETE /api/user/account + JSON export, Customer Portal link, Gallica DOMParser rewrite, a dated live-probe artifact for every serverSafe adapter, full sprint-log move + wiki-gh regeneration, and a 10h legal step — none of which a $10 pack needs. Step 14 (10h) fixes Gallica and probes every adapter while the cut list simultaneously says 'quarantine, don't fix'. Step 7 runs v0.45 'as planned' including migrations against a Supabase branch — Supabase branching requires the Pro plan the same plan defers deciding on. Monetization surface is opened only at step 9-11, so a solo founder spends ~3 weeks with zero external signal on whether anyone wants the SKU. The persona and launch step (15, 8h) is the thinnest of the three: 'post Show HN / r/ClaudeAI / r/LocalLLaMA' with no named-developer outreach. Ko-fi removal 'until Pro' is contradictory with upgrading to Pro in the same window (harmless).",
+     "score_breakdown": "a=5 b=9 c=7 d=6 e=5 → 6.4 raw; −0.2 for building the v0.45 journal/cron ahead of the key UI → 6.2"
+    },
+    {
+     "plan_index": 2,
+     "angle": "USER/PRODUCT-FIRST: the AI-native humanities/area-studies researcher-developer inside Claude Desktop/Cursor; journey discover→npx install→citation-ready papers+archives→run out of free credits→buy a pack; web stays free",
+     "score": 7.6,
+     "strengths": "(b) P0s 9/10: DB restore day 1 (with the explicit 'do not upgrade Supabase yet' call), Pro + Git-deploy disable + WAF rule + env vars day 1-2, and — the key difference from Plan 0 — the v0.44 tree is made committable and committed at step 3 (days 2-4) BEFORE any money-path edit, so every later change lands on a reproducible main; dependency bumps in-tree at step 4; key path at step 7. (a) Time-to-first-dollar 7/10: the conversion mechanism is the sharpest of the three — a lazy 20-credit grant on sign-in, exhaust → 402 → Plans → pack → webhook flips plan=machine — and step 16 walks that exact loop on a second Google account with a real $10 charge and a refund to exercise clawback, which is the best end-to-end verification design here. Distribution is concrete: 10 named researchers who have publicly written about using Claude for archival work, each with a pre-minted install link and an admin-granted 200 credits, plus a 30-second Claude Desktop GIF on an archival query. (d) Market 6.5/10: the persona is narrow but it is the only one that gives a reason to pay that free MIT OpenAlex MCPs cannot match (Gallica/Europeana/DPLA/Islamicate in one contract), and consequently it is the only plan that fixes Gallica (1.5h via xmlUtils) and Met (0.5h) in-window because they are the demo; risk section explicitly names the pivot (citation-graph/ID-resolution lead) if early users are CS/bio devs. (e) Cuts 8/10: Student hidden, subscriptions flagged off, no web metering, v0.37 IP-trial replaced by the signed-in grant, v0.45 journal deferred, no engine work, no BASE/LA Referencia/Thaqalayn/Open Context/PANGAEA fixes, no Supabase Pro, no remote MCP/directories, no docs rewrite, no a11y, no Stripe Tax/account deletion before first sale, counsel review not a gate, no price competition. (c) Effort 6/10: 59h itemized with dashboard tasks called out separately; clawback (2h) and webhook basil-shape fix are correctly kept in-window as cheap correctness rather than deferred.",
+     "weaknesses": "Persona plausibility is the central bet and is unproven: humanities grad students and independent scholars are the least likely segment to pay for API credits; DH engineers exist but are few, and the plan's own risk list concedes 10 DMs may not yield one $10 pack. Effort is understated in the same places as Plan 0: step 9 (quarantine five adapters + Met fix + Gallica regex rewrite + shim throws + allowlist edits + proxy timeout) is ~8h not 5h; step 5 (hide cards + flag + registry-derived counts + webhook payment_status/async gate + plan=machine + lazy grant + chip relabel) is ~6h not 4h; realistic 30-day total ~72-78h. The MVP says 'a 402 links to Plans' but no step itemizes changing the live `{ error: \"Insufficient credits.\" }` body (api/search.js:276/287, meter.js:53) to carry an upgrade URL, and the MCP client would need to surface it — a small but load-bearing gap in the plan's own conversion loop. Step 3 has the committer push main and re-enable Git production deploys, which means the push itself triggers a production deploy from the hook-regenerated tree — acceptable only if main truly equals the intended prod; the plan should keep Git deploys disabled and CLI-deploy at step 16 (it does CLI-deploy at 16, so the re-enable at step 3 is premature). Monitoring/ops safety net (migrate redaction, preflight, cron, uptime) is step 15 — after all money-path code — whereas Plan 1 lands it before the commit; the migrate.mjs password leak is therefore live for the step-3 push if migrate fails. Free-credit grant seeds 20 credits on sign-in (2 OpenAlex-backed calls each) — fine at the free $1/day key allowance but should be watched. Gallica fix and Met fix add scope Plan 0 deliberately avoided; justified by the persona but they are the first things to drop if the schedule slips.",
+     "score_breakdown": "a=7 b=9 c=6 d=6.5 e=8 → 7.3 raw; +0.3 for committing main==prod before touching the money path and for the second-account real-charge journey walk → 7.6"
+    }
+   ],
+   "best_ideas_to_graft": [
+    "From Plan 1 step 4: bundle the ops hardening into the SAME commit that makes main==prod — scripts/migrate.mjs redaction (pass URL via env, log redacted cmd), `VERCEL_ENV==='production'` guard, P3005-text-gated fallback, a scripts/preflight.mjs that asserts AUTH_SECRET≥32/API_KEY_PEPPER/SETTINGS_ENCRYPTION_KEY/POSTGRES_*/AUTH_GOOGLE_*/OPENALEX_API_KEY, the AbortSignal.timeout polyfill, and the goldSetMetrics pathToFileURL guard + `npm test` script. Cheap (~2h), and it means the first push/deploy after the Supabase pause cannot print the DB password into the build log.",
+    "From Plan 2 step 3 ordering: commit the v0.44 tree to main BEFORE any money-path edit (days 2-4), not on day 13 as Plan 0 does. The machine-map fragment edits are the same ~3h either way; doing them first means every subsequent change lands on a reproducible SHA and a mid-plan interruption cannot widen the main≠prod gap. Keep Git production deploys disabled until the step-16 CLI deploy though — do not re-enable on the push as Plan 2 writes.",
+    "From Plan 1 risks: on the first live sign-in after restore, check the unexplained 2026-07-05 OAuth failure ('iss' missing at the OAuth-response stage) before sending anyone through checkout — it is a second auth defect independent of the DB pause and none of the other plans mention it.",
+    "From Plan 2 step 16 / Plan 1 step 15: walk the entire journey on a SECOND Google account with a real $10 live-mode charge (sign in → Developers → mint key → paste config into Claude Desktop → burn free credits → 402 → buy pack → verify plan=machine + chip → refund → verify clawback). Plan 0's smoke uses Shahbaz's admin account, which is plan=admin/unmetered and would not exercise the 402 or the machine-plan flip.",
+    "From Plan 2 steps 5+12: keep the cheap money-correctness items in the 30-day window rather than the 90-day bucket — charge.refunded/charge.dispute.created clawback (floor at 0, flag account), payment_status==='paid' + async_payment_succeeded gate, basil-safe `line.pricing?.price_details?.price` read, stripe.customers.create with idempotency key=userId, and a lazy FREE_MONTHLY_GRANT when credits_period != current month. Together ~4h; deferring clawback (Plan 0) means a refunded $200 pack keeps 60k spendable credits.",
+    "From Plan 2's conversion loop: make the out-of-credits moment convert — change the bare `{ error: \"Insufficient credits.\" }` 402 body (api/search.js:276/287, meter.js:53) to include `upgrade_url: 'https://citation.today/#developers'` and a `code`, and have the MCP tool surface it in its text block, so an agent user who exhausts trial credits sees the path to a pack without leaving the assistant.",
+    "From Plan 2 steps 9/17-18: if the pitch is heritage breadth, the Gallica edge route must actually work before the demo — the xmlUtils SRU regex helpers already exist (used by ONB/BnF), so it is a ~1.5h inline port under api/_shared, and the Met fix is a one-token change (drop artistOrCulture=true). Both belong in the 30-day window for any plan whose marketing names museum/manuscript archives; quarantine the other four dead sources as Plan 0 does.",
+    "From Plan 2 step 18: seed distribution with named targets, not just broadcast posts — 10 researchers/DH developers who have publicly written about using Claude/ChatGPT for archival work, each DM'd a pre-minted install link plus a 200-credit admin grant, and a 30-second Claude Desktop GIF on a query that only OpenCITE answers. Graft onto Plan 0's broader '20 devs building research/RAG agents' list so both segments are tested in the same two weeks.",
+    "From Plan 0 step 9: rename the free allowance copy to 'N free credits to try the API' and cap the `;` multi-term syntax at 5 terms / 512 chars in apiContract.js, dropping `?key=` support entirely — closes three abuse findings and the '20/month never granted' copy defect in minutes rather than building a grant sweep or documenting the query-string key form.",
+    "From Plan 1 step 5: the uptime probe must exercise a DB-touching path — a `health` handler added to the HANDLERS map in api/user/[resource].js running prisma.$queryRaw`SELECT 1` (no new Serverless Function, doubles as the daily Supabase keepalive cron target) plus /api/credits expecting 401 and a keyless shim route expecting no 'error' in the body. The naive /api/auth/session check would have returned 200 `null` throughout the outage."
+   ]
+  },
+  {
+   "scores": [
+    {
+     "plan_index": 0,
+     "angle": "REVENUE-FIRST: single SKU (prepaid API/MCP credit packs), web demoted to free marketing surface, everything off the sign-in→pay→mint→curl path cut",
+     "score": 7.2,
+     "strengths": "(a) Most realistic day-count: the 30-day scope sums to ~53 h and every step sits on the money path; first-dollar is correctly framed as a distribution event, not an engineering one. (b) Order is right: DB restore + migrate.mjs redaction day 1, deploy footgun + Vercel Pro + WAF rule day 1, OpenAlex key day 2-3, key UI by day 8. (c) Effort numbers are mostly honest and the plan explicitly names what NOT to build (no web gating, no student verification, no adapter fixes, no v0.45 journal, no directory listings). (e) Cuts hardest of the three: renames the free allowance to '10 free credits' instead of building a grant sweep; flips serverSafe:false on six dead sources instead of fixing them; defers Gallica; removes Ko-fi so there is one CTA; defers refund clawback with a documented manual procedure. Correctly reasons that basil invoice-line parsing only matters if subscriptions return. Real-card self-purchase + self-refund smoke before any outsider touches it.",
+     "weaknesses": "Commits main==prod only at day 13 (step 10), after two weeks of further edits to an already-unreproducible dirty tree; disabling Git production deploys mitigates the footgun but leaves the 'prod snapshot no ref reproduces' P0 open longer than necessary and means the eventual single commit is a 160+ file blob with zero intermediate checkpoints. Internal inconsistency: step 9 sets the free allowance to 10 credits, step 14 promises '100 free credits on sign-in'. Step 8 (pageSize threading through 28 adapters + six serverSafe flips + five shim throws + lane reorder + Crossref match + cache key + AbortSignal polyfill) at 7 h is optimistic. Market angle is the weakest of the three: 'research/RAG agent devs' is exactly the audience paper-search-mcp (2.6k stars, MIT) already serves free; the heritage/Islamicate pitch is stated but the DM targets are generic. No clawback until step 15 means the first refund leaves spendable credits (acknowledged). Does not check the 2026-07-05 'iss' OAuth failure before sending a customer through checkout."
+    },
+    {
+     "plan_index": 1,
+     "angle": "RISK/STABILITY-FIRST: recover data, make prod reproducible and ledger auditable, execute full v0.45+v0.46 hardening, then sell one SKU (developer packs)",
+     "score": 6,
+     "strengths": "(b) Best P0 discipline: restore→dump→keepalive, Ignored Build Step, green machine map, single commit, CLI redeploy with bundle-marker verification, then monitoring — all before any product change; explicitly keeps dpl_2ZTVC6KJ as rollback target. Only plan that flags the independent 2026-07-05 'iss'-missing OAuth failure as something to check on the first live sign-in before checkout. Only plan that adds a build-time preflight.mjs so a missing AUTH_SECRET/API_KEY_PEPPER fails the build instead of 500-ing at cold start, and that says 'run migrations against a Supabase branch first'. Honest about capacity: states ~78 h with no slack and names the two steps to cut if it slips. Correct product contract (web free, packs only, Free card kept truthful). Refund/dispute clawback and payment_status gate land before the first sale.",
+     "weaknesses": "(a) Slowest to first dollar: ~50 h of hardening (steps 1-8, including the full 12 h v0.45 sprint with credit_events journal, orphan-reconciliation cron, CRON_SECRET, ApiKey.plan drop) precede the Developers panel at step 11; the journal and reconciler are built for customers who do not exist yet. (c) 78 h in 30 days for a solo founder is admitted to have 'no slack' — i.e. it will not finish in 30 days. (e) Does not cut enough: step 12 (10 h) bundles account deletion, Stripe Tax, tax_id_collection, Customer Portal and a LICENSE fix into the first-dollar gate; step 14 (10 h) fixes Gallica and runs a probe artifact; step 3 spends 3 h on wiki hygiene (sprint-log moves, stray files, v0.35 tag) that has zero revenue impact but sits before the commit. Vercel Pro is step 6, after three days of work on a Hobby plan already in fair-use violation. Market plausibility is the same pack SKU as the others but with a later and less specific launch (step 15 lumps npm publish, README rewrite, JSON-LD, self-purchase and Show HN into one 8 h step)."
+    },
+    {
+     "plan_index": 2,
+     "angle": "USER/PRODUCT-FIRST: one persona (AI-native humanities/area-studies researcher-developer in Claude Desktop/Cursor), journey discover→npx install→cited archive results→402→$10 pack; web stays free demo",
+     "score": 7.4,
+     "strengths": "(b) Best P0 ordering of the three: Supabase day 1, Vercel Pro + disable Git deploys + WAF rule day 1, and — crucially — commits main==prod on days 2-4 BEFORE any product edits, so every later change is a normal commit on a reproducible baseline (Plan 0 waits until day 13). Security bumps taken in-tree immediately with Dependabot PRs closed. (d) Sharpest market thesis: names the persona, the install surface (npx in Claude Desktop), the demo query only OpenCITE answers (Ottoman/Islamicate manuscript topic), and a concrete first-dollar mechanism (402→Plans link) plus 10 named-researcher DMs with pre-minted install links and a 200-credit admin grant — this is the only plan whose launch step is specific enough to execute. Justifies the one adapter fix it keeps (Gallica, the heritage flagship) by the persona's demo, and drops Met's dead flag as a 0.5 h fix. Absorbs v0.45 into steps 5/8/11/12 rather than running it as a sprint; lazy 20-credit grant + payment_status gate + pack→machine + clawback all land in ~6 h combined. End-to-end walk on a second Google account with real money, then refund, before launch. (e) Cuts subscriptions behind a flag, cuts the v0.37 IP-trial, cuts Supabase Pro, cuts directories to 90 days, cuts counsel as a gate.",
+     "weaknesses": "(c) 59 h is understated: step 9 (quarantine five sources + Met fix + Gallica SRU rewrite under api/_shared + shim throws + allowlist edits + proxy timeout) at 5 h and step 11 (KV limiter before DB, key regex, last_used_at debounce, header-only keys, term cap, per-user limiter, proxy 2 MB byte cap, Sec-Fetch-Site guard, sources intersect) at 4 h are each closer to 8-10 h; realistic total is ~70 h. Some scope creep in the 30-day window: step 16 re-runs v0.38 T2/T3 coverage verification (no revenue relevance), step 8 adds an API version header, step 10 builds a shared fetch wrapper. (d) The persona is narrower than Plan 0's and the plan itself admits the pivot risk if early users are CS/bio developers; DH researchers are a low-budget audience for $10 packs. The Gallica fix is the one place it builds a feature before the funnel is proven, though defensible. Keeps a 20-credit lazy grant (2 h) where Plan 0's copy change would do. Ko-fi handling is left ambiguous ('remove or keep')."
+    }
+   ],
+   "best_ideas_to_graft": [
+    "Plan 2 → commit the v0.44 tree to main on days 2-4 (baseline first, then build on it) rather than Plan 0's single day-13 blob commit; keeps every subsequent change reviewable and prod reproducible throughout the sprint.",
+    "Plan 1 → before sending anyone through checkout, reproduce the 2026-07-05 'iss'-missing OAuth failure on the first live sign-in after restore; it is an auth defect independent of the DB pause and would break the funnel at step one.",
+    "Plan 1 → scripts/preflight.mjs run from the build script that asserts AUTH_SECRET≥32, API_KEY_PEPPER, SETTINGS_ENCRYPTION_KEY, POSTGRES_*, AUTH_GOOGLE_*, OPENALEX_API_KEY when VERCEL_ENV==='production' and exits non-zero — the one place a build SHOULD fail; pair with migrate.mjs URL redaction.",
+    "Plan 1 → after resume, explicitly verify the pooler tenant password and rotate/update POSTGRES_* in Vercel + ops_credentials memory if 'Tenant or user not found' persists; and run any new migration against a Supabase branch first.",
+    "Plan 1 → Vercel 'Ignored Build Step = exit 0' on production as the mechanical guard against a Dependabot merge, plus a README/CONTRIBUTING line that Dependabot PRs are never merged directly (Plan 2 step 4 has the note).",
+    "Plan 0 → rename the free allowance to '10 free credits to try the API' instead of building the lazy monthly-grant sweep; closes the '20/month never granted' finding in minutes, and revisit a real grant only if trial-to-pack conversion needs it.",
+    "Plan 0 → remove the Ko-fi widget once pack checkout is live so the site has exactly one CTA; also removes the Hobby fair-use surface until Pro is active.",
+    "Plan 0 → log OpenAlex X-RateLimit-Remaining-USD into adapter telemetry and budget prepaid OpenAlex top-ups against pack revenue, so the $1/day free-key ceiling is visible before customers see 'partial' bands.",
+    "Plan 2 → SUBSCRIPTIONS_ENABLED=false flag hiding Student/Pro cards (keeps code, kills copy), with checkout returning 400 for plan checkouts while hidden (Plan 1 step 9), rather than deleting the rail outright.",
+    "Plan 2 → launch tactic: 10 personal DMs to researchers/DH developers who have publicly written about using Claude for archival work, each with a pre-minted install link and a 200-credit admin-SQL grant, plus a 30-second Claude Desktop GIF on an archival query; far more executable than a generic Show HN.",
+    "Plan 2 → static precision-rank lane ordering (OpenAlex → Crossref → DOAJ → heritage) and ≥ceil(n/2)-term hasContentMatch for Crossref as the minimal ordering fix; no RRF revival.",
+    "Plan 1 → make docs/wiki/10-Sprints/Index.md the single sprint→SHA→deploy-id status table and stop writing self-declared status headers in sprint logs (all three agree; Plan 1 states it most precisely as a process rule).",
+    "Plan 0 → real-card smoke checklist as a gate before announcing: buy $10 pack → credits appear → mint key → curl /api/search with limit=25&cite=bibtex → balance decrements → /api/citations and /api/ids → self-refund in Stripe and confirm webhook logs; verify /legal/terms.html md5 != / and OpenAlex key honored via headers.",
+    "Plan 1 → uptime checks that actually exercise the DB (health handler doing SELECT 1 folded into api/user/[resource].js, /api/credits must be 401 not 5xx) with a keyword assertion that shim bodies do not contain 'error'; Plan 2 adds Gallica to the probe once fixed.",
+    "Plan 2 → treat Gallica as the heritage demo source and fix it with the existing xmlUtils SRU regex helpers in the 30-day window (1.5 h) while quarantining the other five dead sources; it is the one adapter fix with a direct conversion payoff for the persona."
+   ]
+  },
+  {
+   "scores": [
+    {
+     "plan_index": 0,
+     "angle": "REVENUE-FIRST: one SKU (prepaid API/MCP credit packs), web demoted to free marketing surface, everything off the sign-in->pay->mint-key->curl path cut",
+     "score": 7,
+     "strengths": "(a) Best time-to-first-dollar shape: ~40h of code before a day-13 real-card smoke, then days 14-30 are pure distribution; correctly frames the first dollar as a distribution event, not an engineering one. (b) Handles the three P0s in the right spirit: Supabase restore + off-site dump + keepalive on day 1; the main->prod footgun is neutralised on day 1 by closing Dependabot PRs and disabling Git production deploys (so the late commit at step 10 is a process risk, not a regression risk); key path lands at step 6, immediately after the pack->machine webhook fix. (c) Step-level estimates are mostly sane and the plan names concrete existing server pieces (handlers/keys.js, goStripe, existing checkout return URL) instead of inventing work. (d) Reprices to $5/1k cost-plus, drops CURATED so one query = one OpenAlex call, provisions the OpenAlex key, and pitches heritage/Islamicate breadth + citation formats + coverage-honest billing rather than competing with free OpenAlex-wrapper MCPs. (e) Strongest cut list: kills subscriptions by deletion rather than building 16h of web gating, defers the v0.45 credit_events journal, dead-adapter fixes, docs rewrite, directory listings, Supabase Pro, Stripe Tax, a11y/perf. Explicitly acknowledges the web app never bills and keeps it that way. Includes migrate.mjs password-leak redaction before the first post-restore build, the WAF rule on /api/proxy, and the empty-adapter-set guard.",
+     "weaknesses": "(b) Commits main==prod only at step 10 (~day 13) after eight steps of further edits on a dirty tree that no git ref already reproduces; one giant `git add -A` at the end is a bigger blast radius than committing the prod snapshot first (Plan 2 does it on days 2-4). (c) ~54h is an undercount by roughly a third: step 8 packs 13 findings into 7h including threading opts.pageSize through all 28 adapter files, six serverSafe flips with corpusSize removal, five shim-adapter throws, lane reordering, Crossref match tightening, cache-key change and a polyfill; step 10's 4.5h covers both the fragment surgery to green a 32-problem machine map AND a live-money smoke. (d) Markets 'museum, manuscript and Islamicate archives' while deferring the Gallica fix (the heritage flagship, dead in prod since May) and never provisioning EUROPEANA_API_KEY (serverKeys.js:10 injects it only when set; it is unprovisioned, so Europeana silently drops out of the paid tier) — the demo query will not show what the pitch promises. Free-credit copy is inconsistent (step 9 says '10 free credits', step 14 offers '100 free credits on sign-in'). Refund/dispute clawback deferred to 90-day with a manual procedure — cheap enough (~1-2h) that it should precede the first sale. Launch pool (generic RAG/research-agent devs) is the segment where paper-search-mcp (2.6k stars, MIT) already wins."
+    },
+    {
+     "plan_index": 1,
+     "angle": "RISK/STABILITY-FIRST: recover data, make prod reproducible, make ledger auditable, then sell one SKU (developer packs) through one honest path",
+     "score": 5.5,
+     "strengths": "(b) Best P0 ordering and hygiene: DB restore + dump first; freeze Git deploys and close Dependabot PRs at step 2; machine-map greening as an explicit gate; commit main==prod at step 4 with migrate.mjs redaction, VERCEL_ENV gate, preflight.mjs and the AbortSignal polyfill folded into the same commit; monitoring at step 5 with the correct insight that only a DB-touching probe would have caught the outage; keeps dpl_2ZTVC6KJ named as the rollback target and verifies live bundle markers post-redeploy. (c) Most honest effort accounting: states ~78h with 'no slack' and pre-names which steps to trim (legal, adapter fixes) if the schedule slips. Only plan whose risk section flags the independent 2026-07-05 'iss'-missing OAuth failure that must be checked on the first live sign-in before any customer is routed to checkout. Correctly notes Student/Pro cards must be hidden and that the web never meters; refund clawback and payment_status gate are in the 30-day window; polite-pool/UA identity handled.",
+     "weaknesses": "(a) Time-to-first-dollar is the worst of the three: steps 1-15 total ~78h (26 days at 3h/day) before launch, and 20 of those hours (full v0.45 T1-T9 + 'v0.46 closure' including a credit_events journal, orphan-reconcile cron with CRON_SECRET, ApiKey.plan two-step drop) are spent hardening a ledger that has zero customers and zero traffic — hardening-before-funnel is exactly the pattern to penalise. The key-mint UI (the actual revenue mechanism) does not appear until step 11. (e) Cuts the least: keeps account deletion, Stripe Tax, Customer Portal, proxy byte-budget/allowlist trim, a dated live-probe artifact, and a Gallica rewrite all inside the 30-day window. (d) Go-to-market is an afterthought: one 8h step that also contains npm publish, README/JSON-LD rewrite, the self-purchase and all community posts; no persona, no DM list, no demo query. Minor factual slip: 'run migrations against a Supabase branch first' requires Supabase Pro, which the plan simultaneously leaves undecided. Vercel Pro is step 6, after the commit/redeploy, while Ko-fi + checkout already violate Hobby terms today."
+    },
+    {
+     "plan_index": 2,
+     "angle": "USER/PRODUCT-FIRST: AI-native humanities/area-studies researcher-developer in Claude Desktop/Cursor; journey discover->install MCP->real archive+paper sources->run out of credits->buy pack; web stays free demo",
+     "score": 6.8,
+     "strengths": "(b) Best sequencing of the P0s: Supabase restore day 1; Vercel Pro + Analytics + WAF rule + Git-deploy freeze + env vars in one dashboard session on day 1; main==prod commit on days 2-4 BEFORE any further edits (with archive tag for the dangling v0.35 tip); security bumps taken in-tree at step 4; Developers panel at step 7. (d) Sharpest market thesis: names a concrete persona, a concrete install path (npx -y opencite-mcp in claude_desktop_config.json), a demo query that only OpenCITE can answer, the exact 402->Plans link as the single conversion mechanism, and a lazy 20-credit grant so the free path actually ends in a paywall; fixes Gallica (1.5h) and Met (0.5h) inside the 30-day window so the heritage pitch is demonstrable; static precision-ranked lane order (OpenAlex/Crossref/DOAJ first, heritage after) is the cheapest fix for the interleave defect. Risk section is unusually candid (persona-mismatch pivot to citation-graph lead, OpenAlex $1/day exhaustion by one user). (e) Explicitly cuts sprint v0.45 as a separate sprint, the credit_events journal, v0.37 IP-trial state, directory applications, Supabase Pro, institutional outreach, and Student entirely. Includes refund/dispute clawback + payment_status gate (2h) before first sale, and ApiUsage upsert as the cheap alternative to a journal.",
+     "weaknesses": "(c) ~59h is the least honest estimate relative to scope: it carries everything Plan 0 does plus Gallica/Met fixes, proxy allowlist + timeout, refund clawback, ApiUsage writer, preflight.mjs, lazy grant, API version header and /openapi.json — step 9 (six quarantines, Gallica SRU regex rewrite, five shim throws, allowlist changes, proxy timeout) at 5h and step 11 (KV limiter before DB, key regex, header-only keys, term cap, per-user limiter, 2MB proxy byte budget, Edge Sec-Fetch guard, sources intersect) at 4h are each closer to 2x. Realistic total ~85h, which pushes the day-15 deploy toward day 22+. (b/risk) Step 3 re-enables Git production deploys right after the commit, which re-arms the footgun: every push during steps 4-15 would auto-ship a half-built pack rail to prod; the founder's workflow is CLI deploy and the freeze should stay until the step-16 deploy. (d) Persona is real but small and budget-constrained; DH researchers are less likely than agent developers to be comfortable minting API keys, and the plan offers no fallback pool beyond the 10 DMs. Step 16 expects Europeana in the demo results but no step provisions EUROPEANA_API_KEY. Ko-fi left as 'remove or keep' rather than a decision. migrate.mjs password-leak fix arrives only at step 15, after the step-3 redeploy (safe only because the DB was restored at step 1)."
+    }
+   ],
+   "best_ideas_to_graft": [
+    "From Plan 2 (step 3): commit the exact tree prod runs to main on days 2-4, BEFORE any further edits, so the 152-file dirty tree stops growing and every later change is a small reviewable commit; but do NOT re-enable Git production deploys afterwards — keep CLI `vercel --prod` from a SHA as the only deploy path until launch.",
+    "From Plan 2 (step 9): fix Gallica via the existing xmlUtils SRU regex helpers (~1.5h) and Met by dropping artistOrCulture=true (~0.5h) inside the 30-day window — the pitch in every plan leads with museum/manuscript archives, so the heritage flagship must actually return results in the first curl/demo.",
+    "Gap in all three plans: provision a free EUROPEANA_API_KEY in Vercel (serverKeys.js:10 already injects it when set; the keyed source auto-drops from the paid tier while unset). Five minutes, and without it the 'all' tier and the demo lack Europeana.",
+    "From Plan 2 (step 5/16): a lazy 20-credit free grant on first key use plus the 402 -> Plans link as the single conversion mechanism, and admin-SQL 200-credit grants for DM'd prospects; this makes the free path terminate in a paywall instead of relying only on cold purchases.",
+    "From Plan 2 (step 8): static precision-ranked interleave lanes (OpenAlex -> Crossref -> DOAJ -> heritage) plus >=ceil(n/2)-term hasContentMatch for Crossref — the cheapest fix for the off-topic ranks 3/6/9 defect without touching any engine.",
+    "From Plan 2 (step 12) / Plan 1 (step 8): handle charge.refunded + charge.dispute.created with a floor-0 credit decrement and a payment_status==='paid' gate before the first sale (~2h); Plan 0's 'manual procedure documented in refunds.html' is cheaper to skip than to explain to Stripe in a dispute.",
+    "From Plan 1 (risks): on the first live sign-in after the Supabase restore, verify the 2026-07-05 'iss'-missing OAuth failure does not recur before routing anyone to checkout — it is an auth defect independent of the DB pause and none of the other plans mention it.",
+    "From Plan 1 (step 4): keep dpl_2ZTVC6KJHiFH9NKFBvdHni3q82P3 as the named rollback target and diff live bundle markers (`unlimited`, absence of `credits:1/0`) immediately after the first redeploy, since the committed tree will change the BillingContext/CreditsChip contract versus what prod ships today.",
+    "From Plan 1 (step 4): add scripts/preflight.mjs asserting AUTH_SECRET>=32, API_KEY_PEPPER, SETTINGS_ENCRYPTION_KEY, POSTGRES_*, AUTH_GOOGLE_*, OPENALEX_API_KEY when VERCEL_ENV==='production' — the one place a build SHOULD fail — and fold the migrate.mjs redaction + VERCEL_ENV gate into the same commit as the main==prod snapshot so no post-restore build can print the DB password.",
+    "From Plan 1 (step 2) and Plan 2 (step 4): take the @auth/core 0.41.3 / @auth/prisma-adapter 2.11.3 / mcp sdk 1.30.0 bumps in-tree in the same commit and close the Dependabot PRs with a comment explaining main is not the deploy source; Plan 0 defers this to 90-day for no reason.",
+    "From Plan 1 (risks): a written decision gate — if two weeks after launch produce zero purchases, revisit the SKU (citation-graph/ID-resolution as lead feature, or a web Pro built on features the free app lacks) rather than continuing to polish the pack rail.",
+    "From Plan 0 (step 9): rename the free allowance copy to 'N free credits to try the API' if the lazy grant slips — closing the '20/month never granted' finding by copy in 5 minutes is acceptable as a fallback, never as the primary path once the 402 funnel exists.",
+    "From Plan 2 (step 18): a 30-second Claude Desktop demo GIF on an archival query, posted to the persona's own venues (Humanist list, r/DigitalHumanities, DH Slack) in addition to Show HN / r/ClaudeAI — Plan 0's generic RAG-developer pool is where free OpenAlex MCPs already win."
+   ]
+  }
+ ],
+ "totals": [
+  21.6,
+  17.7,
+  21.8
+ ],
+ "winner": 2
+}

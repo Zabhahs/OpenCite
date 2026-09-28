@@ -65,7 +65,7 @@ export const PARAMS = {
     default: "json",
     description:
       "json (default, structured cards) | mla | apa | bibtex | ris | csl-json " +
-      "(non-json returns a flat bibliography of the ranked results).",
+      "(non-json returns a flat bibliography of the returned results).",
   },
 };
 
@@ -92,8 +92,6 @@ export const RESULT_FIELDS = {
   subjects: "Controlled-vocabulary subject terms.",
   language: "ISO-639 language code, when known.",
   citedBy: "Citation count, when the work carries one (else null).",
-  score: "Relevance score (BM25F) for this query.",
-  lowConfidence: "True when no genuine match existed and this is a best-guess.",
   citations: "Formatted citations: { mla, apa, …extra requested formats }.",
 };
 
@@ -103,7 +101,6 @@ export const RESPONSE_SHAPE = {
   query: "Echo of the q parameter.",
   terms: "Parsed keyword terms.",
   coverage: `Corpus-weighted coverage band for this request: one of ${COVERAGE_BANDS.join(", ")}.`,
-  lowConfidence: "True when results are best-guesses (no genuine match anywhere).",
   count: "Number of results returned.",
   totalCandidates: "Total deduped candidates considered before the limit.",
   tookMs: "Server processing time in milliseconds.",
@@ -116,8 +113,9 @@ export const API_CONTRACT = {
   endpoint: "/api/search",
   method: "GET",
   description:
-    "One verifiable, deduped, ranked, citation-ready call across many open-access " +
-    "scholarly sources. Results are origin-blind: provenance fields are returned, " +
+    "One verifiable, deduped, citation-ready call across many open-access scholarly " +
+    "sources. Results preserve each source's native relevance order, fairly " +
+    "interleaved across sources. Origin-blind: provenance fields are returned, " +
     "but the serving upstream is not disclosed.",
   params: PARAMS,
   response: { shape: RESPONSE_SHAPE, resultFields: RESULT_FIELDS, coverageBands: COVERAGE_BANDS },

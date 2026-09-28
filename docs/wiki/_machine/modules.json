@@ -2,12 +2,13 @@
   {
     "id": "adapters.core.crossref",
     "path": "src/adapters/core/crossref.js",
-    "loc": 85,
+    "loc": 88,
     "deps": [
+      "adapters.shared.contentMatch",
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
-      "lib.helpers",
-      "lib.scoring"
+      "lib.helpers"
     ],
     "kind": "adapter",
     "runtime": "both",
@@ -27,9 +28,10 @@
   {
     "id": "adapters.core.curatedJournals",
     "path": "src/adapters/core/curatedJournals.js",
-    "loc": 55,
+    "loc": 56,
     "deps": [
       "adapters.shared.parseOpenAlex",
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -54,8 +56,9 @@
   {
     "id": "adapters.core.doaj",
     "path": "src/adapters/core/doaj.js",
-    "loc": 66,
+    "loc": 67,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
       "lib.helpers"
@@ -78,9 +81,10 @@
   {
     "id": "adapters.core.openalex",
     "path": "src/adapters/core/openalex.js",
-    "loc": 57,
+    "loc": 58,
     "deps": [
       "adapters.shared.parseOpenAlex",
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -130,27 +134,25 @@
   {
     "id": "adapters.extensions.bdh",
     "path": "src/adapters/extensions/bdh.js",
-    "loc": 32,
-    "deps": [
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "client",
     "purpose": "Biblioteca Digital Hispánica thin shim: delegates to /api/search/bdh backend route.",
     "exports": [
       "BDH_ADAPTER"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#bdh",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "heritage",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.bnfApi",
@@ -185,20 +187,18 @@
   {
     "id": "adapters.extensions.britishLibrary",
     "path": "src/adapters/extensions/britishLibrary.js",
-    "loc": 33,
-    "deps": [
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "client",
     "purpose": "British Library BNB SPARQL thin shim: delegates to /api/search/bl backend route; no totalCount.",
     "exports": [
       "BRITISH_LIBRARY_ADAPTER"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#britishlibrary",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
@@ -206,7 +206,7 @@
       "sparql",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.chroniclingAmerica",
@@ -317,8 +317,9 @@
   {
     "id": "adapters.extensions.europeana",
     "path": "src/adapters/extensions/europeana.js",
-    "loc": 85,
+    "loc": 86,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
       "lib.helpers"
@@ -342,8 +343,9 @@
   {
     "id": "adapters.extensions.gallica",
     "path": "src/adapters/extensions/gallica.js",
-    "loc": 34,
+    "loc": 35,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -367,12 +369,10 @@
   {
     "id": "adapters.extensions.index",
     "path": "src/adapters/extensions/index.js",
-    "loc": 61,
+    "loc": 63,
     "deps": [
       "adapters.extensions.base",
-      "adapters.extensions.bdh",
       "adapters.extensions.bnfApi",
-      "adapters.extensions.britishLibrary",
       "adapters.extensions.chroniclingAmerica",
       "adapters.extensions.coreAc",
       "adapters.extensions.dpla",
@@ -382,7 +382,6 @@
       "adapters.extensions.laReferencia",
       "adapters.extensions.lcDatasets",
       "adapters.extensions.met",
-      "adapters.extensions.mexicana",
       "adapters.extensions.ncbi",
       "adapters.extensions.ndli",
       "adapters.extensions.northwestern",
@@ -415,8 +414,9 @@
   {
     "id": "adapters.extensions.internetArchive",
     "path": "src/adapters/extensions/internetArchive.js",
-    "loc": 233,
+    "loc": 240,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
       "lib.helpers"
@@ -467,8 +467,9 @@
   {
     "id": "adapters.extensions.lcDatasets",
     "path": "src/adapters/extensions/lcDatasets.js",
-    "loc": 55,
+    "loc": 56,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
       "lib.helpers"
@@ -492,8 +493,9 @@
   {
     "id": "adapters.extensions.met",
     "path": "src/adapters/extensions/met.js",
-    "loc": 62,
+    "loc": 63,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -517,35 +519,35 @@
   {
     "id": "adapters.extensions.mexicana",
     "path": "src/adapters/extensions/mexicana.js",
-    "loc": 42,
-    "deps": [
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "client",
     "purpose": "Mexicana OAI-PMH thin shim: delegates to /api/search/mexicana; nextToken non-standard (bug).",
     "exports": [
       "MEXICANA_ADAPTER"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [
       "F-106"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#mexicana",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "latin-america",
       "oai-pmh",
       "thin-shim"
-    ]
+    ],
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve."
   },
   {
     "id": "adapters.extensions.ncbi",
     "path": "src/adapters/extensions/ncbi.js",
-    "loc": 86,
+    "loc": 87,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -675,8 +677,9 @@
   {
     "id": "adapters.extensions.openContext",
     "path": "src/adapters/extensions/openContext.js",
-    "loc": 31,
+    "loc": 32,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -700,8 +703,9 @@
   {
     "id": "adapters.extensions.openEdition",
     "path": "src/adapters/extensions/openEdition.js",
-    "loc": 35,
+    "loc": 36,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -906,8 +910,9 @@
   {
     "id": "adapters.extensions.smithsonian",
     "path": "src/adapters/extensions/smithsonian.js",
-    "loc": 66,
+    "loc": 67,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -930,8 +935,9 @@
   {
     "id": "adapters.extensions.thaqalayn",
     "path": "src/adapters/extensions/thaqalayn.js",
-    "loc": 51,
+    "loc": 52,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary",
       "lib.helpers"
@@ -956,8 +962,9 @@
   {
     "id": "adapters.extensions.wikidata",
     "path": "src/adapters/extensions/wikidata.js",
-    "loc": 150,
+    "loc": 151,
     "deps": [
+      "adapters.shared.proxy",
       "constants.defaults",
       "constants.vocabulary"
     ],
@@ -979,7 +986,7 @@
   {
     "id": "adapters.index",
     "path": "src/adapters/index.js",
-    "loc": 144,
+    "loc": 145,
     "deps": [
       "adapters.core.crossref",
       "adapters.core.curatedJournals",
@@ -1028,6 +1035,27 @@
       "shared",
       "base"
     ]
+  },
+  {
+    "id": "adapters.shared.contentMatch",
+    "path": "src/adapters/_shared/contentMatch.js",
+    "loc": 57,
+    "deps": [],
+    "kind": "lib",
+    "runtime": "both",
+    "purpose": "Content-scope match predicate (hasContentMatch): retrieval-correctness filter behind the author-search-off contract; relocated verbatim from the quarantined lib/scoring.js in v0.44 T5. Not ranking.",
+    "exports": [
+      "hasContentMatch"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md",
+    "tags": [
+      "adapter",
+      "shared",
+      "retrieval"
+    ],
+    "notes": "Sole consumer: src/adapters/core/crossref.js."
   },
   {
     "id": "adapters.shared.normalize",
@@ -1079,7 +1107,7 @@
   {
     "id": "adapters.shared.proxy",
     "path": "src/adapters/_shared/proxy.js",
-    "loc": 70,
+    "loc": 94,
     "deps": [
       "lib.log"
     ],
@@ -1104,7 +1132,7 @@
   {
     "id": "adapters.shared.xmlUtils",
     "path": "src/adapters/_shared/xmlUtils.js",
-    "loc": 159,
+    "loc": 158,
     "deps": [],
     "kind": "adapter",
     "runtime": "both",
@@ -1215,55 +1243,6 @@
     "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year)."
   },
   {
-    "id": "api.credits",
-    "path": "api/credits.js",
-    "loc": 45,
-    "deps": [
-      "api.shared.apiAuth",
-      "api.shared.auth",
-      "api.shared.prisma"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "GET /api/credits → { credits, tier } for the signed-in user; session-cookie auth (browser counterpart to the API-key-gated /api/search). Read-only — never spends. Admins get { Infinity, 'admin' }.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "04-Backend-API/Auth-Sessions.md",
-    "tags": [
-      "billing",
-      "credits",
-      "session-auth"
-    ],
-    "notes": "v0.41 (F-300): backs the client BillingProvider. Reads User.total_credits + User.plan (same columns billing.js settles). DB error degrades to the Infinity/'free' stub so the UI never blocks."
-  },
-  {
-    "id": "api.history",
-    "path": "api/history.js",
-    "loc": 87,
-    "deps": [
-      "api.shared.auth",
-      "api.shared.parseBody",
-      "api.shared.prisma"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "Search history CRUD (GET/POST/DELETE /api/history); session-authenticated; trims to 50 entries.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "04-Backend-API/Auth-Sessions.md",
-    "tags": [
-      "history",
-      "crud"
-    ],
-    "notes": "Overflow trim is fire-and-forget (no await). BigInt ts converted to Number for JSON serialization."
-  },
-  {
     "id": "api.ids",
     "path": "api/ids.js",
     "loc": 57,
@@ -1287,58 +1266,6 @@
       "billing"
     ],
     "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak)."
-  },
-  {
-    "id": "api.keys",
-    "path": "api/keys.js",
-    "loc": 83,
-    "deps": [
-      "api.shared.auth",
-      "api.shared.crypto",
-      "api.shared.plans",
-      "api.shared.prisma"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "API key issuance (GET/POST/DELETE /api/keys): list prefixes, mint a new key (plaintext returned once), revoke.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [
-      "F-413"
-    ],
-    "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",
-    "tags": [
-      "api-key",
-      "issuance",
-      "keys"
-    ],
-    "notes": "No per-user key count limit. Plaintext returned exactly once in POST response — not stored, not logged."
-  },
-  {
-    "id": "api.library",
-    "path": "api/library.js",
-    "loc": 97,
-    "deps": [
-      "api.shared.auth",
-      "api.shared.parseBody",
-      "api.shared.prisma"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "Saved library CRUD (GET/POST/DELETE /api/library); session-authenticated; stores trimmed result blobs keyed by DOI or source:id.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "04-Backend-API/Auth-Sessions.md",
-    "tags": [
-      "library",
-      "crud"
-    ],
-    "notes": "RESULT_FIELDS includes source — library stores origin-aware records (not subject to origin-blind invariant since it's user-owned data, not API response data)."
   },
   {
     "id": "api.proxy",
@@ -1370,12 +1297,42 @@
     "notes": "No auth. redirect:follow without re-validating destination hostname. No https: scheme enforcement."
   },
   {
+    "id": "api.route.[source]",
+    "path": "api/search/[source].js",
+    "loc": 53,
+    "deps": [
+      "adapters.extensions.dpla",
+      "adapters.extensions.europeana",
+      "adapters.extensions.smithsonian",
+      "api.shared.requireInternalOrigin",
+      "api.shared.serverKeys"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "v0.43.1 dynamic dispatcher (source ∈ dpla|europeana|smithsonian): browser-shim that proxies a keyed-source query from the client adapter, injecting the backend API key from env. Replaces the three identical per-source files.",
+    "exports": [
+      "default"
+    ],
+    "status": "keyed",
+    "findings": [
+      "F-407"
+    ],
+    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "tags": [
+      "per-source",
+      "browser-shim",
+      "keyed",
+      "dispatcher",
+      "function-budget"
+    ],
+    "notes": "Folds the 3 keyed Node shims into 1 to stay under Vercel Hobby's 12-Serverless-Function cap (Edge functions don't count, so the 6 keyless edge shims stay as their own static files — Vercel resolves exact filenames before the [source] param). Same /api/search/<slug> URLs, so client adapters are unchanged. v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403. Unknown source → 404."
+  },
+  {
     "id": "api.route.bdh",
     "path": "api/search/bdh.js",
-    "loc": 90,
-    "deps": [
-      "api.shared.log"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "api-route",
     "runtime": "server",
     "purpose": "Edge proxy for Biblioteca Digital Hispánica (datos.bne.es) JSON REST API.",
@@ -1383,23 +1340,22 @@
       "default",
       "config"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "per-source",
       "edge",
       "cors"
     ],
-    "notes": null
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve."
   },
   {
     "id": "api.route.bl",
     "path": "api/search/bl.js",
-    "loc": 133,
-    "deps": [
-      "api.shared.log"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "api-route",
     "runtime": "server",
     "purpose": "Edge proxy for British Library SPARQL endpoint (bnb.data.bl.uk/sparql); CORS workaround + response normalization.",
@@ -1407,72 +1363,18 @@
       "default",
       "config"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-408"
     ],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "per-source",
       "edge",
       "sparql",
       "cors"
     ],
-    "notes": "Query injected into SPARQL template with only double-quote stripping — minimal sanitization."
-  },
-  {
-    "id": "api.route.dpla",
-    "path": "api/search/dpla.js",
-    "loc": 25,
-    "deps": [
-      "adapters.extensions.dpla",
-      "api.shared.requireInternalOrigin",
-      "api.shared.serverKeys"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "Browser-shim: proxies DPLA queries from the client adapter, injecting the backend API key from env.",
-    "exports": [
-      "default"
-    ],
-    "status": "keyed",
-    "findings": [
-      "F-407"
-    ],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
-    "tags": [
-      "per-source",
-      "browser-shim",
-      "keyed"
-    ],
-    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
-  },
-  {
-    "id": "api.route.europeana",
-    "path": "api/search/europeana.js",
-    "loc": 25,
-    "deps": [
-      "adapters.extensions.europeana",
-      "api.shared.requireInternalOrigin",
-      "api.shared.serverKeys"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "Browser-shim: proxies Europeana queries from the client adapter, injecting the backend API key from env.",
-    "exports": [
-      "default"
-    ],
-    "status": "keyed",
-    "findings": [
-      "F-407"
-    ],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
-    "tags": [
-      "per-source",
-      "browser-shim",
-      "keyed"
-    ],
-    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: Query injected into SPARQL template with only double-quote stripping — minimal sanitization."
   },
   {
     "id": "api.route.gallica",
@@ -1503,10 +1405,9 @@
   {
     "id": "api.route.mexicana",
     "path": "api/search/mexicana.js",
-    "loc": 148,
-    "deps": [
-      "api.shared.log"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "api-route",
     "runtime": "server",
     "purpose": "Edge proxy for Mexicana OAI-PMH (cultura.gob.mx); fetches full page, client-side filters by query match.",
@@ -1514,18 +1415,18 @@
       "default",
       "config"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-409"
     ],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "per-source",
       "edge",
       "oai-pmh",
       "cors"
     ],
-    "notes": "resumptionToken from query param passed directly to OAI URL without validation."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: resumptionToken from query param passed directly to OAI URL without validation."
   },
   {
     "id": "api.route.opencontext",
@@ -1578,36 +1479,9 @@
     "notes": "Contract reverse-engineered from OpenEdition SPA bundle."
   },
   {
-    "id": "api.route.smithsonian",
-    "path": "api/search/smithsonian.js",
-    "loc": 25,
-    "deps": [
-      "adapters.extensions.smithsonian",
-      "api.shared.requireInternalOrigin",
-      "api.shared.serverKeys"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "Browser-shim: proxies Smithsonian queries from the client adapter, injecting the backend API key from env.",
-    "exports": [
-      "default"
-    ],
-    "status": "keyed",
-    "findings": [
-      "F-407"
-    ],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
-    "tags": [
-      "per-source",
-      "browser-shim",
-      "keyed"
-    ],
-    "notes": "v0.39: guarded by requireInternalOrigin (F-407 fixed) — same-origin browser callers only; direct/cross-site calls 403."
-  },
-  {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 455,
+    "loc": 427,
     "deps": [
       "adapters.index",
       "api.shared.adapterHealth",
@@ -1624,8 +1498,7 @@
       "constants.defaults",
       "lib.citations",
       "lib.dedup",
-      "lib.idResolve",
-      "lib.scoring"
+      "lib.idResolve"
     ],
     "kind": "api-route",
     "runtime": "server",
@@ -1647,33 +1520,6 @@
       "rrf"
     ],
     "notes": "Admin cost-0 path: preAuthorize/settle are no-ops. debug=1 and simple=1 are server-derived admin-only; non-admin ?debug=1 is a silent no-op. Cache stores only the public body (no per-caller meta)."
-  },
-  {
-    "id": "api.settings",
-    "path": "api/settings.js",
-    "loc": 70,
-    "deps": [
-      "api.shared.auth",
-      "api.shared.crypto",
-      "api.shared.prisma"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "User settings GET/POST: AES-256-GCM encrypted blob persisted in users.settings (JSONB).",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [
-      "F-405"
-    ],
-    "wiki": "04-Backend-API/Shared-Modules.md",
-    "tags": [
-      "settings",
-      "crypto",
-      "encryption"
-    ],
-    "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
   },
   {
     "id": "api.shared.adapterHealth",
@@ -1747,7 +1593,7 @@
   {
     "id": "api.shared.apiContract",
     "path": "api/_shared/apiContract.js",
-    "loc": 143,
+    "loc": 141,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1777,8 +1623,10 @@
   {
     "id": "api.shared.auth",
     "path": "api/_shared/auth.js",
-    "loc": 75,
-    "deps": [],
+    "loc": 107,
+    "deps": [
+      "api.shared.prisma"
+    ],
     "kind": "api-shared",
     "runtime": "server",
     "purpose": "TRUSTED_ORIGINS SSOT, the OWN_VERCEL_HOST_RE / isTrustedOrigin / isTrustedHost trust helpers (reused by checkout + requireInternalOrigin), origin-aware CORS header setter, and getSession (loopback Auth.js session fetch).",
@@ -1944,7 +1792,7 @@
   {
     "id": "api.shared.debugResult",
     "path": "api/_shared/debugResult.js",
-    "loc": 42,
+    "loc": 27,
     "deps": [
       "api.shared.publicResult"
     ],
@@ -1963,6 +1811,136 @@
       "origin-revealing"
     ],
     "notes": "HARD INVARIANT: only callable when identity.admin === true. source is the single field that breaks origin-blindness."
+  },
+  {
+    "id": "api.shared.handlers.credits",
+    "path": "api/_shared/handlers/credits.js",
+    "loc": 61,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.auth",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "GET /api/credits → { credits, tier } for the signed-in user; session-cookie auth (browser counterpart to the API-key-gated /api/search). Read-only — never spends. Admins get { Infinity, 'admin' }.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "billing",
+      "credits",
+      "session-auth"
+    ],
+    "notes": "v0.41 (F-300): backs the client BillingProvider. Reads User.total_credits + User.plan (same columns billing.js settles). DB error degrades to the Infinity/'free' stub so the UI never blocks."
+  },
+  {
+    "id": "api.shared.handlers.history",
+    "path": "api/_shared/handlers/history.js",
+    "loc": 87,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.parseBody",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Search history CRUD (GET/POST/DELETE /api/history); session-authenticated; trims to 50 entries.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "history",
+      "crud"
+    ],
+    "notes": "Overflow trim is fire-and-forget (no await). BigInt ts converted to Number for JSON serialization."
+  },
+  {
+    "id": "api.shared.handlers.keys",
+    "path": "api/_shared/handlers/keys.js",
+    "loc": 83,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.crypto",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "API key issuance (GET/POST/DELETE /api/keys): list prefixes, mint a new key (plaintext returned once), revoke.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-413"
+    ],
+    "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",
+    "tags": [
+      "api-key",
+      "issuance",
+      "keys"
+    ],
+    "notes": "No per-user key count limit. Plaintext returned exactly once in POST response — not stored, not logged."
+  },
+  {
+    "id": "api.shared.handlers.library",
+    "path": "api/_shared/handlers/library.js",
+    "loc": 97,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.parseBody",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Saved library CRUD (GET/POST/DELETE /api/library); session-authenticated; stores trimmed result blobs keyed by DOI or source:id.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "library",
+      "crud"
+    ],
+    "notes": "RESULT_FIELDS includes source — library stores origin-aware records (not subject to origin-blind invariant since it's user-owned data, not API response data)."
+  },
+  {
+    "id": "api.shared.handlers.settings",
+    "path": "api/_shared/handlers/settings.js",
+    "loc": 74,
+    "deps": [
+      "api.shared.auth",
+      "api.shared.crypto",
+      "api.shared.parseBody",
+      "api.shared.prisma"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "User settings GET/POST: AES-256-GCM encrypted blob persisted in users.settings (JSONB).",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [
+      "F-405"
+    ],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "settings",
+      "crypto",
+      "encryption"
+    ],
+    "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
   },
   {
     "id": "api.shared.kv",
@@ -2124,7 +2102,7 @@
   {
     "id": "api.shared.publicResult",
     "path": "api/_shared/publicResult.js",
-    "loc": 56,
+    "loc": 54,
     "deps": [
       "lib.citations"
     ],
@@ -2249,12 +2227,40 @@
     "notes": "bodyParser:false required for raw body signature verification. P2002 collision = duplicate event, acknowledge without re-apply."
   },
   {
+    "id": "api.user.[resource]",
+    "path": "api/user/[resource].js",
+    "loc": 32,
+    "deps": [
+      "api.shared.handlers.credits",
+      "api.shared.handlers.history",
+      "api.shared.handlers.keys",
+      "api.shared.handlers.library",
+      "api.shared.handlers.settings"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "v0.43.1 dispatcher: one Serverless Function fronting the five session-authed Prisma-backed user-data resources (credits/history/keys/library/settings). Picks the handler by path segment; each handler still does its own auth + method routing.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Auth-Sessions.md",
+    "tags": [
+      "dispatcher",
+      "user-data",
+      "crud",
+      "session-auth",
+      "function-budget"
+    ],
+    "notes": "Folds 5 Node functions into 1 to stay under Vercel Hobby's 12-Serverless-Function cap (Edge functions don't count). The handler modules moved verbatim to api/_shared/handlers/. Legacy paths /api/{credits,history,keys,library,settings} preserved by vercel.json rewrites → /api/user/<resource>, so nothing client-side changed. Unknown resource → 404."
+  },
+  {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 484,
+    "loc": 466,
     "deps": [
       "adapters.index",
-      "components.AdminConsole",
       "components.FilterBar",
       "components.LauncherBlock",
       "components.Layout",
@@ -2271,7 +2277,6 @@
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSearch",
-      "hooks.useSemanticRerank",
       "hooks.useSettings",
       "hooks.useTheme",
       "launchers.index",
@@ -2327,30 +2332,31 @@
   {
     "id": "components.admin.ScoreExplainer",
     "path": "src/components/admin/ScoreExplainer.jsx",
-    "loc": 221,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "component",
     "runtime": "client",
     "purpose": "F1 admin tool — debug-mode search showing ranked results with expandable BM25F/RRF score breakdowns and gate dispositions.",
     "exports": [
       "ScoreExplainer"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "01-Frontend/Components/_index.md#adminconsole",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "admin",
       "debug",
       "scoring"
-    ]
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve."
   },
   {
     "id": "components.AdminConsole",
     "path": "src/components/AdminConsole.jsx",
-    "loc": 59,
+    "loc": 57,
     "deps": [
       "components.admin.GoldSetHarness",
-      "components.admin.ScoreExplainer",
       "contexts.AuthContext",
       "lib.admin"
     ],
@@ -2413,7 +2419,7 @@
   {
     "id": "components.FilterBar",
     "path": "src/components/FilterBar.jsx",
-    "loc": 282,
+    "loc": 283,
     "deps": [
       "lib.langNormalize"
     ],
@@ -2459,7 +2465,7 @@
   {
     "id": "components.Layout",
     "path": "src/components/Layout.jsx",
-    "loc": 428,
+    "loc": 439,
     "deps": [
       "constants.app",
       "constants.themes",
@@ -2539,7 +2545,7 @@
   {
     "id": "components.ResultCard",
     "path": "src/components/ResultCard.jsx",
-    "loc": 239,
+    "loc": 241,
     "deps": [
       "components.EagleTooltip",
       "hooks.useEagleTooltip",
@@ -2566,7 +2572,7 @@
   {
     "id": "components.SearchControls",
     "path": "src/components/SearchControls.jsx",
-    "loc": 142,
+    "loc": 88,
     "deps": [],
     "kind": "component",
     "runtime": "client",
@@ -2629,7 +2635,7 @@
   {
     "id": "components.SourceSection",
     "path": "src/components/SourceSection.jsx",
-    "loc": 117,
+    "loc": 112,
     "deps": [
       "components.BookGroupHeader",
       "components.ResultCard",
@@ -2655,7 +2661,7 @@
   {
     "id": "components.UnifiedResultList",
     "path": "src/components/UnifiedResultList.jsx",
-    "loc": 204,
+    "loc": 199,
     "deps": [
       "adapters.index",
       "components.BookGroupHeader",
@@ -2703,7 +2709,7 @@
   {
     "id": "constants.defaults",
     "path": "src/constants/defaults.js",
-    "loc": 59,
+    "loc": 49,
     "deps": [],
     "kind": "constant",
     "runtime": "client",
@@ -2786,7 +2792,7 @@
     ],
     "status": "healthy",
     "findings": [],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "wiki": "00-Overview/Glossary.md",
     "tags": [
       "constants",
       "vocabulary"
@@ -2819,7 +2825,7 @@
   {
     "id": "contexts.BillingContext",
     "path": "src/contexts/BillingContext.jsx",
-    "loc": 54,
+    "loc": 71,
     "deps": [
       "contexts.AuthContext",
       "lib.api"
@@ -2890,7 +2896,7 @@
   {
     "id": "hooks.useFilters",
     "path": "src/hooks/useFilters.js",
-    "loc": 60,
+    "loc": 46,
     "deps": [
       "lib.langNormalize"
     ],
@@ -2963,12 +2969,10 @@
   {
     "id": "hooks.useSearch",
     "path": "src/hooks/useSearch.js",
-    "loc": 169,
+    "loc": 156,
     "deps": [
       "adapters.index",
-      "lib.dedup",
-      "lib.scoring",
-      "lib.synonyms"
+      "lib.dedup"
     ],
     "kind": "hook",
     "runtime": "client",
@@ -2992,34 +2996,32 @@
   {
     "id": "hooks.useSemanticRerank",
     "path": "src/hooks/useSemanticRerank.js",
-    "loc": 112,
-    "deps": [
-      "lib.rrf",
-      "lib.semantic"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "hook",
     "runtime": "client",
     "purpose": "Two-phase React hook: expensive pass embeds query+corpus once per result set (builds lexical/semantic/native rank maps); cheap pass re-fuses on semanticWeight slider change without re-embedding.",
     "exports": [
       "useSemanticRerank"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-205"
     ],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "hook",
       "rerank",
       "rrf",
       "pipeline"
     ],
-    "notes": "CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
   },
   {
     "id": "hooks.useSettings",
     "path": "src/hooks/useSettings.js",
-    "loc": 121,
+    "loc": 112,
     "deps": [
       "adapters.index",
       "constants.defaults",
@@ -3265,7 +3267,7 @@
   {
     "id": "lib.dedup",
     "path": "src/lib/dedup.js",
-    "loc": 131,
+    "loc": 145,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -3293,7 +3295,7 @@
   {
     "id": "lib.dedup.test",
     "path": "src/lib/dedup.test.js",
-    "loc": 144,
+    "loc": 172,
     "deps": [
       "lib.dedup"
     ]
@@ -3315,18 +3317,18 @@
     ],
     "status": "healthy",
     "findings": [],
-    "wiki": "03-Search-Pipeline/Ranking-Scoring.md#gold-set-metrics",
+    "wiki": "01-Frontend/Components/_index.md",
     "tags": [
       "metrics",
       "testing",
       "admin"
     ],
-    "notes": "Unit-tested in goldSetMetrics.test.js. Imported by components/admin/GoldSetHarness.jsx — NOT orphaned. Not called during live search."
+    "notes": "Unit-tested in goldSetMetrics.test.js. Imported by components/admin/GoldSetHarness.jsx — NOT orphaned. Not called during live search. v0.44: recall@k stays meaningful post-teardown; nDCG/MRR measure upstream order only."
   },
   {
     "id": "lib.goldSetMetrics.test",
     "path": "src/lib/goldSetMetrics.test.js",
-    "loc": 198,
+    "loc": 199,
     "deps": [
       "lib.goldSetMetrics"
     ]
@@ -3520,8 +3522,9 @@
   {
     "id": "lib.rrf",
     "path": "src/lib/rrf.js",
-    "loc": 14,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "lib",
     "runtime": "shared",
     "purpose": "Weighted Reciprocal Rank Fusion: scale-free merger of native, lexical, and semantic rank lists; also provides buildNativeRanks (per-source dense rank map) and nativeWeight (pool-size-aware native share).",
@@ -3531,25 +3534,26 @@
       "buildNativeRanks",
       "nativeWeight"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-200",
       "F-201"
     ],
-    "wiki": "03-Search-Pipeline/RRF-Fusion.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "rrf",
       "fusion",
       "ranking",
       "pipeline"
     ],
-    "notes": "Used by hooks.useSemanticRerank (client). Not yet called by api.search (server) — F-209 open gap."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Used by hooks.useSemanticRerank (client). Not yet called by api.search (server) — F-209 open gap."
   },
   {
     "id": "lib.scoring",
     "path": "src/lib/scoring.js",
-    "loc": 290,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "lib",
     "runtime": "shared",
     "purpose": "BM25F content-relevance scorer (SSOT): tokenises title/abstract/keywords with NFKD normalisation, computes per-pool IDF, applies phrase/proximity boosts, capability-gated citation tiebreak and thin-source prior; also exports hasContentMatch and applyConfidenceGate.",
@@ -3560,7 +3564,7 @@
       "meaningfulTerms",
       "normalizeForMatch"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-200",
       "F-201",
@@ -3568,37 +3572,38 @@
       "F-203",
       "F-204"
     ],
-    "wiki": "03-Search-Pipeline/Ranking-Scoring.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "scoring",
       "bm25f",
       "relevance",
       "pipeline"
     ],
-    "notes": "D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
   },
   {
     "id": "lib.semantic",
     "path": "src/lib/semantic.js",
-    "loc": 68,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "lib",
     "runtime": "client",
     "purpose": "Manages the embed.worker singleton, dispatches embedding jobs via a promise Map keyed by msgId, constructs the title+abstract+keywords input string within a 512-char budget, returns a cosine-similarity rank Map.",
     "exports": [
       "computeSemanticRanks"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-205"
     ],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "semantic",
       "embeddings",
       "pipeline"
     ],
-    "notes": "Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
   },
   {
     "id": "lib.storage",
@@ -3624,25 +3629,26 @@
   {
     "id": "lib.synonyms",
     "path": "src/lib/synonyms.js",
-    "loc": 125,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "lib",
     "runtime": "client",
     "purpose": "Score-side term expansion (original query to APIs unchanged): 16 hand-curated academic clusters (synchronous) + Moby Thesaurus II letter-keyed shards (async, CDN-fetched, shard-cached).",
     "exports": [
       "expandTerms"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-207"
     ],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "synonyms",
       "expansion",
       "pipeline"
     ],
-    "notes": "MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
   },
   {
     "id": "main",
@@ -3891,7 +3897,7 @@
   {
     "id": "scripts.migrate",
     "path": "scripts/migrate.mjs",
-    "loc": 80,
+    "loc": 81,
     "deps": [],
     "kind": "script",
     "runtime": "build",
@@ -3975,7 +3981,7 @@
   {
     "id": "vercel",
     "path": "vercel.json",
-    "loc": 26,
+    "loc": 31,
     "deps": [],
     "kind": "config",
     "runtime": "infra",
@@ -4008,45 +4014,47 @@
     ]
   },
   {
-    "id": "workers.embed.worker",
+    "id": "workers.embed",
     "path": "src/workers/embed.worker.js",
-    "loc": 30,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "worker",
     "runtime": "client",
     "purpose": "Loads and runs all-MiniLM-L6-v2 via @xenova/transformers@2.17.2 from jsDelivr CDN; handles embed messages, returns L2-normalised embedding arrays.",
     "exports": [],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-205"
     ],
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "worker",
       "embeddings",
       "pipeline"
     ],
-    "notes": "Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
   },
   {
     "id": "workers.synonyms.worker",
     "path": "src/workers/synonyms.worker.js",
-    "loc": 26,
+    "loc": 0,
     "deps": [],
+    "quarantined": true,
     "kind": "worker",
     "runtime": "client",
     "purpose": "Fetches and JSON-parses Moby Thesaurus shards off the main thread; caches parsed shards in-worker and replies with an entries array the main thread rebuilds into a Map.",
     "exports": [],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-207"
     ],
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "worker",
       "synonyms",
       "pipeline"
     ],
-    "notes": "Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Added v0.42 (F-207): moves the ~4MB 'c'-shard JSON parse off the main thread. lib.synonyms falls back to an inline main-thread fetch when Worker is undefined (SSR/tests)."
   }
 ]

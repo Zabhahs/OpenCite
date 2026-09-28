@@ -34,25 +34,15 @@ export const DEFAULT_SETTINGS = {
   ndliKey: "",   // NDLI — free at ndl.iitkgp.ac.in
   curatedJournals: DEFAULT_CURATED_JOURNALS,
   enabledSources: {},
-  // "unified" = single ranked list across all adapters (default)
+  // "unified" = single interleaved list across all adapters (default)
   // "source"  = per-adapter sections (power-user / source view)
   viewMode: "unified",
-  synonyms: true,
-  semanticSearch: true,
+  // v0.44 — engine teardown: the ranking-layer settings keys were removed with the
+  // engine (see docs/wiki/99-Archive/_quarantine/v0_44_engine/). Stale values in
+  // saved settings are inert (nothing reads them).
+
   // When false (default): adapters query content fields only (title/abstract/keywords),
   // so a query like "memon" no longer returns papers merely authored by someone named Memon.
   // When true: adapters revert to author-inclusive / all-field search.
-  rrfSemanticWeight: 0.4,
-  // RRF fusion weight for the Lexical↔Semantic slider when semanticSearch is on.
-  // 0.0 = pure lexical (BM25F), 1.0 = pure semantic (embeddings).
-  // Default 0.4 reproduces the hardcoded 0.6/0.4 balance.
-  searchDefaultsV31: true,
-  // One-time migration flag — marks that v.31 always-on search defaults (semantic + synonym) have been applied.
   authorSearch: false,
-  // v0.36 — DEVELOPER diagnostic (admin-gated in the UI). When true, the client search
-  // pipeline returns RAW adapter output in fan-out order: skips cross-adapter dedup,
-  // BM25F scoring, and the confidence gate (and semantic rerank is bypassed in App).
-  // Lets an admin see whether poor results originate upstream (adapter) or in our
-  // post-retrieve pipeline. Default off; never shown to non-admins.
-  simpleSearch: false,
 };

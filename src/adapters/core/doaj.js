@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const DOAJ_ADAPTER = {
   id: "DOAJ",
@@ -31,7 +32,7 @@ export const DOAJ_ADAPTER = {
       ? clean
       : `bibjson.title:(${clean}) OR bibjson.abstract:(${clean}) OR bibjson.keywords:(${clean})`;
     const url = `https://doaj.org/api/v3/search/articles/${encodeURIComponent(queryStr)}?pageSize=${pageSize}&page=${page}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`DOAJ ${r.status}`);
     const data = await r.json();
     const results = (data.results || []).map((a, i) => {

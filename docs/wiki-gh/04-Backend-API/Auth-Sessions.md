@@ -1,5 +1,5 @@
 ---
-machine_ids: [api.auth.handler, api.shared.auth, api.shared.apiAuth, api.keys]
+machine_ids: [api.auth.handler, api.shared.auth, api.shared.apiAuth, api.shared.handlers.keys, api.user.[resource]]
 findings: [F-401, F-402, F-413, F-414]
 runtime: server
 status: healthy
@@ -40,15 +40,18 @@ Mounted at `/api/auth/*` via vercel.json rewrite: `{ "source": "/api/auth/:path*
 
 **Error handling:** Auth handler errors return `500 "Internal auth error"` (plain text, no stack trace, `handler.js:134`).
 
-## `getSession` (`api/_shared/auth.js:36–48`)
+## `getSession` (`api/_shared/auth.js`)
 
-Used by all protected routes to resolve the caller's Auth.js session. Makes an internal loopback fetch to `/api/auth/session` with the caller's cookies forwarded.
+Used by all protected routes to resolve the caller's Auth.js session. Since v0.44 it is
+**in-process**: it reads the Auth.js session cookie (database-session token), looks the session
+up via Prisma, and enforces expiry the same way Auth.js does. There is no HTTP loopback.
 
-**Security note (F-401):** The loopback URL is constructed from `x-forwarded-host` / `host` headers:
-```js
-const host = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
-```
-A crafted `host` header could redirect this internal fetch to an arbitrary external host, which would then receive the caller's session cookies. On Vercel, `x-forwarded-host` is set by the platform infrastructure and is not caller-controlled. On self-hosted deployments this is a real risk. Low severity in practice (Vercel managed), but structurally unsafe.
+Contract (unchanged from the loopback era): returns the flat user `{ id, name, email, image }`
+or `null`. Callers read `user.id` / `user.email` directly — do not nest it.
+
+**History:** before v0.44 this was a loopback self-fetch of `/api/auth/session` whose URL was
+built from `x-forwarded-host` (F-401, host-header redirect of a cookie-bearing request — pinned
+in v0.39, eliminated in v0.44 when the loopback was removed).
 
 ## CORS (`api/_shared/auth.js:18–29`)
 
@@ -56,9 +59,11 @@ A crafted `host` header could redirect this internal fetch to an arbitrary exter
 
 Note: `/api/search` sets `Access-Control-Allow-Origin: *` unconditionally (it's a public API — no cookie/credential flow). The search endpoint's CORS is separate from `setCorsHeaders`.
 
-## API key issuance (`api/keys.js`)
+## API key issuance (`api/_shared/handlers/keys.js`)
 
 **Route:** `GET/POST/DELETE /api/keys` — requires a human session.
+
+> **v0.43.1:** the five session-authed user-data handlers — `keys`, `credits`, `history`, `library`, `settings` — were moved verbatim from `api/*.js` to `api/_shared/handlers/*.js` and are now fronted by a single dispatcher, `api/user/[resource].js`, to stay under Vercel Hobby's 12-Serverless-Function cap. The legacy `/api/<resource>` paths are preserved by `vercel.json` rewrites (`/api/keys` → `/api/user/keys`, …), so behaviour and client callers are unchanged. Each handler still does its own session auth + method routing.
 
 - `GET`: returns all keys for the caller (prefix + metadata only, never the hash or plaintext).
 - `POST`: calls `generateApiKey()` → returns `{ key, ...publicView }`. The plaintext is returned **exactly once** and never stored. The hash (`hashApiKey(key)`) is persisted as `key_hash`.
@@ -70,7 +75,7 @@ New keys are always created with `plan: free`. Plan elevation happens out-of-ban
 
 ## API key resolution (`api/_shared/apiAuth.js`)
 
-**Master key path:** `OPENCITE_API_KEY` is compared with `===` at `apiAuth.js:47`. This is a direct string equality check, not `crypto.timingSafeEqual`. A timing oracle exists on the master key — an attacker sending many requests with varying key lengths/prefixes could theoretically measure response time differences. See F-402.
+**Master key path:** `OPENCITE_API_KEY` is compared with `crypto.timingSafeEqual` over fixed-length hashes of both sides (F-402, fixed v0.39) — no timing oracle on the master key.
 
 **Customer key path:**
 1. `presentedKey(req)` extracts from `x-api-key` header (preferred) or `?key=` param.

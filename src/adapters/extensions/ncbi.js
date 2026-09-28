@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 // Decode the numeric/basic named XML entities PubMed abstracts carry (e.g. Greek µ as
 // &#x3bc;). stripHtml only blanks named entities, so abstract text needs a real decode.
@@ -49,7 +50,7 @@ export const NCBI_ADAPTER = {
     // the authorSearch toggle flips the tag to [Author].
     const tag = settings.authorSearch ? "Author" : "Title/Abstract";
     const term = query.trim().split(/\s+/).map(w => `${w}[${tag}]`).join(" AND ");
-    const r1 = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
+    const r1 = await fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
     if (!r1.ok) throw new Error(`NCBI esearch ${r1.status}`);
     const searchData = await r1.json();
     const ids = searchData.esearchresult?.idlist || [];
@@ -57,8 +58,8 @@ export const NCBI_ADAPTER = {
     if (ids.length === 0) return { results: [], hasMore: false };
     // esummary (metadata) and efetch (abstract XML) run in parallel. esummary is required;
     // efetch is enrichment — if it fails, degrade to empty abstracts rather than erroring.
-    const summaryReq = fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json`);
-    const abstractReq = fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(",")}&rettype=abstract&retmode=xml`)
+    const summaryReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json`);
+    const abstractReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(",")}&rettype=abstract&retmode=xml`)
       .then(r => (r.ok ? r.text() : "")).then(parsePubmedAbstracts).catch(() => ({}));
     const [r2, abstractMap] = await Promise.all([summaryReq, abstractReq]);
     if (!r2.ok) throw new Error(`NCBI esummary ${r2.status}`);

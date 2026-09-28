@@ -25,3 +25,6 @@ pnpm-debug.log*
 /Usersshahb*Temp*.json
 *_fts.json
 *_probe.json
+
+# Claude Code agent worktrees (local only)
+.claude/worktrees/

@@ -14,7 +14,7 @@ tags: [citations, formatting, mla, apa, bibtex, csl, ris]
 
 ## What it is
 
-Both files are pure formatting helpers — no scoring, no network calls. Called at render time (citation display in `ResultCard`) and on user action (copy/download button).
+Both files are pure formatting helpers — no network calls, no involvement in result ordering. Called at render time (citation display in `ResultCard`) and on user action (copy/download button).
 
 `src/lib/citations.js` — five export formats, shared name-formatting helpers.
 `src/lib/langNormalize.js` — ISO 639-1/639-2/full-name normalisation to a display-safe pair.
@@ -54,7 +54,7 @@ Three type branches per formatter: `primary-source`, `book-chapter` (detected by
 
 **RIS**: splits `pages` on `-` or en-dash (`–`) into `SP`/`EP` fields. Book chapters use `T2` for container title; articles use `JO`.
 
-### `normalizeLanguage` (`langNormalize.js`, line 68)
+### `normalizeLanguage` (`langNormalize.js`)
 
 Four-path lookup:
 1. 2-letter ISO 639-1 (`en`, `fr`) → direct `DISPLAY` lookup.
@@ -76,7 +76,7 @@ Four-path lookup:
 
 ## Overengineering / dead code assessment
 
-`exportAs` is a lazy dispatcher called only on user action (copy/download) — never at search time. This is correct: no citation is built during ranking. `isBookChapter` is exported (used by `groupResults.js` too for the book-chapter grouping logic). No dead code detected.
+`exportAs` is a lazy dispatcher called only on user action (copy/download) — never at search time, so it adds nothing to the search hot path. `isBookChapter` is exported (used by `groupResults.js` too for the book-chapter grouping logic). No dead code detected.
 
 ## 🩺 Health audit
 
@@ -87,4 +87,4 @@ Four-path lookup:
 
 ## See also
 
-[Adapter-Architecture](../02-Adapters/Adapter-Architecture.md) · [Ranking-Scoring](Ranking-Scoring.md)
+[Adapter-Architecture](../02-Adapters/Adapter-Architecture.md) · [Pipeline](Pipeline.md)

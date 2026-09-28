@@ -29,6 +29,10 @@ import {
   // OPENNEURO_ADAPTER, ENA_ADAPTER, SCIELO_ADAPTER — QUARANTINED v0.38: always-dead
   // (0 results every query → false `partial` coverage → billing discount). Source preserved at
   // docs/wiki/99-Archive/_quarantine/. Findings F-107/F-109/F-110/F-208.
+  // BDH_ADAPTER, BRITISH_LIBRARY_ADAPTER, MEXICANA_ADAPTER — QUARANTINED v0.44 T5: dead
+  // upstreams, live-probed 2026-06-09 (BDH → HTTP 403; BL SPARQL → hangs to timeout;
+  // Mexicana → expired TLS cert). Source preserved at
+  // docs/wiki/99-Archive/_quarantine/v0_44_adapters/ (adapters + their edge routes).
   // v.29 — humanities worldwide-coverage adapters
   LA_REFERENCIA_ADAPTER,
   OAPEN_ADAPTER,
@@ -41,11 +45,8 @@ import {
   // v.18 — SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,
-  BDH_ADAPTER,
   BNF_API_ADAPTER,
-  BRITISH_LIBRARY_ADAPTER,
   LC_DATASETS_ADAPTER,
-  MEXICANA_ADAPTER,
   WIKIDATA_ADAPTER,
 } from "./extensions/index.js";
 
@@ -86,11 +87,11 @@ export const ADAPTERS = [
   // Extensions — v.18 SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,
-  BDH_ADAPTER,
+  // BDH_ADAPTER — QUARANTINED v0.44 T5 (see import note above)
   BNF_API_ADAPTER,
-  BRITISH_LIBRARY_ADAPTER,
+  // BRITISH_LIBRARY_ADAPTER — QUARANTINED v0.44 T5 (see import note above)
   LC_DATASETS_ADAPTER,
-  MEXICANA_ADAPTER,
+  // MEXICANA_ADAPTER — QUARANTINED v0.44 T5 (see import note above)
   WIKIDATA_ADAPTER,
 ];
 

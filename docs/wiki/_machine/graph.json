@@ -2,6 +2,14 @@
   "edges": [
     [
       "adapters.core.crossref",
+      "adapters.shared.contentMatch"
+    ],
+    [
+      "adapters.core.crossref",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.core.crossref",
       "constants.defaults"
     ],
     [
@@ -13,12 +21,12 @@
       "lib.helpers"
     ],
     [
-      "adapters.core.crossref",
-      "lib.scoring"
+      "adapters.core.curatedJournals",
+      "adapters.shared.parseOpenAlex"
     ],
     [
       "adapters.core.curatedJournals",
-      "adapters.shared.parseOpenAlex"
+      "adapters.shared.proxy"
     ],
     [
       "adapters.core.curatedJournals",
@@ -27,6 +35,10 @@
     [
       "adapters.core.curatedJournals",
       "constants.vocabulary"
+    ],
+    [
+      "adapters.core.doaj",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.core.doaj",
@@ -43,6 +55,10 @@
     [
       "adapters.core.openalex",
       "adapters.shared.parseOpenAlex"
+    ],
+    [
+      "adapters.core.openalex",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.core.openalex",
@@ -67,14 +83,6 @@
     [
       "adapters.extensions.base",
       "lib.helpers"
-    ],
-    [
-      "adapters.extensions.bdh",
-      "constants.defaults"
-    ],
-    [
-      "adapters.extensions.bdh",
-      "constants.vocabulary"
     ],
     [
       "adapters.extensions.bnfApi",
@@ -93,14 +101,6 @@
       "constants.vocabulary"
     ],
     [
-      "adapters.extensions.britishLibrary",
-      "constants.defaults"
-    ],
-    [
-      "adapters.extensions.britishLibrary",
-      "constants.vocabulary"
-    ],
-    [
       "adapters.extensions.chroniclingAmerica",
       "adapters.shared.proxy"
     ],
@@ -150,6 +150,10 @@
     ],
     [
       "adapters.extensions.europeana",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.europeana",
       "constants.defaults"
     ],
     [
@@ -159,6 +163,10 @@
     [
       "adapters.extensions.europeana",
       "lib.helpers"
+    ],
+    [
+      "adapters.extensions.gallica",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.extensions.gallica",
@@ -174,15 +182,7 @@
     ],
     [
       "adapters.extensions.index",
-      "adapters.extensions.bdh"
-    ],
-    [
-      "adapters.extensions.index",
       "adapters.extensions.bnfApi"
-    ],
-    [
-      "adapters.extensions.index",
-      "adapters.extensions.britishLibrary"
     ],
     [
       "adapters.extensions.index",
@@ -219,10 +219,6 @@
     [
       "adapters.extensions.index",
       "adapters.extensions.met"
-    ],
-    [
-      "adapters.extensions.index",
-      "adapters.extensions.mexicana"
     ],
     [
       "adapters.extensions.index",
@@ -282,6 +278,10 @@
     ],
     [
       "adapters.extensions.internetArchive",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.internetArchive",
       "constants.defaults"
     ],
     [
@@ -306,6 +306,10 @@
     ],
     [
       "adapters.extensions.lcDatasets",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.lcDatasets",
       "constants.defaults"
     ],
     [
@@ -318,6 +322,10 @@
     ],
     [
       "adapters.extensions.met",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.met",
       "constants.defaults"
     ],
     [
@@ -325,12 +333,8 @@
       "constants.vocabulary"
     ],
     [
-      "adapters.extensions.mexicana",
-      "constants.defaults"
-    ],
-    [
-      "adapters.extensions.mexicana",
-      "constants.vocabulary"
+      "adapters.extensions.ncbi",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.extensions.ncbi",
@@ -406,6 +410,10 @@
     ],
     [
       "adapters.extensions.openContext",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.openContext",
       "constants.defaults"
     ],
     [
@@ -414,6 +422,10 @@
     ],
     [
       "adapters.extensions.openEdition",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.openEdition",
       "constants.defaults"
     ],
     [
@@ -474,11 +486,19 @@
     ],
     [
       "adapters.extensions.smithsonian",
+      "adapters.shared.proxy"
+    ],
+    [
+      "adapters.extensions.smithsonian",
       "constants.defaults"
     ],
     [
       "adapters.extensions.smithsonian",
       "constants.vocabulary"
+    ],
+    [
+      "adapters.extensions.thaqalayn",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.extensions.thaqalayn",
@@ -491,6 +511,10 @@
     [
       "adapters.extensions.thaqalayn",
       "lib.helpers"
+    ],
+    [
+      "adapters.extensions.wikidata",
+      "adapters.shared.proxy"
     ],
     [
       "adapters.extensions.wikidata",
@@ -585,30 +609,6 @@
       "api.shared.publicResult"
     ],
     [
-      "api.credits",
-      "api.shared.apiAuth"
-    ],
-    [
-      "api.credits",
-      "api.shared.auth"
-    ],
-    [
-      "api.credits",
-      "api.shared.prisma"
-    ],
-    [
-      "api.history",
-      "api.shared.auth"
-    ],
-    [
-      "api.history",
-      "api.shared.parseBody"
-    ],
-    [
-      "api.history",
-      "api.shared.prisma"
-    ],
-    [
       "api.ids",
       "api.shared.meter"
     ],
@@ -617,75 +617,31 @@
       "lib.idResolve"
     ],
     [
-      "api.keys",
-      "api.shared.auth"
-    ],
-    [
-      "api.keys",
-      "api.shared.crypto"
-    ],
-    [
-      "api.keys",
-      "api.shared.plans"
-    ],
-    [
-      "api.keys",
-      "api.shared.prisma"
-    ],
-    [
-      "api.library",
-      "api.shared.auth"
-    ],
-    [
-      "api.library",
-      "api.shared.parseBody"
-    ],
-    [
-      "api.library",
-      "api.shared.prisma"
-    ],
-    [
       "api.proxy",
       "api.shared.log"
     ],
     [
-      "api.route.bdh",
-      "api.shared.log"
-    ],
-    [
-      "api.route.bl",
-      "api.shared.log"
-    ],
-    [
-      "api.route.dpla",
+      "api.route.[source]",
       "adapters.extensions.dpla"
     ],
     [
-      "api.route.dpla",
-      "api.shared.requireInternalOrigin"
-    ],
-    [
-      "api.route.dpla",
-      "api.shared.serverKeys"
-    ],
-    [
-      "api.route.europeana",
+      "api.route.[source]",
       "adapters.extensions.europeana"
     ],
     [
-      "api.route.europeana",
+      "api.route.[source]",
+      "adapters.extensions.smithsonian"
+    ],
+    [
+      "api.route.[source]",
       "api.shared.requireInternalOrigin"
     ],
     [
-      "api.route.europeana",
+      "api.route.[source]",
       "api.shared.serverKeys"
     ],
     [
       "api.route.gallica",
-      "api.shared.log"
-    ],
-    [
-      "api.route.mexicana",
       "api.shared.log"
     ],
     [
@@ -695,18 +651,6 @@
     [
       "api.route.openedition",
       "api.shared.log"
-    ],
-    [
-      "api.route.smithsonian",
-      "adapters.extensions.smithsonian"
-    ],
-    [
-      "api.route.smithsonian",
-      "api.shared.requireInternalOrigin"
-    ],
-    [
-      "api.route.smithsonian",
-      "api.shared.serverKeys"
     ],
     [
       "api.search",
@@ -773,22 +717,6 @@
       "lib.idResolve"
     ],
     [
-      "api.search",
-      "lib.scoring"
-    ],
-    [
-      "api.settings",
-      "api.shared.auth"
-    ],
-    [
-      "api.settings",
-      "api.shared.crypto"
-    ],
-    [
-      "api.settings",
-      "api.shared.prisma"
-    ],
-    [
       "api.shared.adapterHealth.test",
       "api.shared.adapterHealth"
     ],
@@ -806,6 +734,10 @@
     ],
     [
       "api.shared.apiAuth",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.auth",
       "api.shared.prisma"
     ],
     [
@@ -839,6 +771,78 @@
     [
       "api.shared.debugResult",
       "api.shared.publicResult"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.plans"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.history",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.history",
+      "api.shared.parseBody"
+    ],
+    [
+      "api.shared.handlers.history",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.keys",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.keys",
+      "api.shared.crypto"
+    ],
+    [
+      "api.shared.handlers.keys",
+      "api.shared.plans"
+    ],
+    [
+      "api.shared.handlers.keys",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.library",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.library",
+      "api.shared.parseBody"
+    ],
+    [
+      "api.shared.handlers.library",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.settings",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.settings",
+      "api.shared.crypto"
+    ],
+    [
+      "api.shared.handlers.settings",
+      "api.shared.parseBody"
+    ],
+    [
+      "api.shared.handlers.settings",
+      "api.shared.prisma"
     ],
     [
       "api.shared.kv",
@@ -885,12 +889,28 @@
       "api.shared.prisma"
     ],
     [
-      "App",
-      "adapters.index"
+      "api.user.[resource]",
+      "api.shared.handlers.credits"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.history"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.keys"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.library"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.settings"
     ],
     [
       "App",
-      "components.AdminConsole"
+      "adapters.index"
     ],
     [
       "App",
@@ -958,10 +978,6 @@
     ],
     [
       "App",
-      "hooks.useSemanticRerank"
-    ],
-    [
-      "App",
       "hooks.useSettings"
     ],
     [
@@ -995,10 +1011,6 @@
     [
       "components.AdminConsole",
       "components.admin.GoldSetHarness"
-    ],
-    [
-      "components.AdminConsole",
-      "components.admin.ScoreExplainer"
     ],
     [
       "components.AdminConsole",
@@ -1177,22 +1189,6 @@
       "lib.dedup"
     ],
     [
-      "hooks.useSearch",
-      "lib.scoring"
-    ],
-    [
-      "hooks.useSearch",
-      "lib.synonyms"
-    ],
-    [
-      "hooks.useSemanticRerank",
-      "lib.rrf"
-    ],
-    [
-      "hooks.useSemanticRerank",
-      "lib.semantic"
-    ],
-    [
       "hooks.useSettings",
       "adapters.index"
     ],
@@ -1290,16 +1286,16 @@
     ]
   ],
   "reverse": {
-    "constants.defaults": [
-      "App",
+    "adapters.shared.contentMatch": [
+      "adapters.core.crossref"
+    ],
+    "adapters.shared.proxy": [
       "adapters.core.crossref",
       "adapters.core.curatedJournals",
       "adapters.core.doaj",
       "adapters.core.openalex",
       "adapters.extensions.base",
-      "adapters.extensions.bdh",
       "adapters.extensions.bnfApi",
-      "adapters.extensions.britishLibrary",
       "adapters.extensions.chroniclingAmerica",
       "adapters.extensions.coreAc",
       "adapters.extensions.dpla",
@@ -1309,7 +1305,38 @@
       "adapters.extensions.laReferencia",
       "adapters.extensions.lcDatasets",
       "adapters.extensions.met",
-      "adapters.extensions.mexicana",
+      "adapters.extensions.ncbi",
+      "adapters.extensions.ndli",
+      "adapters.extensions.northwestern",
+      "adapters.extensions.oapen",
+      "adapters.extensions.onb",
+      "adapters.extensions.openContext",
+      "adapters.extensions.openEdition",
+      "adapters.extensions.openLibrary",
+      "adapters.extensions.pangaea",
+      "adapters.extensions.princetonDpul",
+      "adapters.extensions.rijksmuseum",
+      "adapters.extensions.smithsonian",
+      "adapters.extensions.thaqalayn",
+      "adapters.extensions.wikidata"
+    ],
+    "constants.defaults": [
+      "App",
+      "adapters.core.crossref",
+      "adapters.core.curatedJournals",
+      "adapters.core.doaj",
+      "adapters.core.openalex",
+      "adapters.extensions.base",
+      "adapters.extensions.bnfApi",
+      "adapters.extensions.chroniclingAmerica",
+      "adapters.extensions.coreAc",
+      "adapters.extensions.dpla",
+      "adapters.extensions.europeana",
+      "adapters.extensions.gallica",
+      "adapters.extensions.internetArchive",
+      "adapters.extensions.laReferencia",
+      "adapters.extensions.lcDatasets",
+      "adapters.extensions.met",
       "adapters.extensions.ncbi",
       "adapters.extensions.ndli",
       "adapters.extensions.northwestern",
@@ -1337,9 +1364,7 @@
       "adapters.core.doaj",
       "adapters.core.openalex",
       "adapters.extensions.base",
-      "adapters.extensions.bdh",
       "adapters.extensions.bnfApi",
-      "adapters.extensions.britishLibrary",
       "adapters.extensions.chroniclingAmerica",
       "adapters.extensions.coreAc",
       "adapters.extensions.dpla",
@@ -1349,7 +1374,6 @@
       "adapters.extensions.laReferencia",
       "adapters.extensions.lcDatasets",
       "adapters.extensions.met",
-      "adapters.extensions.mexicana",
       "adapters.extensions.ncbi",
       "adapters.extensions.ndli",
       "adapters.extensions.northwestern",
@@ -1387,31 +1411,10 @@
       "adapters.shared.parseOpenAlex",
       "components.ResultCard"
     ],
-    "lib.scoring": [
-      "adapters.core.crossref",
-      "api.search",
-      "hooks.useSearch"
-    ],
     "adapters.shared.parseOpenAlex": [
       "adapters.core.curatedJournals",
       "adapters.core.openalex",
       "api.shared.citationGraph"
-    ],
-    "adapters.shared.proxy": [
-      "adapters.extensions.base",
-      "adapters.extensions.bnfApi",
-      "adapters.extensions.chroniclingAmerica",
-      "adapters.extensions.coreAc",
-      "adapters.extensions.dpla",
-      "adapters.extensions.laReferencia",
-      "adapters.extensions.ndli",
-      "adapters.extensions.northwestern",
-      "adapters.extensions.oapen",
-      "adapters.extensions.onb",
-      "adapters.extensions.openLibrary",
-      "adapters.extensions.pangaea",
-      "adapters.extensions.princetonDpul",
-      "adapters.extensions.rijksmuseum"
     ],
     "adapters.shared.xmlUtils": [
       "adapters.extensions.bnfApi",
@@ -1420,13 +1423,7 @@
     "adapters.extensions.base": [
       "adapters.extensions.index"
     ],
-    "adapters.extensions.bdh": [
-      "adapters.extensions.index"
-    ],
     "adapters.extensions.bnfApi": [
-      "adapters.extensions.index"
-    ],
-    "adapters.extensions.britishLibrary": [
       "adapters.extensions.index"
     ],
     "adapters.extensions.chroniclingAmerica": [
@@ -1437,11 +1434,11 @@
     ],
     "adapters.extensions.dpla": [
       "adapters.extensions.index",
-      "api.route.dpla"
+      "api.route.[source]"
     ],
     "adapters.extensions.europeana": [
       "adapters.extensions.index",
-      "api.route.europeana"
+      "api.route.[source]"
     ],
     "adapters.extensions.gallica": [
       "adapters.extensions.index"
@@ -1456,9 +1453,6 @@
       "adapters.extensions.index"
     ],
     "adapters.extensions.met": [
-      "adapters.extensions.index"
-    ],
-    "adapters.extensions.mexicana": [
       "adapters.extensions.index"
     ],
     "adapters.extensions.ncbi": [
@@ -1496,7 +1490,7 @@
     ],
     "adapters.extensions.smithsonian": [
       "adapters.extensions.index",
-      "api.route.smithsonian"
+      "api.route.[source]"
     ],
     "adapters.extensions.thaqalayn": [
       "adapters.extensions.index"
@@ -1536,33 +1530,31 @@
     "api.shared.auth": [
       "api.auth.handler",
       "api.checkout",
-      "api.credits",
-      "api.history",
-      "api.keys",
-      "api.library",
-      "api.settings",
       "api.shared.apiAuth",
+      "api.shared.handlers.credits",
+      "api.shared.handlers.history",
+      "api.shared.handlers.keys",
+      "api.shared.handlers.library",
+      "api.shared.handlers.settings",
       "api.shared.requireInternalOrigin"
     ],
     "api.shared.prisma": [
       "api.auth.handler",
       "api.checkout",
-      "api.credits",
-      "api.history",
-      "api.keys",
-      "api.library",
-      "api.settings",
       "api.shared.apiAuth",
+      "api.shared.auth",
       "api.shared.billing",
+      "api.shared.handlers.credits",
+      "api.shared.handlers.history",
+      "api.shared.handlers.keys",
+      "api.shared.handlers.library",
+      "api.shared.handlers.settings",
       "api.stripe.webhook"
     ],
     "api.shared.log": [
       "api.checkout",
       "api.proxy",
-      "api.route.bdh",
-      "api.route.bl",
       "api.route.gallica",
-      "api.route.mexicana",
       "api.route.opencontext",
       "api.route.openedition",
       "api.shared.kv",
@@ -1570,14 +1562,16 @@
     ],
     "api.shared.parseBody": [
       "api.checkout",
-      "api.history",
-      "api.library"
+      "api.shared.handlers.history",
+      "api.shared.handlers.library",
+      "api.shared.handlers.settings"
     ],
     "api.shared.plans": [
       "api.checkout",
-      "api.keys",
       "api.search",
       "api.shared.apiAuth",
+      "api.shared.handlers.credits",
+      "api.shared.handlers.keys",
       "api.stripe.webhook"
     ],
     "api.shared.citationGraph": [
@@ -1592,31 +1586,17 @@
       "api.search",
       "api.shared.debugResult"
     ],
-    "api.shared.apiAuth": [
-      "api.credits",
-      "api.search",
-      "api.shared.meter"
-    ],
     "lib.idResolve": [
       "api.ids",
       "api.search",
       "api.shared.citationGraph",
       "lib.idResolve.test"
     ],
-    "api.shared.crypto": [
-      "api.keys",
-      "api.settings",
-      "api.shared.apiAuth"
-    ],
     "api.shared.requireInternalOrigin": [
-      "api.route.dpla",
-      "api.route.europeana",
-      "api.route.smithsonian"
+      "api.route.[source]"
     ],
     "api.shared.serverKeys": [
-      "api.route.dpla",
-      "api.route.europeana",
-      "api.route.smithsonian",
+      "api.route.[source]",
       "api.search"
     ],
     "adapters.index": [
@@ -1630,6 +1610,11 @@
       "api.search",
       "api.shared.adapterHealth.test",
       "api.shared.citationGraph"
+    ],
+    "api.shared.apiAuth": [
+      "api.search",
+      "api.shared.handlers.credits",
+      "api.shared.meter"
     ],
     "api.shared.apiContract": [
       "api.search",
@@ -1666,12 +1651,29 @@
       "hooks.useSearch",
       "lib.dedup.test"
     ],
+    "api.shared.crypto": [
+      "api.shared.apiAuth",
+      "api.shared.handlers.keys",
+      "api.shared.handlers.settings"
+    ],
     "api.shared.kv": [
       "api.shared.cache",
       "api.shared.ratelimit"
     ],
-    "components.AdminConsole": [
-      "App"
+    "api.shared.handlers.credits": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.history": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.keys": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.library": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.settings": [
+      "api.user.[resource]"
     ],
     "components.FilterBar": [
       "App"
@@ -1723,9 +1725,6 @@
     "hooks.useSearch": [
       "App"
     ],
-    "hooks.useSemanticRerank": [
-      "App"
-    ],
     "hooks.useSettings": [
       "App"
     ],
@@ -1756,9 +1755,6 @@
       "lib.library"
     ],
     "components.admin.GoldSetHarness": [
-      "components.AdminConsole"
-    ],
-    "components.admin.ScoreExplainer": [
       "components.AdminConsole"
     ],
     "lib.langNormalize": [
@@ -1816,15 +1812,6 @@
     ],
     "lib.history": [
       "hooks.useHistory"
-    ],
-    "lib.synonyms": [
-      "hooks.useSearch"
-    ],
-    "lib.rrf": [
-      "hooks.useSemanticRerank"
-    ],
-    "lib.semantic": [
-      "hooks.useSemanticRerank"
     ],
     "launchers._factory": [
       "launchers.index"

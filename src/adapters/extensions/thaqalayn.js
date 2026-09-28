@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const THAQALAYN_ADAPTER = {
   id: "THAQALAYN", name: "Thaqalayn",
@@ -18,7 +19,7 @@ export const THAQALAYN_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const r = await fetch(`https://www.thaqalayn-api.net/api/v2/query?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" } });
+    const r = await fetchWithTimeout(`https://www.thaqalayn-api.net/api/v2/query?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Thaqalayn ${r.status}`);
     const data = await r.json();
     const all = Array.isArray(data) ? data : (data.hadiths || data.results || []);

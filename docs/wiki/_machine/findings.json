@@ -4,12 +4,12 @@
     "type": "dup",
     "severity": "low",
     "title": "xmlUtils helpers duplicated into api/search/mexicana.js",
-    "detail": "src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
     "path": "src/adapters/_shared/xmlUtils.js:13",
     "modules": [
       "adapters.shared.xmlUtils"
     ],
-    "status": "open",
+    "status": "moot",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
     "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/. Plan: 02-Adapters/Shared-Utils-Plan.md (v0.41)."
   },
@@ -90,12 +90,12 @@
     "type": "bug",
     "severity": "low",
     "title": "Mexicana returns nextToken instead of generic nextPageToken",
-    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination. [RESOLVED v0.38 T5: TWO-part fix — (1) return key renamed nextToken->nextPageToken, AND (2) the adapter read the token from a bespoke opts.mexicanaToken that useSearch never populated; corrected to opts.pageToken (the generic key, matching Rijksmuseum). Both halves were required for load-more to work.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination. [RESOLVED v0.38 T5: TWO-part fix — (1) return key renamed nextToken->nextPageToken, AND (2) the adapter read the token from a bespoke opts.mexicanaToken that useSearch never populated; corrected to opts.pageToken (the generic key, matching Rijksmuseum). Both halves were required for load-more to work.]",
     "path": "src/adapters/extensions/mexicana.js:21",
     "modules": [
       "adapters.extensions.mexicana"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "02-Adapters/Adapter-Health-Matrix.md#f-106",
     "fix_hint": "Change nextToken to nextPageToken in the return statement. Verify the server route at api/search/mexicana.js passes it back under the same key."
   },
@@ -244,14 +244,14 @@
     "type": "debt",
     "severity": "med",
     "title": "BM25F IDF is degenerate on micro-pool (14–45 docs) — mitigated by RRF fusion, not eliminated",
-    "detail": "scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
     "path": "src/lib/scoring.js:160-171",
     "modules": [
       "lib.scoring",
       "lib.rrf"
     ],
-    "status": "confirmed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d3",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Accepted residual. To fully eliminate: replace micro-pool IDF with corpus-level IDF (would require a background statistics endpoint) or rely entirely on native+semantic ranks when available. Not a priority given current RRF weighting."
   },
   {
@@ -259,13 +259,13 @@
     "type": "ux",
     "severity": "low",
     "title": "Display-side score normalisation (0–100 per query) not implemented",
-    "detail": "D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
     "path": "src/lib/scoring.js:13-15",
     "modules": [
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d4",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Normalise _score to 0-100 relative to top hit in the admin debug card renderer, or hide raw _score and show only _fused rank."
   },
   {
@@ -273,14 +273,14 @@
     "type": "bug",
     "severity": "high",
     "title": "Internet Archive download counts used as citedBy rank signal — FIXED in v0.35",
-    "detail": "D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
     "path": "src/adapters/extensions/internetArchive.js:100",
     "modules": [
       "adapters.extensions.internetArchive",
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d1",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed. Verify: run probe.mjs on surname queries (shaikh, ali, khan) — IA items should no longer lead."
   },
   {
@@ -288,13 +288,13 @@
     "type": "bug",
     "severity": "high",
     "title": "Internet Archive retrieval sorted by downloads (popularity) not relevance — FIXED in v0.35",
-    "detail": "D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
     "path": "src/adapters/extensions/internetArchive.js:184",
     "modules": [
       "adapters.extensions.internetArchive"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d2",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed."
   },
   {
@@ -302,13 +302,13 @@
     "type": "bug",
     "severity": "med",
     "title": "Diacritic and transliteration fragmentation — FIXED in v0.35",
-    "detail": "D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
     "path": "src/lib/scoring.js:124-144",
     "modules": [
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d5",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed. ALIAS_CLUSTERS is conservative — extend with documented rationale if new domains need folding."
   },
   {
@@ -316,14 +316,14 @@
     "type": "perf",
     "severity": "med",
     "title": "Semantic rerank is client-only — API consumers and MCP endpoint receive no semantic signal",
-    "detail": "computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
     "path": "src/lib/semantic.js",
     "modules": [
       "lib.semantic",
-      "workers.embed.worker"
+      "workers.embed"
     ],
-    "status": "spike-complete",
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Not easily fixable without a separate embedding service or switching to a smaller synchronous model. Acceptable architectural constraint. Document clearly for API consumers."
   },
   {
@@ -345,13 +345,13 @@
     "type": "perf",
     "severity": "low",
     "title": "Moby Thesaurus shard JSON.parse is synchronous — large shards may cause main-thread jank",
-    "detail": "loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
     "path": "src/lib/synonyms.js:48-61",
     "modules": [
       "lib.synonyms"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Move shard loading to a Web Worker, or use a streaming JSON parser. Low priority — synonym expansion is optional and jank is one-time (shards are cached)."
   },
   {
@@ -373,15 +373,15 @@
     "type": "bug",
     "severity": "med",
     "title": "Server /api/search does NOT use RRF — returns BM25F-only order while the browser does full RRF (the two front doors disagree)",
-    "detail": "CORRECTED 2026-06-08, verified against live prod code: api/search.js never imports lib/rrf.js (no buildNativeRanks/rrfScores) and sorts purely by BM25F _score at api/search.js:351 (finalResults.sort((a,b)=>(b._score||0)-(a._score||0))). rrf.js is imported ONLY by src/hooks/useSemanticRerank.js:3 (browser). So the metered API + MCP path returns BM25F-only ranking, while the browser app returns native+lexical+semantic RRF fusion — the same query yields DIFFERENTLY-ORDERED results across the two surfaces. The earlier finding (and the v0.35 commit message 2cf5cb6) claimed server RRF was live; the code in prod refutes that — it was reverted or never landed. This is NOT 'what we did well'; it is an open ranking-consistency defect. Note: native rank fusion (buildNativeRanks/nativeWeight) is dead on the server regardless; only the in-browser fuseRanks path is wired.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. CORRECTED 2026-06-08, verified against live prod code: api/search.js never imports lib/rrf.js (no buildNativeRanks/rrfScores) and sorts purely by BM25F _score at api/search.js:351 (finalResults.sort((a,b)=>(b._score||0)-(a._score||0))). rrf.js is imported ONLY by src/hooks/useSemanticRerank.js:3 (browser). So the metered API + MCP path returns BM25F-only ranking, while the browser app returns native+lexical+semantic RRF fusion — the same query yields DIFFERENTLY-ORDERED results across the two surfaces. The earlier finding (and the v0.35 commit message 2cf5cb6) claimed server RRF was live; the code in prod refutes that — it was reverted or never landed. This is NOT 'what we did well'; it is an open ranking-consistency defect. Note: native rank fusion (buildNativeRanks/nativeWeight) is dead on the server regardless; only the in-browser fuseRanks path is wired.",
     "path": "api/search.js:351",
     "modules": [
       "api.search",
       "lib.rrf",
       "lib.scoring"
     ],
-    "status": "open",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#f-209",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Wire server RRF: import { buildNativeRanks, nativeWeight, rrfScores } from ../src/lib/rrf.js into api/search.js, stamp nativeRank/nativeScore on adapter results (as the browser path does), fuse native+lexical, and sort by the fused score instead of raw _score (line 351). ~5-line change reusing the existing 13-LOC rrf.js. Semantic arm stays browser-only (Web Worker + 23MB MiniLM can't run in Vercel Functions — see F-205), so server fusion is native+lexical two-input; document that residual gap for API/MCP consumers."
   },
   {
@@ -635,8 +635,8 @@
     "path": "api/_shared/parseBody.js:3",
     "modules": [
       "api.shared.parseBody",
-      "api.history",
-      "api.library",
+      "api.shared.handlers.history",
+      "api.shared.handlers.library",
       "api.checkout"
     ],
     "status": "fixed",
@@ -706,13 +706,13 @@
     "type": "debt",
     "severity": "low",
     "title": "api/settings.js reads req.body directly instead of parseBody — inconsistent body handling",
-    "detail": "api/settings.js:51 accesses `req.body ?? {}` directly (relying on Vercel's automatic body parsing) while all other POST routes use parseBody() for stream-based reading. This is inconsistent — if Vercel body parsing is ever disabled (e.g., per-route config), settings POST would silently receive undefined body.",
+    "detail": "FIXED v0.44 T3: handlers/settings.js now routes the POST body through parseBody (64 KB cap). api/settings.js:51 accesses `req.body ?? {}` directly (relying on Vercel's automatic body parsing) while all other POST routes use parseBody() for stream-based reading. This is inconsistent — if Vercel body parsing is ever disabled (e.g., per-route config), settings POST would silently receive undefined body.",
     "path": "api/settings.js:51",
     "modules": [
-      "api.settings",
+      "api.shared.handlers.settings",
       "api.shared.parseBody"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
     "fix_hint": "Replace `req.body ?? {}` with `await parseBody(req)` for consistency."
   },
@@ -734,11 +734,9 @@
     "severity": "med",
     "title": "Keyed per-source routes (Europeana/DPLA/Smithsonian) are unauthenticated — quota drain risk",
     "detail": "api/search/europeana.js, dpla.js, smithsonian.js have no auth, no rate limit, and no credit charge. Any caller with network access to the Vercel function URLs can send unlimited queries, burning the project's Europeana/DPLA/Smithsonian API quota without any cost to themselves. These URLs are discoverable from the client adapter source code. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
-    "path": "api/search/europeana.js:11",
+    "path": "api/search/[source].js:13",
     "modules": [
-      "api.route.europeana",
-      "api.route.dpla",
-      "api.route.smithsonian"
+      "api.route.[source]"
     ],
     "status": "fixed",
     "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
@@ -749,12 +747,12 @@
     "type": "security",
     "severity": "low",
     "title": "BL SPARQL route injects query into SPARQL template with minimal sanitization",
-    "detail": "api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/bl.js:15",
     "modules": [
       "api.route.bl"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "04-Backend-API/Per-Source-Routes.md#bl---british-library-sparql",
     "fix_hint": "Use parameterized SPARQL via the Upstash or a SPARQL-safe encoding, or at minimum strip all non-alphanumeric characters from the query before injection."
   },
@@ -763,12 +761,12 @@
     "type": "security",
     "severity": "low",
     "title": "Mexicana route passes resumptionToken from query param directly into OAI-PMH URL",
-    "detail": "api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/mexicana.js:51",
     "modules": [
       "api.route.mexicana"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "04-Backend-API/Per-Source-Routes.md#mexicanajs---mexicana-oai-pmh",
     "fix_hint": "Validate that resumptionToken matches a known format (alphanumeric + limited punctuation) before using it."
   },
@@ -822,7 +820,7 @@
     "detail": "api/keys.js:50-59 — POST creates a new key without checking how many the user already has. Each key still spends from the user's own credit pool, so the financial impact is self-limiting. The risk is that a large number of keys creates noise in the api_keys table and makes key management harder. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/keys.js:50",
     "modules": [
-      "api.keys"
+      "api.shared.handlers.keys"
     ],
     "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",

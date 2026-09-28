@@ -1,5 +1,5 @@
 ---
-machine_ids: [api.route.europeana, api.route.dpla, api.route.smithsonian, api.route.bl, api.route.gallica, api.route.bdh, api.route.mexicana, api.route.opencontext, api.route.openedition]
+machine_ids: [api.route.[source], api.route.bl, api.route.gallica, api.route.bdh, api.route.mexicana, api.route.opencontext, api.route.openedition]
 findings: [F-407, F-408, F-409]
 runtime: server
 status: mixed
@@ -8,7 +8,9 @@ tags: [api, per-source, browser-shim, edge, cors, heritage]
 
 # Per-Source Routes (`api/search/*.js`)
 
-> Nine edge/Node serverless routes that proxy browser clients to sources that require backend secrets, CORS workarounds, or POST request bodies.
+> Seven serverless functions that proxy browser clients to sources that require backend secrets, CORS workarounds, or POST request bodies: one Node dispatcher (`[source].js`) for the three keyed sources + six keyless Edge routes.
+
+> **v0.43.1 consolidation:** the three keyed Node shims (Europeana/DPLA/Smithsonian) were folded into a single dynamic route `api/search/[source].js` to stay under Vercel Hobby's 12-Serverless-Function cap (Edge functions don't count). The six keyless heritage routes stay as their own static Edge files — consolidating them buys nothing (Edge is free) and would force a runtime merge + a Gallica `DOMParser`→regex rewrite. Vercel resolves exact filenames before the `[source]` param, so the static edge routes keep precedence.
 
 ## What it is
 
@@ -24,9 +26,7 @@ These routes do **not** go through the API billing / auth pipeline. They are bro
 
 | Route | File | Runtime | Reason | Auth | Key source |
 |---|---|---|---|---|---|
-| `/api/search/europeana` | `europeana.js` | Node | Secret API key | None | `serverInjectedKeys()` |
-| `/api/search/dpla` | `dpla.js` | Node | Secret API key | None | `serverInjectedKeys()` |
-| `/api/search/smithsonian` | `smithsonian.js` | Node | Secret API key | None | `serverInjectedKeys()` |
+| `/api/search/{europeana,dpla,smithsonian}` | `[source].js` | Node | Secret API key | `requireInternalOrigin` | `serverInjectedKeys()` |
 | `/api/search/bl` | `bl.js` | Edge | CORS + SPARQL | None | None |
 | `/api/search/gallica` | `gallica.js` | Edge | CORS + SRU/XML | None | None |
 | `/api/search/bdh` | `bdh.js` | Edge | CORS | None | None |
@@ -34,19 +34,20 @@ These routes do **not** go through the API billing / auth pipeline. They are bro
 | `/api/search/opencontext` | `opencontext.js` | Edge | CORS | None | None |
 | `/api/search/openedition` | `openedition.js` | Edge | CORS + POST body | None | None |
 
-## Keyed routes (Europeana, DPLA, Smithsonian) — v0.34
+## Keyed routes (Europeana, DPLA, Smithsonian) — v0.34, consolidated v0.43.1
 
-All three are structurally identical (same pattern, ~23 lines each):
+The three were structurally identical (~23 lines each). v0.43.1 folded them into a single dynamic Node route, `api/search/[source].js`, that maps the `source` path segment to the matching adapter:
 
 ```
-GET /api/search/{source}?q=<query>&offset=<n>
-→ serverInjectedKeys() → adapter.search(q, keys, {offset})
-→ 200 { results:[], hasMore:false } always (fail-soft)
+GET /api/search/{source}?q=<query>&offset=<n>      source ∈ { dpla, europeana, smithsonian }
+→ requireInternalOrigin(req,res)                   (F-407: same-origin browser callers only)
+→ ADAPTERS[source].search(q, serverInjectedKeys(), {offset})
+→ 200 { results:[], hasMore:false } always (fail-soft) · unknown source → 404
 ```
 
-The adapter's server branch does the actual upstream fetch + normalize. No duplication of adapter logic in the route. The key is never echoed in the response or error body. If the env key is absent, `serverInjectedKeys()` returns an object without that key → the adapter gets no key → it will error → the fail-soft catch returns `{results:[], hasMore:false, error:e.message}`.
+The adapter's server branch does the actual upstream fetch + normalize. No duplication of adapter logic in the route. The key is never echoed in the response or error body. If the env key is absent, `serverInjectedKeys()` returns an object without that key → the adapter gets no key → it will error → the fail-soft catch returns `{results:[], hasMore:false, error:e.message}`. The browser still calls `/api/search/europeana` (etc.), so the client adapters are unchanged.
 
-**Security note (F-407):** These routes have no auth, no rate limit, and no credit charge. A public caller who discovers them can query Europeana/DPLA/Smithsonian for free, spending the project's API quota. They are not protected by any of the `/api/search` billing machinery. The URLs are not secret (they're in the client adapter code), but they are undocumented public endpoints.
+**Security note (F-407, fixed v0.39):** the dispatcher calls `requireInternalOrigin` first, so only same-origin browser callers reach it; direct/cross-site requests get `403` (verified live). The earlier state — no auth, no rate limit, no credit charge, letting a public caller drain the project's Europeana/DPLA/Smithsonian quota — is resolved.
 
 ## Heritage/CORS routes (Edge runtime)
 

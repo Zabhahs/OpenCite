@@ -32,6 +32,13 @@ the revival checklist, re-verify, and flip the machine record back to `healthy`/
 | [[adapter-semanticscholar]] | v0.42 | Deregistered v0.27; approval-gated key + rate-limited; orphan descriptor | [[09-Audit/Tech-Debt-Overengineering#f-105]] | Yes — fix `protocol`, re-add key + registry |
 | [[context-settings]] | v0.41 | Never mounted — prop-drilling used instead | F-301, F-308 | Yes — see revival checklist |
 | [[oauth-apple-microsoft]] | v0.41 | Inactive "soon" UI — no OAuth integration yet | F-305 | Yes — implement OAuth first |
+| `v0_44_adapters/adapter-bdh.js` + `route-bdh.js` | v0.44 (T5) | Dead upstream — datos.bne.es HTTP 403 on every probe (live-probed 2026-06-09) | — | Yes — re-probe upstream, restore files + registry entries |
+| `v0_44_adapters/adapter-britishLibrary.js` + `route-bl.js` | v0.44 (T5) | Dead upstream — BNB SPARQL endpoint hangs to timeout (live-probed 2026-06-09) | — | Yes — re-probe upstream, restore files + registry entries |
+| `v0_44_adapters/adapter-mexicana.js` + `route-mexicana.js` | v0.44 (T5) | Dead upstream — expired TLS certificate (live-probed 2026-06-09) | — | Yes — re-probe upstream, restore files + registry entries |
+
+> **v0.44 format note:** the v0.44 arrivals are preserved as **raw `.js` files** under
+> `v0_44_adapters/` (git `mv`, history intact) rather than embedded-source `.md` dossiers; each
+> file carries its quarantine banner + revival checklist in a header comment.
 
 > **Why these three:** all `serverSafe:true`, so the `/api/search` fan-out counted them as failed →
 > forced `coverage:partial` on **every** search → the freeBelowBand discount fired on every paid query.

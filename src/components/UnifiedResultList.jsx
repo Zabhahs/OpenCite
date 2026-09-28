@@ -11,10 +11,13 @@ const LOAD_STEP = 10;
 const ADAPTER_MAP = Object.fromEntries(ADAPTERS.map(a => [a.id, a]));
 
 // ---------------------------------------------------------------------------
-// UnifiedResultList — ranks all results from all adapters by _score and
-// presents them as a single paginated list. Source attribution is shown
-// as a colored chip above each card. Book chapters sharing the same container
-// title are clustered together under a parent-work header (same as source view).
+// UnifiedResultList — merges all results from all adapters into a single
+// paginated list. Default order is a round-robin interleave across sections
+// (sprint v0.44 D-3: result #1 of each source, then #2, …), preserving each
+// source's native relevance order; explicit Year/Citations sorts re-sort the
+// pool. Source attribution is shown as a colored chip above each card. Book
+// chapters sharing the same container title are clustered together under a
+// parent-work header (same as source view).
 //
 // Props:
 //   filteredSections  — output of useFilters (already filtered/sorted per user prefs)
@@ -41,25 +44,27 @@ export function UnifiedResultList({
     setDisplayCount(INITIAL_DISPLAY);
   }, [searchKey]);
 
-  // Pool and rank across all sections
+  // Pool across all sections. Explicit sorts re-sort the flat pool; the default is
+  // a round-robin interleave (D-3) that keeps each source's native order intact.
   const allResults = useMemo(() => {
-    const pool = [];
-    for (const section of Object.values(filteredSections)) {
-      for (const r of section.results || []) {
-        pool.push(r);
+    const lists = Object.values(filteredSections)
+      .map(s => s.results || [])
+      .filter(l => l.length > 0);
+
+    if (sortBy === "citations") {
+      return lists.flat().sort((a, b) => (b.citedBy ?? -1) - (a.citedBy ?? -1));
+    } else if (sortBy === "year") {
+      return lists.flat().sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10));
+    }
+    // "default" → round-robin interleave: result #1 of each section, then #2, …
+    const out = [];
+    const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0);
+    for (let i = 0; i < maxLen; i++) {
+      for (const l of lists) {
+        if (i < l.length) out.push(l[i]);
       }
     }
-    if (sortBy === "citations") {
-      return pool.sort((a, b) => (b.citedBy ?? -1) - (a.citedBy ?? -1));
-    } else if (sortBy === "year") {
-      return pool.sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10));
-    }
-    // "relevance" or "default" → _score desc, citedBy tie-break
-    return pool.sort((a, b) => {
-      const scoreDiff = (b._score ?? 0) - (a._score ?? 0);
-      if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
-      return (b.citedBy ?? 0) - (a.citedBy ?? 0);
-    });
+    return out;
   }, [filteredSections, sortBy]);
 
   // Cluster book chapters under their parent work; non-chapters are solo groups
@@ -71,10 +76,10 @@ export function UnifiedResultList({
 
   const hasMoreLocal  = displayCount < allGroups.length;
   // Can we fetch more results from any remote adapter that is actually
-  // contributing visible results? An adapter whose hits were all gated out as
-  // loose matches shouldn't keep the "more available" prompt alive — fetching
-  // more from it just yields more junk that gets filtered, so the button would
-  // appear to do nothing. Read from filteredSections (post-gate visible pool).
+  // contributing visible results? An adapter whose hits are all hidden by the
+  // active facet filters shouldn't keep the "more available" prompt alive —
+  // fetching more from it just yields more rows that get filtered, so the button
+  // would appear to do nothing. Read from filteredSections (visible pool).
   const hasMoreRemote = Object.values(filteredSections).some(
     s => s.hasMore && !s.loading && !s.loadingMore && (s.results?.length || 0) > 0
   );
@@ -113,11 +118,6 @@ export function UnifiedResultList({
                     >
                       {adapter.name}
                     </span>
-                    {r._lowConfidence && (
-                      <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
-                        loose match
-                      </span>
-                    )}
                   </div>
                 )}
                 <ResultCard
@@ -151,11 +151,6 @@ export function UnifiedResultList({
                           >
                             {adapter.name}
                           </span>
-                          {r._lowConfidence && (
-                            <span className="mono-font text-[9px] uppercase tracking-widest text-amber-700 border border-amber-400 px-1.5 py-0.5">
-                              loose match
-                            </span>
-                          )}
                         </div>
                       )}
                       <ResultCard

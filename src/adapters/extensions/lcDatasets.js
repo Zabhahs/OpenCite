@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const LC_DATASETS_ADAPTER = {
   id: "LC_DATASETS", name: "Library of Congress",
@@ -22,7 +23,7 @@ export const LC_DATASETS_ADAPTER = {
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://loc.gov/search/?q=${encodeURIComponent(query)}&fo=json&c=${pageSize}&sp=${page}`;
-    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
     if (!r.ok) throw new Error(`Library of Congress ${r.status}`);
     const data = await r.json();
     const items = data.results || [];

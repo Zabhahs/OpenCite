@@ -1,8 +1,10 @@
 // OpenCITE — ResultCard
 // Displays a single search result with citation, save, and copy functionality.
 // v.17: book-chapter awareness, editors, enrichment metadata display.
+// v0.44: memoized (React.memo + useMemo'd citation builds) — long unified lists
+// re-render on every copy/save state change; cards whose props are unchanged skip.
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { buildMLA, buildAPA, segmentsToPlain, isBookChapter } from "../lib/citations.js";
 import { truncate } from "../lib/helpers.js";
 import { EagleTooltip } from "./EagleTooltip.jsx";
@@ -11,9 +13,9 @@ import { useEagleTooltip } from "../hooks/useEagleTooltip.js";
 const EAGLE_LIBRARY_MSG =
   "Saved! ★ Open your Library to select favourites and export them as BibTeX, RIS, or CSL-JSON.";
 
-export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup }) {
-  const mlaSegs = buildMLA(result);
-  const apaSegs = buildAPA(result);
+export const ResultCard = React.memo(function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup }) {
+  const mlaSegs = useMemo(() => buildMLA(result), [result]);
+  const apaSegs = useMemo(() => buildAPA(result), [result]);
   const cardId = result.id;
   const [imgFailed, setImgFailed] = useState(false);
   const [citationsOpen, setCitationsOpen] = useState(false);
@@ -235,4 +237,4 @@ export function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggl
       </div>
     </article>
   );
-}
+});

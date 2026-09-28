@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 // R3: Europeana native type → UnifiedResult type
 const EUROPEANA_TYPE_MAP = {
@@ -33,7 +34,7 @@ export const EUROPEANA_ADAPTER = {
     // in the browser until the project-level EUROPEANA_API_KEY env is provisioned; once it
     // is, drop europeanaKey from Settings/defaults and this branch becomes backend-only.
     if (typeof window !== "undefined" && !settings.europeanaKey) {
-      const r = await fetch(`/api/search/europeana?q=${encodeURIComponent(query)}&offset=${offset}`);
+      const r = await fetchWithTimeout(`/api/search/europeana?q=${encodeURIComponent(query)}&offset=${offset}`);
       if (!r.ok) throw new Error(`Europeana ${r.status}`);
       return await r.json();                       // { results, hasMore } — already normalized server-side
     }
@@ -42,7 +43,7 @@ export const EUROPEANA_ADAPTER = {
     const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const start = offset + 1;
     const url = `https://api.europeana.eu/record/v2/search.json?wskey=${encodeURIComponent(settings.europeanaKey)}&query=${encodeURIComponent(query)}&rows=${rows}&start=${start}&profile=rich`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Europeana ${r.status}`);
     const data = await r.json();
     if (data.success === false) throw new Error(data.error || "Europeana request rejected.");

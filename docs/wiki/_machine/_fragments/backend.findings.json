@@ -8,8 +8,8 @@
     "path": "api/_shared/parseBody.js:3",
     "modules": [
       "api.shared.parseBody",
-      "api.history",
-      "api.library",
+      "api.shared.handlers.history",
+      "api.shared.handlers.library",
       "api.checkout"
     ],
     "status": "fixed",
@@ -79,13 +79,13 @@
     "type": "debt",
     "severity": "low",
     "title": "api/settings.js reads req.body directly instead of parseBody — inconsistent body handling",
-    "detail": "api/settings.js:51 accesses `req.body ?? {}` directly (relying on Vercel's automatic body parsing) while all other POST routes use parseBody() for stream-based reading. This is inconsistent — if Vercel body parsing is ever disabled (e.g., per-route config), settings POST would silently receive undefined body.",
+    "detail": "FIXED v0.44 T3: handlers/settings.js now routes the POST body through parseBody (64 KB cap). api/settings.js:51 accesses `req.body ?? {}` directly (relying on Vercel's automatic body parsing) while all other POST routes use parseBody() for stream-based reading. This is inconsistent — if Vercel body parsing is ever disabled (e.g., per-route config), settings POST would silently receive undefined body.",
     "path": "api/settings.js:51",
     "modules": [
-      "api.settings",
+      "api.shared.handlers.settings",
       "api.shared.parseBody"
     ],
-    "status": "open",
+    "status": "fixed",
     "wiki": "04-Backend-API/Shared-Modules.md#parsebodyjs",
     "fix_hint": "Replace `req.body ?? {}` with `await parseBody(req)` for consistency."
   },
@@ -107,11 +107,9 @@
     "severity": "med",
     "title": "Keyed per-source routes (Europeana/DPLA/Smithsonian) are unauthenticated — quota drain risk",
     "detail": "api/search/europeana.js, dpla.js, smithsonian.js have no auth, no rate limit, and no credit charge. Any caller with network access to the Vercel function URLs can send unlimited queries, burning the project's Europeana/DPLA/Smithsonian API quota without any cost to themselves. These URLs are discoverable from the client adapter source code. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
-    "path": "api/search/europeana.js:11",
+    "path": "api/search/[source].js:13",
     "modules": [
-      "api.route.europeana",
-      "api.route.dpla",
-      "api.route.smithsonian"
+      "api.route.[source]"
     ],
     "status": "fixed",
     "wiki": "04-Backend-API/Per-Source-Routes.md#security-note-f-407",
@@ -122,12 +120,12 @@
     "type": "security",
     "severity": "low",
     "title": "BL SPARQL route injects query into SPARQL template with minimal sanitization",
-    "detail": "api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. api/search/bl.js:15 — `query.replace(/\"/g, '')` is the only sanitization before the query string is interpolated into a SPARQL FILTER. This strips double quotes but does not prevent other SPARQL injection patterns (e.g. `#` comment injection, backslash sequences, FILTER bypass with `LCASE(STR('x')) || LCASE(STR(?title))`). Practical impact is limited to data manipulation in the results returned to the browser. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/bl.js:15",
     "modules": [
       "api.route.bl"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "04-Backend-API/Per-Source-Routes.md#bl---british-library-sparql",
     "fix_hint": "Use parameterized SPARQL via the Upstash or a SPARQL-safe encoding, or at minimum strip all non-alphanumeric characters from the query before injection."
   },
@@ -136,12 +134,12 @@
     "type": "security",
     "severity": "low",
     "title": "Mexicana route passes resumptionToken from query param directly into OAI-PMH URL",
-    "detail": "api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. api/search/mexicana.js:51 — `encodeURIComponent(token)` is applied but the token value is otherwise unvalidated before being appended to the OAI-PMH URL. A crafted token could manipulate the OAI verb or inject additional query parameters if the OAI endpoint is lenient in parsing. The upstream (mexicana.cultura.gob.mx) would likely reject malformed tokens. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/search/mexicana.js:51",
     "modules": [
       "api.route.mexicana"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "04-Backend-API/Per-Source-Routes.md#mexicanajs---mexicana-oai-pmh",
     "fix_hint": "Validate that resumptionToken matches a known format (alphanumeric + limited punctuation) before using it."
   },
@@ -195,7 +193,7 @@
     "detail": "api/keys.js:50-59 — POST creates a new key without checking how many the user already has. Each key still spends from the user's own credit pool, so the financial impact is self-limiting. The risk is that a large number of keys creates noise in the api_keys table and makes key management harder. [RESOLVED v0.39 — verified in code on-branch 2026-06-08; see sprint_log_v0_39.md.]",
     "path": "api/keys.js:50",
     "modules": [
-      "api.keys"
+      "api.shared.handlers.keys"
     ],
     "status": "fixed",
     "wiki": "04-Backend-API/Auth-Sessions.md#api-key-issuance",

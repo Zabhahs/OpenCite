@@ -4,12 +4,12 @@
     "type": "dup",
     "severity": "low",
     "title": "xmlUtils helpers duplicated into api/search/mexicana.js",
-    "detail": "src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. src/adapters/_shared/xmlUtils.js exports dcOne, dcAll, oaiRecords, oaiResumptionToken. api/search/mexicana.js is a Vercel Edge route that cannot import from src/, so the helpers are inlined. Any bug fix must be manually mirrored. The constraint is documented in xmlUtils.js:13-16.",
     "path": "src/adapters/_shared/xmlUtils.js:13",
     "modules": [
       "adapters.shared.xmlUtils"
     ],
-    "status": "open",
+    "status": "moot",
     "wiki": "02-Adapters/Adapter-Architecture.md#f-100--xmlutils-duplicated-into-apisearchmexicanajs",
     "fix_hint": "Move shared helpers to a packages/shared-utils workspace importable by both src/ and api/. Plan: 02-Adapters/Shared-Utils-Plan.md (v0.41)."
   },
@@ -90,12 +90,12 @@
     "type": "bug",
     "severity": "low",
     "title": "Mexicana returns nextToken instead of generic nextPageToken",
-    "detail": "src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination. [RESOLVED v0.38 T5: TWO-part fix — (1) return key renamed nextToken->nextPageToken, AND (2) the adapter read the token from a bespoke opts.mexicanaToken that useSearch never populated; corrected to opts.pageToken (the generic key, matching Rijksmuseum). Both halves were required for load-more to work.]",
+    "detail": "QUARANTINED v0.44 T5 with its adapter/route. src/adapters/extensions/mexicana.js:29 returns nextToken in its result object. The generic field name consumed by runSearch (src/adapters/index.js:129) and useSearch.js is nextPageToken. The Mexicana token is not threaded back correctly for load-more pagination. [RESOLVED v0.38 T5: TWO-part fix — (1) return key renamed nextToken->nextPageToken, AND (2) the adapter read the token from a bespoke opts.mexicanaToken that useSearch never populated; corrected to opts.pageToken (the generic key, matching Rijksmuseum). Both halves were required for load-more to work.]",
     "path": "src/adapters/extensions/mexicana.js:21",
     "modules": [
       "adapters.extensions.mexicana"
     ],
-    "status": "fixed",
+    "status": "quarantined",
     "wiki": "02-Adapters/Adapter-Health-Matrix.md#f-106",
     "fix_hint": "Change nextToken to nextPageToken in the return statement. Verify the server route at api/search/mexicana.js passes it back under the same key."
   },

@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 const BASE = "https://www.wikidata.org/w/api.php";
 const HEADERS = {
@@ -45,7 +46,7 @@ export const WIKIDATA_ADAPTER = {
     const rows   = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
 
     // 1 — CirrusSearch: find scholarly articles matching the query
-    const r1 = await fetch(
+    const r1 = await fetchWithTimeout(
       `${BASE}?action=query&list=search` +
       `&srsearch=${encodeURIComponent(query + " haswbstatement:P31=Q13442814")}` +
       `&srlimit=${rows}&sroffset=${offset}&format=json&origin=*`,
@@ -62,7 +63,7 @@ export const WIKIDATA_ADAPTER = {
     if (qids.length === 0) return { results: [], hasMore: false };
 
     // 2 — Batch fetch full entity data for all matched articles
-    const r2 = await fetch(
+    const r2 = await fetchWithTimeout(
       `${BASE}?action=wbgetentities` +
       `&ids=${qids.join("|")}&props=labels|descriptions|claims&languages=en&format=json&origin=*`,
       { headers: HEADERS }
@@ -89,7 +90,7 @@ export const WIKIDATA_ADAPTER = {
     // 3 — Batch fetch labels for all referenced items (journals, publishers, subjects, authors)
     let refLabels = {};
     if (refIds.size > 0) {
-      const r3 = await fetch(
+      const r3 = await fetchWithTimeout(
         `${BASE}?action=wbgetentities` +
         `&ids=${[...refIds].join("|")}&props=labels&languages=en&format=json&origin=*`,
         { headers: HEADERS }

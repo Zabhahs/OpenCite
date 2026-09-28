@@ -4,14 +4,14 @@
     "type": "debt",
     "severity": "med",
     "title": "BM25F IDF is degenerate on micro-pool (14–45 docs) — mitigated by RRF fusion, not eliminated",
-    "detail": "scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. scoreResults computes IDF from the pooled candidate batch, not a real corpus. At 14–45 docs, 'rare' and 'common' are indistinguishable. This is D3. The fix (v0.35) is RRF fusion of native + local BM25F on both client and server paths — the degenerate BM25F rank is now only ONE input, weighted at most 50% (at pool ≥50) and as low as 30% (at pool <20 where nativeWeight=0.7). The BM25F IDF is still computed over the micro-pool; the mitigation is that RRF makes it share weight with the full-corpus native signal rather than operating alone.",
     "path": "src/lib/scoring.js:160-171",
     "modules": [
       "lib.scoring",
       "lib.rrf"
     ],
-    "status": "confirmed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d3",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Accepted residual. To fully eliminate: replace micro-pool IDF with corpus-level IDF (would require a background statistics endpoint) or rely entirely on native+semantic ranks when available. Not a priority given current RRF weighting."
   },
   {
@@ -19,13 +19,13 @@
     "type": "ux",
     "severity": "low",
     "title": "Display-side score normalisation (0–100 per query) not implemented",
-    "detail": "D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D4 core ordering fix is done (RRF on both paths; public results sorted by _fused). The remaining UX gap: admin debug cards still show raw BM25F _score values (1.79 vs 16.17 type comparisons) which are query-length-dependent and confusing. The _fused RRF value is dimensionless and comparisons within a single query are valid, but no 0-100 normalisation is applied. Low priority since raw scores are admin-only.",
     "path": "src/lib/scoring.js:13-15",
     "modules": [
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d4",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Normalise _score to 0-100 relative to top hit in the admin debug card renderer, or hide raw _score and show only _fused rank."
   },
   {
@@ -33,14 +33,14 @@
     "type": "bug",
     "severity": "high",
     "title": "Internet Archive download counts used as citedBy rank signal — FIXED in v0.35",
-    "detail": "D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D1: internetArchive.js mapped IA download counts (up to 231,971) into result.citedBy. The scorer added up to CITED_BY_CAP=0.3 tiebreak for all results where capability.rankFields.citedBy===true. Every IA result saturated the cap, promoting non-scholarly OCR scans above peer-reviewed work. Fixed: rankFields.citedBy set to false — downloads still emitted for display but not honored for rank.",
     "path": "src/adapters/extensions/internetArchive.js:100",
     "modules": [
       "adapters.extensions.internetArchive",
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d1",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed. Verify: run probe.mjs on surname queries (shaikh, ali, khan) — IA items should no longer lead."
   },
   {
@@ -48,13 +48,13 @@
     "type": "bug",
     "severity": "high",
     "title": "Internet Archive retrieval sorted by downloads (popularity) not relevance — FIXED in v0.35",
-    "detail": "D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D2: IA adapter previously used sort=downloads+desc, fetching the most-downloaded items. Combined with D1, popularity was double-counted. Fixed: no sort parameter — IA Solr default relevance order applies. nativeRank now stamped from merged position for RRF fusion.",
     "path": "src/adapters/extensions/internetArchive.js:184",
     "modules": [
       "adapters.extensions.internetArchive"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d2",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed."
   },
   {
@@ -62,13 +62,13 @@
     "type": "bug",
     "severity": "med",
     "title": "Diacritic and transliteration fragmentation — FIXED in v0.35",
-    "detail": "D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. D5: Quran/Qur'an/Koran produced 0/5 top-title overlap. The tokenizer split on \\W+ so Qur'an → [qur, an], losing the whole-token alias. No diacritic folding existed. Fixed: TOKENIZE_SPLIT_RE keeps intra-word apostrophes; normalizeForMatch applies NFKD decomposition + combining-mark strip + intra-apostrophe removal + ALIAS_MAP (4 curated Islamic-scholarship clusters). Score-side only — original query to APIs unchanged.",
     "path": "src/lib/scoring.js:124-144",
     "modules": [
       "lib.scoring"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#d5",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Already fixed. ALIAS_CLUSTERS is conservative — extend with documented rationale if new domains need folding."
   },
   {
@@ -76,14 +76,14 @@
     "type": "perf",
     "severity": "med",
     "title": "Semantic rerank is client-only — API consumers and MCP endpoint receive no semantic signal",
-    "detail": "computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
     "path": "src/lib/semantic.js",
     "modules": [
       "lib.semantic",
-      "workers.embed.worker"
+      "workers.embed"
     ],
-    "status": "spike-complete",
-    "wiki": "03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Not easily fixable without a separate embedding service or switching to a smaller synchronous model. Acceptable architectural constraint. Document clearly for API consumers."
   },
   {
@@ -105,13 +105,13 @@
     "type": "perf",
     "severity": "low",
     "title": "Moby Thesaurus shard JSON.parse is synchronous — large shards may cause main-thread jank",
-    "detail": "loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. loadShard fetches the shard file asynchronously but JSON.parse runs synchronously on the main thread. Letter 'c' shard is approximately 4MB — this could cause a visible jank spike on first synonym expansion for terms starting with 'c', 's', etc.",
     "path": "src/lib/synonyms.js:48-61",
     "modules": [
       "lib.synonyms"
     ],
-    "status": "fixed",
-    "wiki": "03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Move shard loading to a Web Worker, or use a streaming JSON parser. Low priority — synonym expansion is optional and jank is one-time (shards are cached)."
   },
   {
@@ -133,15 +133,15 @@
     "type": "bug",
     "severity": "med",
     "title": "Server /api/search does NOT use RRF — returns BM25F-only order while the browser does full RRF (the two front doors disagree)",
-    "detail": "CORRECTED 2026-06-08, verified against live prod code: api/search.js never imports lib/rrf.js (no buildNativeRanks/rrfScores) and sorts purely by BM25F _score at api/search.js:351 (finalResults.sort((a,b)=>(b._score||0)-(a._score||0))). rrf.js is imported ONLY by src/hooks/useSemanticRerank.js:3 (browser). So the metered API + MCP path returns BM25F-only ranking, while the browser app returns native+lexical+semantic RRF fusion — the same query yields DIFFERENTLY-ORDERED results across the two surfaces. The earlier finding (and the v0.35 commit message 2cf5cb6) claimed server RRF was live; the code in prod refutes that — it was reverted or never landed. This is NOT 'what we did well'; it is an open ranking-consistency defect. Note: native rank fusion (buildNativeRanks/nativeWeight) is dead on the server regardless; only the in-browser fuseRanks path is wired.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. CORRECTED 2026-06-08, verified against live prod code: api/search.js never imports lib/rrf.js (no buildNativeRanks/rrfScores) and sorts purely by BM25F _score at api/search.js:351 (finalResults.sort((a,b)=>(b._score||0)-(a._score||0))). rrf.js is imported ONLY by src/hooks/useSemanticRerank.js:3 (browser). So the metered API + MCP path returns BM25F-only ranking, while the browser app returns native+lexical+semantic RRF fusion — the same query yields DIFFERENTLY-ORDERED results across the two surfaces. The earlier finding (and the v0.35 commit message 2cf5cb6) claimed server RRF was live; the code in prod refutes that — it was reverted or never landed. This is NOT 'what we did well'; it is an open ranking-consistency defect. Note: native rank fusion (buildNativeRanks/nativeWeight) is dead on the server regardless; only the in-browser fuseRanks path is wired.",
     "path": "api/search.js:351",
     "modules": [
       "api.search",
       "lib.rrf",
       "lib.scoring"
     ],
-    "status": "open",
-    "wiki": "03-Search-Pipeline/Known-Defects.md#f-209",
+    "status": "moot",
+    "wiki": "03-Search-Pipeline/Known-Defects.md",
     "fix_hint": "Wire server RRF: import { buildNativeRanks, nativeWeight, rrfScores } from ../src/lib/rrf.js into api/search.js, stamp nativeRank/nativeScore on adapter results (as the browser path does), fuse native+lexical, and sort by the fused score instead of raw _score (line 351). ~5-line change reusing the existing 13-LOC rrf.js. Semantic arm stays browser-only (Web Worker + 23MB MiniLM can't run in Vercel Functions — see F-205), so server fusion is native+lexical two-input; document that residual gap for API/MCP consumers."
   },
   {

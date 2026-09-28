@@ -1,7 +1,10 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
-import { hasContentMatch } from "../../lib/scoring.js";
+// v0.44 T5: hasContentMatch moved out of lib/scoring.js (engine quarantined) into the
+// adapter layer — the author-search-off content filter is retrieval, not ranking.
+import { hasContentMatch } from "../_shared/contentMatch.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const CROSSREF_ADAPTER = {
   id: "CROSSREF",
@@ -37,7 +40,7 @@ export const CROSSREF_ADAPTER = {
         : `query=${encodeURIComponent(query)}`;
     }
     const url = `https://api.crossref.org/works?${queryParam}&rows=${pageSize}&offset=${offset}${mailto}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Crossref ${r.status}`);
     const data = await r.json();
     const items = data.message?.items || [];

@@ -13,28 +13,32 @@ tags: [overview, architecture]
 > Step-by-step trace: [Search-Lifecycle](Search-Lifecycle.md). Audit: [Health-Dashboard](../09-Audit/Health-Dashboard.md).
 
 ## The shape of it
-OpenCITE is **one search engine with two front doors**, sharing a single adapter + ranking core:
 
-1. **The browser app** (React/Vite SPA) — fans out to ~25 source [adapters](../02-Adapters/Adapter-Architecture.md) in parallel *from the client*, ranks locally, renders streaming results.
+OpenCITE is **one search engine with two front doors**, sharing a single adapter + dedup core:
+
+1. **The browser app** (React/Vite SPA) — fans out to the source [adapters](../02-Adapters/Adapter-Architecture.md) in parallel *from the client*, dedupes as results stream in, renders in native upstream order.
 2. **`/api/search`** (Vercel serverless) — the **origin-blind, metered** grounding endpoint for AI agents and the [MCP server](../06-MCP-Server/MCP-Server.md); runs the *same adapters* server-side, applies billing/auth/tiering, returns source-anonymized results.
 
-Why it works: **adapters and scoring are `runtime: both`** — the exact same `src/adapters/*` and `src/lib/{scoring,rrf}.js` execute client- and server-side. See [Duplication-and-Reuse](../09-Audit/Duplication-and-Reuse.md).
+Why it works: **adapters and dedup are `runtime: both`** — the exact same `src/adapters/*` and `src/lib/dedup.js` execute client- and server-side, so the two doors return the same works. See [Duplication-and-Reuse](../09-Audit/Duplication-and-Reuse.md).
+
+Since v0.44 there is **no local ranking layer** on either surface: result order is each upstream's own relevance order, round-robin interleaved across sources. The BM25F/RRF/semantic engine was deprecated — see [Pipeline](../03-Search-Pipeline/Pipeline.md) and `sprint_log_v0_44.md`.
 
 ```
                           ┌─────────────────────────────────────────────┐
    Browser (SPA)          │  src/ (React)                               │
    ───────────            │  App.jsx ─ orchestrator                     │
    user → SearchInput ───►│  hooks/useSearch ─► adapters/* (parallel) ──┼─► upstream source APIs
-   SearchControls (slider)│         │                ▲                   │    (CORS-blocked via
-   ResultCard / lists ◄───┤  lib/{scoring,rrf,       │ proxiedFetch      │     api/proxy.js allowlist)
-                          │   semantic,dedup} ranks ─┘                   │
-                          │  contexts: Settings(local), Auth, Billing*   │
+   ResultCard / lists ◄───┤         │                ▲                   │    (CORS-blocked via
+                          │  lib/dedup (streaming    │ proxiedFetch      │     api/proxy.js allowlist)
+                          │   first-wins) ───────────┘                   │
+                          │  contexts: Auth, Billing                     │
                           └───────────────┬─────────────────────────────┘
                                           │  fetch (auth: session / API key)
                           ┌───────────────▼─────────────────────────────┐
    Vercel serverless      │  api/search.js  (origin-blind, metered)      │
    ─────────────────      │   apiAuth → ratelimit → cache → fan-out      │
-   AI agents / MCP ──────►│   adapters/* (same code) → scoring + RRF     │
+   AI agents / MCP ──────►│   adapters/* (same code) → dedup+field-merge │
+                          │   → round-robin interleave (native order)    │
                           │   coverage → billing (preauth/settle/refund) │
                           │   publicResult (blind) | debugResult (admin) │
                           │  api/proxy.js · api/search/{keyed routes}    │
@@ -45,7 +49,6 @@ Why it works: **adapters and scoring are `runtime: both`** — the exact same `s
                            (users, keys,     (rate-limit,    (checkout,
                             billing, labels)  credits, cache) webhook)
 ```
-*Billing context is a client stub, not yet mounted — see [Tech-Debt-Overengineering](../09-Audit/Tech-Debt-Overengineering.md#f-300).*
 
 ## Layers → wiki
 | Concern | Where | Note |
@@ -54,7 +57,7 @@ Why it works: **adapters and scoring are `runtime: both`** — the exact same `s
 | UI components & UX | `src/components/*` | [UI-Map](../01-Frontend/UI-Map.md), [_index](../01-Frontend/Components/_index.md) |
 | Client state | `src/hooks/*`, `src/contexts/*` | [State-Flow](../01-Frontend/State-Flow.md) |
 | Sources | `src/adapters/*` | [Adapter-Architecture](../02-Adapters/Adapter-Architecture.md) |
-| Ranking | `src/lib/{scoring,rrf,semantic,dedup}` | [Ranking-Scoring](../03-Search-Pipeline/Ranking-Scoring.md) |
+| Pipeline (dedup, order) | `src/lib/dedup.js` | [Pipeline](../03-Search-Pipeline/Pipeline.md) |
 | Metered API | `api/search.js`, `api/_shared/*` | [Search-Endpoint](../04-Backend-API/Search-Endpoint.md) |
 | CORS proxy | `api/proxy.js` | [Proxy](../04-Backend-API/Proxy.md) |
 | Auth | `api/auth`, `api/_shared/{auth,apiAuth}` | [Auth-Sessions](../04-Backend-API/Auth-Sessions.md) |
@@ -64,9 +67,11 @@ Why it works: **adapters and scoring are `runtime: both`** — the exact same `s
 | Build/deploy | `vite`, `tailwind`, `scripts/migrate.mjs`, `vercel.json` | [Build-Deploy](../08-Build-Deploy/Build-Deploy.md) |
 
 ## Runtime split (the key mental model)
-- **`both`** (35 modules) — adapters, `scoring`, `rrf`: one implementation, two surfaces. **Protect this.**
-- **`client`-only** (55) — React UI, hooks, contexts, and crucially the **semantic rerank** (Web Worker + 23MB model) → API consumers get lexical+native RRF but **no semantic signal** ([Duplication-and-Reuse](../09-Audit/Duplication-and-Reuse.md#f-205)).
-- **`server`-only** (39) — billing, auth, proxy, KV/Prisma, per-source keyed routes.
+- **`both`** — adapters and `dedup`: one implementation, two surfaces. **Protect this.**
+- **`client`-only** — React UI, hooks, contexts; `BillingProvider` is mounted and drives the credits chip.
+- **`server`-only** — billing, auth, proxy, KV/Prisma, per-source keyed routes, citation graph, ID resolution.
+
+The authoritative module list with runtimes is `docs/wiki/_machine/modules.json` — do not count modules here.
 
 ## See also
 [Search-Lifecycle](Search-Lifecycle.md) · [Tech-Stack](Tech-Stack.md) · [Health-Dashboard](../09-Audit/Health-Dashboard.md) · [home](../home.md)

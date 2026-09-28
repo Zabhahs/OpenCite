@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const GALLICA_ADAPTER = {
   id: "GALLICA", name: "BnF Gallica",
@@ -22,7 +23,7 @@ export const GALLICA_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
-    const r = await fetch(`/api/search/gallica?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
+    const r = await fetchWithTimeout(`/api/search/gallica?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
     if (!r.ok) throw new Error(`Gallica ${r.status}`);
     const data = await r.json();
     return {

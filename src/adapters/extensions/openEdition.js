@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 // OpenEdition — French/European open-access SSH platform (Journals, Books, Hypotheses,
 // Calenda). The upstream search-api takes a JSON POST, which the generic proxy can't carry
@@ -25,7 +26,7 @@ export const OPENEDITION_ADAPTER = {
     const offset = opts.offset || 0;
     const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const page = Math.floor(offset / pageSize) + 1;
-    const r = await fetch(`/api/search/openedition?q=${encodeURIComponent(query)}&page=${page}&rows=${pageSize}`);
+    const r = await fetchWithTimeout(`/api/search/openedition?q=${encodeURIComponent(query)}&page=${page}&rows=${pageSize}`);
     if (!r.ok) throw new Error(`OpenEdition ${r.status}`);
     const data = await r.json();
     const results = data.results || [];

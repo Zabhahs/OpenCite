@@ -1,8 +1,32 @@
 // OpenCITE — proxiedFetch SSOT (v.19)
-// Pass ctx = { adapterId: "BDH" } to get per-adapter proxy logs.
+// Pass ctx = { adapterId: "NDLI" } to get per-adapter proxy logs.
 import { log } from "../../lib/log.js";
 
 const PROXY_BASE = "/api/proxy";
+
+// v0.44 T5 — client-side timeout discipline. Before this, NO adapter fetch carried a
+// timeout, so one hung upstream pinned its result section forever. Single shared budget
+// for every adapter fetch. AbortSignal.timeout: all modern browsers + Node 18+, so the
+// same helper works in both runtimes (browser adapters and the server fan-out).
+export const FETCH_TIMEOUT_MS = 15000;
+
+/**
+ * fetchWithTimeout — drop-in fetch wrapper for adapters that call upstream APIs (or
+ * same-origin shim routes) directly instead of via proxiedFetch. Preserves the caller's
+ * options untouched; an explicit caller-supplied options.signal wins over the default.
+ */
+// AbortSignal.timeout is missing on Safari/iOS < 16; fall back to a manual controller so those
+// browsers still search instead of throwing a TypeError before the request is issued.
+export function timeoutSignal(ms = FETCH_TIMEOUT_MS) {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+  const c = new AbortController();
+  setTimeout(() => c.abort(), ms);
+  return c.signal;
+}
+
+export function fetchWithTimeout(url, options = {}) {
+  return fetch(url, { signal: timeoutSignal(FETCH_TIMEOUT_MS), ...options });
+}
 
 export async function proxiedFetch(url, options = {}, ctx = {}) {
   const adapterId = ctx.adapterId;
@@ -32,7 +56,7 @@ export async function proxiedFetch(url, options = {}, ctx = {}) {
     if (options.body !== undefined) fetchOpts.body = options.body;
 
     try {
-      const response = await fetch(url, fetchOpts);
+      const response = await fetchWithTimeout(url, fetchOpts); // v0.44 T5: 15s budget
       if (adapterId) {
         const ms = Date.now() - startMs;
         if (response.ok) log(adapterId, "proxy-ok", { status: response.status, ms });
@@ -55,7 +79,7 @@ export async function proxiedFetch(url, options = {}, ctx = {}) {
       : {};
 
   try {
-    const response = await fetch(proxyUrl, fetchOpts);
+    const response = await fetchWithTimeout(proxyUrl, fetchOpts); // v0.44 T5: 15s budget
     if (adapterId) {
       const ms = Date.now() - startMs;
       if (response.ok) log(adapterId, "proxy-ok", { status: response.status, ms });

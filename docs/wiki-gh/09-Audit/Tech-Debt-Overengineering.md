@@ -32,14 +32,14 @@ Settings flow through `useSettings` + prop-drilling; the context file is dead. *
 `themes.js:49` exports it; `useTheme.js:4` hardcodes `'tan'` again. **Fix:** consume the export. See [Hooks](../01-Frontend/Hooks.md#usetheme).
 
 ## 🏗️ Overengineering assessment (verdict: mostly justified — don't gut)
-- The **two-phase semantic rerank** (`useSemanticRerank`) is *justified* — it keeps slider drags pure arithmetic (no re-embed). Documented as a good pattern in [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md).
+- The **two-phase semantic rerank** (`useSemanticRerank`) is *justified* — it keeps slider drags pure arithmetic (no re-embed). Documented as a good pattern in [[03-Search-Pipeline/Semantic-Rerank]].
 - The **gold-set regression harness** (`goldSetMetrics` + admin `GoldSetHarness`) is well-built and unit-tested but admin-only and lightly used — keep, but know it's heavy for a solo product. See [_index](../01-Frontend/Components/_index.md).
 
 ## 🧹 Sloppiness / correctness-debt (data & config)
 
 <a id="f-200"></a>
 ### f-200 — BM25F IDF over a 14–45-doc micro-pool is degenerate [med]
-IDF across the tiny merged pool is statistically meaningless; mitigated (not eliminated) by RRF weighting it 30–50%. `scoring.js:160-171`. **Fix:** corpus priors or lean on native+semantic. Accepted residual. See [Ranking-Scoring](../03-Search-Pipeline/Ranking-Scoring.md).
+IDF across the tiny merged pool is statistically meaningless; mitigated (not eliminated) by RRF weighting it 30–50%. `scoring.js:160-171`. **Fix:** corpus priors or lean on native+semantic. Accepted residual. See [[03-Search-Pipeline/Ranking-Scoring]].
 
 <a id="f-201"></a>
 ### f-201 — No display-side score normalization [low]
@@ -97,7 +97,7 @@ Met up to 3× pageSize concurrent (`met.js:27`); Rijksmuseum 2-hop image resolve
 
 <a id="f-207"></a>
 ### f-207 — Moby synonym shard `JSON.parse` synchronous on main thread [low]
-`synonyms.js:48` — jank on large letters (c~4MB). **Fix:** parse off-thread. See [Synonyms-Vocab](../03-Search-Pipeline/Synonyms-Vocab.md#correctness-notes).
+`synonyms.js:48` — jank on large letters (c~4MB). **Fix:** parse off-thread. See [[03-Search-Pipeline/Synonyms-Vocab#correctness-notes]].
 
 ## 📦 Dependency / build debt
 

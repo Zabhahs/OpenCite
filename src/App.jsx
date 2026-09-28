@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore, Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
@@ -8,7 +8,6 @@ import { useSettings } from "./hooks/useSettings.js";
 import { useHistory } from "./hooks/useHistory.js";
 import { useLibrary } from "./hooks/useLibrary.js";
 import { useSearch } from "./hooks/useSearch.js";
-import { useSemanticRerank } from "./hooks/useSemanticRerank.js";
 import { useFilters } from "./hooks/useFilters.js";
 
 // Data
@@ -26,8 +25,12 @@ import { SearchStatusBar } from "./components/SearchStatusBar.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel, PricingPanel } from "./components/Panels.jsx";
-import { AdminConsole } from "./components/AdminConsole.jsx";
 import { getPlatform } from "./lib/platform.js";
+
+// v0.44 — admin console is code-split: non-admin visitors never download it.
+const AdminConsole = React.lazy(() =>
+  import("./components/AdminConsole.jsx").then(m => ({ default: m.AdminConsole }))
+);
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext.jsx";
@@ -37,6 +40,15 @@ import { BillingProvider, useBilling } from "./contexts/BillingContext.jsx";
 // v.19 — admin gate + debug log
 import { isAdmin } from "./lib/admin.js";
 import { installDebugLog, getDebugLog } from "./lib/log.js";
+
+// v0.44 — reactive hash routing: subscribe to hashchange so route changes re-render
+// without a full page reload (the previous render-time read of window.location.hash
+// only updated on remount). Module-level: stable identities for useSyncExternalStore.
+const subscribeToHash = (callback) => {
+  window.addEventListener("hashchange", callback);
+  return () => window.removeEventListener("hashchange", callback);
+};
+const getHashSnapshot = () => window.location.hash;
 
 function OpenCITE() {
   const [query, setQuery] = useState("");
@@ -51,8 +63,9 @@ function OpenCITE() {
   // v.19 — admin status drives debug logger install + UI exposure
   const admin = isAdmin(user);
 
-  // v0.33 F1/F2 — admin console route (hash-based for SPA)
-  const showAdminConsole = admin && window.location.hash === "#/admin/console";
+  // v0.33 F1/F2 — admin console route (hash-based for SPA; reactive via hashchange, v0.44)
+  const hash = useSyncExternalStore(subscribeToHash, getHashSnapshot);
+  const showAdminConsole = admin && hash === "#/admin/console";
 
   const { themeKey, theme, changeTheme } = useTheme();
   const { settings, save: saveSettings, load: loadSettings, loaded, isEnabled, toggleAdapter } = useSettings();
@@ -60,16 +73,7 @@ function OpenCITE() {
   const lib = useLibrary();
   const [filterState, setFilterState] = useState({});
   const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
-  // v.31 — live Lexical↔Semantic fusion weight. Drives reranking immediately; persisted
-  // to settings only on slider commit (avoids per-tick API/localStorage spam, §3).
-  const [rrfWeight, setRrfWeight] = useState(settings.rrfSemanticWeight ?? 0.4);
-  // Keep the live value in sync when settings load / sync from DB.
-  useEffect(() => { setRrfWeight(settings.rrfSemanticWeight ?? 0.4); }, [settings.rrfSemanticWeight]);
-  // v0.36 — simple (raw) mode bypasses semantic rerank entirely.
-  const semanticActive = settings.semanticSearch && !settings.simpleSearch;
-  const { rerankedStates, rerankStatus } = useSemanticRerank(sectionStates, query, semanticActive, rrfWeight);
-  const effectiveStates = rerankedStates || sectionStates;
-  const filteredSections = useFilters(effectiveStates, filterState);
+  const filteredSections = useFilters(sectionStates, filterState);
 
   // v.19 — install debug logger ring buffer once when admin signs in
   useEffect(() => {
@@ -102,21 +106,23 @@ function OpenCITE() {
     setQuery(q);
     setActivePanel(null);
     hist.add(q);
+    setFilterState({}); // parity with handleSearch — stale facets don't apply to a new query
     search(q);
   }, [search, hist]);
 
   // Unified view: trigger loadMore only for adapters that are actually contributing
-  // visible results. Firing for adapters whose results were all gated as low-confidence
-  // fetches more junk that immediately gets filtered, making the button appear broken.
+  // visible results. Firing for adapters whose results are all hidden by the active
+  // facet filters fetches more rows that immediately get filtered, making the button
+  // appear broken. loadMore pages the executed query recorded inside useSearch (F-A3).
   const handleLoadMoreAll = useCallback(() => {
     ADAPTERS.filter(isEnabled).forEach(a => {
       const s = sectionStates[a.id];
       const fs = filteredSections[a.id];
       if (s?.hasMore && !s?.loadingMore && !s?.loading && (fs?.results?.length || 0) > 0) {
-        loadMore(a.id, query);
+        loadMore(a.id);
       }
     });
-  }, [sectionStates, filteredSections, loadMore, isEnabled, query]);
+  }, [sectionStates, filteredSections, loadMore, isEnabled]);
 
   const dismissModal = useCallback(() => {
     try { localStorage.setItem("opencite_auth_prompted", "1"); } catch {}
@@ -164,36 +170,22 @@ function OpenCITE() {
     [enabledAdapters, sectionStates]
   );
 
-  // v.31 — hold the list until the FINAL sort is known: no populate-then-reshuffle.
-  // Reveal only once every adapter has settled and, when semantic ranking is on, the
-  // RRF fuse has completed (or terminally failed → falls back to BM25F order).
-  const totalResults = useMemo(
-    () => Object.values(sectionStates).reduce((n, s) => n + (s.results?.length || 0), 0),
-    [sectionStates]
-  );
-  const resultsReady =
-    !hasSearched ? false
-    : !allDone ? false
-    : totalResults === 0 ? true
-    : !semanticActive ? true
-    : (rerankStatus === "done" || rerankStatus === "error");
-  const semanticPreparing = semanticActive && allDone && rerankStatus === "reranking";
+  // v.31 — hold the list until every adapter has settled: no populate-then-reshuffle.
+  // (v0.44: ranking is gone, so "settled" is the only reveal condition left.)
+  const resultsReady = hasSearched && allDone;
 
+  // v0.44 — scores no longer exist: sections rank purely by result count
+  // (sections with results always sort before empty ones).
   const sortedAdapters = useMemo(() => {
     if (!allDone) return enabledAdapters;
-    const sectionAvgScore = (id) => {
-      const results = filteredSections[id]?.results || [];
-      if (!results.length) return 0;
-      return results.reduce((sum, r) => sum + (r._score ?? 0), 0) / results.length;
-    };
     return [...enabledAdapters].sort((a, b) => {
       const cntA = sectionStates[a.id]?.results?.length || 0;
       const cntB = sectionStates[b.id]?.results?.length || 0;
       if (cntA > 0 && cntB === 0) return -1;
       if (cntA === 0 && cntB > 0) return 1;
-      return sectionAvgScore(b.id) - sectionAvgScore(a.id);
+      return cntB - cntA;
     });
-  }, [allDone, enabledAdapters, sectionStates, filteredSections]);
+  }, [allDone, enabledAdapters, sectionStates]);
 
   const { withResults, withoutResults } = useMemo(() => {
     const withResults = sortedAdapters.filter(a => {
@@ -246,7 +238,7 @@ function OpenCITE() {
             onHistory={() => {}}
             onSettings={() => {}}
             onPlans={() => {}}
-            onLogoClick={() => { window.location.hash = ""; window.location.reload(); }}
+            onLogoClick={() => { window.location.hash = ""; }}
             libraryCount={0}
             historyCount={0}
             activePanel={null}
@@ -254,7 +246,9 @@ function OpenCITE() {
           />
           <div className="my-6 border-b border-stone-200 pb-4">
             <p className="mono-font text-xs uppercase tracking-widest text-stone-600 mb-4">Admin Console (v0.33)</p>
-            <AdminConsole />
+            <Suspense fallback={null}>
+              <AdminConsole />
+            </Suspense>
           </div>
           <Footer />
         </div>
@@ -322,15 +316,11 @@ function OpenCITE() {
           inputRef={inputRef}
         />
 
-        {/* v.31 — relevance slider + quick search settings, always visible under the search bar */}
+        {/* Quick search settings (layout + author search), always visible under the search bar */}
         <SearchControls
           settings={settings}
           onSave={saveSettings}
-          rrfWeight={rrfWeight}
-          onRrfWeightChange={setRrfWeight}
-          onRrfWeightCommit={(v) => saveSettings({ ...settings, rrfSemanticWeight: v })}
           onOpenSettings={() => setActivePanel("settings")}
-          admin={admin}
         />
 
         {hasSearched && resultsReady && (
@@ -348,20 +338,12 @@ function OpenCITE() {
             {isUnified && <SearchStatusBar sectionStates={sectionStates} adapters={enabledAdapters} />}
 
             {!resultsReady ? (
-              /* ── Loading — hold the list until the final sort is ready (no reshuffle) ── */
+              /* ── Loading — hold the list until every adapter settles (no reshuffle) ── */
               <div className="py-6 space-y-2">
                 {!isUnified && (
                   <div className="flex items-center gap-2">
                     <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
                     <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Searching sources…</span>
-                  </div>
-                )}
-                {semanticPreparing && (
-                  <div className="flex items-center gap-2">
-                    <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
-                    <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">
-                      Ranking results… preparing semantic model (first run downloads ~23MB, then cached)
-                    </span>
                   </div>
                 )}
               </div>
@@ -401,7 +383,7 @@ function OpenCITE() {
                         copied={copied}
                         isInLibrary={lib.isInLibrary}
                         onToggleLibrary={lib.toggle}
-                        onLoadMore={(id) => loadMore(id, query)}
+                        onLoadMore={loadMore}
                       />
                     ))}
 

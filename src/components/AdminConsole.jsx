@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { isAdmin } from "../lib/admin.js";
-import { ScoreExplainer } from "./admin/ScoreExplainer.jsx";
 import { GoldSetHarness } from "./admin/GoldSetHarness.jsx";
 
-// Admin console: two tabs — F1 (Score Explainer) and F2 (Gold-Set Harness).
-// Entry point for scoring + relevance regression work (v0.33 T1).
+// Admin console — F2 (Gold-Set Harness): recall grading is ranking-independent, so it
+// survives the v0.44 engine teardown. The Score Explainer (F1) tab was removed with the
+// scoring engine (quarantined at docs/wiki/99-Archive/_quarantine/v0_44_engine/).
 export function AdminConsole() {
   const { user, status } = useAuth();
-  const [activeTab, setActiveTab] = useState("score-explainer");
+  const [activeTab, setActiveTab] = useState("gold-set");
 
   // Admin gate — SSOT is the email-based isAdmin() in src/lib/admin.js (VITE_ADMIN_EMAILS),
   // the SAME gate that controls the ⚗ admin header link + the #/admin/console route in App.jsx.
@@ -31,7 +31,6 @@ export function AdminConsole() {
       {/* Tab bar */}
       <div className="flex gap-2 border-b border-stone-200 pb-3">
         {[
-          { id: "score-explainer", label: "Score Explainer (F1)" },
           { id: "gold-set", label: "Gold-Set Harness (F2)" },
         ].map(tab => (
           <button
@@ -50,7 +49,6 @@ export function AdminConsole() {
 
       {/* Tab content */}
       <div>
-        {activeTab === "score-explainer" && <ScoreExplainer />}
         {activeTab === "gold-set" && <GoldSetHarness />}
       </div>
     </div>

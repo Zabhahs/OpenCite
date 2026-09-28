@@ -50,11 +50,13 @@ export { BASE_ADAPTER }  from "./base.js";
 // v.18 SOW heritage adapters
 export { CHRONICLING_AMERICA_ADAPTER } from "./chroniclingAmerica.js";
 export { ONB_ADAPTER }              from "./onb.js";
-export { BDH_ADAPTER }              from "./bdh.js";
+// BDH_ADAPTER (bdh.js), BRITISH_LIBRARY_ADAPTER (britishLibrary.js), MEXICANA_ADAPTER
+// (mexicana.js) — QUARANTINED v0.44 T5: dead upstreams, live-probed 2026-06-09
+// (BDH → HTTP 403; BL SPARQL → hangs to timeout; Mexicana → expired TLS cert).
+// Adapter source + their /api/search/{bdh,bl,mexicana} edge routes preserved at
+// docs/wiki/99-Archive/_quarantine/v0_44_adapters/.
 export { BNF_API_ADAPTER }          from "./bnfApi.js";
-export { BRITISH_LIBRARY_ADAPTER }  from "./britishLibrary.js";
 // DELPHER_ADAPTER — KB API requires legal access credentials; endpoint https://www.delpher.nl/nl/platform/api/search returns 404
 // NLS_ADAPTER — NLS Data Foundry has no public search API; https://data.nls.uk/api/search/ returns 404
 export { LC_DATASETS_ADAPTER }      from "./lcDatasets.js";
-export { MEXICANA_ADAPTER }         from "./mexicana.js";
 export { WIKIDATA_ADAPTER }         from "./wikidata.js";

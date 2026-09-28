@@ -9,6 +9,7 @@
  */
 
 import { nDCG, MRR, recall, computeMetrics, aggregateMetrics } from "./goldSetMetrics.js";
+import { pathToFileURL } from "node:url";
 
 // ─── Test Suite 1: nDCG ───────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ const tests = [
   test_aggregateMetrics_empty,
 ];
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   console.log("Running goldSetMetrics tests...\n");
 
   let passed = 0;

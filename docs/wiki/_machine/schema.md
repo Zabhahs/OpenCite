@@ -36,7 +36,7 @@ Dot-path from repo root, extension dropped, `_shared` → `shared`:
 | `src/hooks/useSearch.js` | `hooks.useSearch` |
 | `api/_shared/billing.js` | `api.shared.billing` |
 | `api/search.js` | `api.search` |
-| `api/search/dpla.js` | `api.route.dpla` *(per-source routes namespaced `api.route.*` to avoid colliding with `api.search`)* |
+| `api/search/bdh.js` | `api.route.bdh` *(per-source routes namespaced `api.route.*` to avoid colliding with `api.search`; the keyed dispatcher `api/search/[source].js` → `api.route.[source]`)* |
 | `mcp/src/server.js` | `mcp.server` |
 | `prisma/schema.prisma` | `prisma.schema` |
 
@@ -79,7 +79,7 @@ Components keep PascalCase; hooks keep `useX`. Everything else camelCase as writ
   "detail": "Why it's wrong and the blast radius.",
   "path": "src/adapters/extensions/internetArchive.js:142",
   "modules": ["adapters.extensions.internetArchive"],
-  "status": "open|confirmed|fixed|wontfix",
+  "status": "open|confirmed|fixed|wontfix|mitigated|moot|quarantined",
   "wiki": "09-Audit/Bugs.md#f-001",
   "fix_hint": "Optional: the smallest correct fix."
 }

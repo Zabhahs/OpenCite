@@ -1,6 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
-import { proxiedFetch } from "../_shared/proxy.js";
+import { proxiedFetch, fetchWithTimeout } from "../_shared/proxy.js";
 import { dcOne, dcAll, sruTotal, sruRecords } from "../_shared/xmlUtils.js";
 
 export const ONB_ADAPTER = {
@@ -27,7 +27,7 @@ export const ONB_ADAPTER = {
     // always proxies. No SSR today, so the `window` guard is correct for this architecture.
     let r;
     if (typeof window === 'undefined') {
-      r = await fetch(sruUrl, { headers: { Accept: "application/xml, text/xml" } });
+      r = await fetchWithTimeout(sruUrl, { headers: { Accept: "application/xml, text/xml" } });
     } else {
       r = await proxiedFetch(sruUrl, {}, { adapterId: "ONB" });
     }

@@ -3,7 +3,17 @@
     "allow": [
       "Bash(curl -s *)",
       "Bash(curl -sL *)",
-      "Bash(curl -sI *)"
+      "Bash(curl -sI *)",
+      "Bash(curl *)",
+      "Bash(node scripts/wiki/build-machine-map.mjs *)",
+      "Bash(node scripts/stress/probe.mjs *)",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__get_deployment",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__list_deployments",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__get_project",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__list_teams",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__list_projects",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__web_fetch_vercel_url",
+      "mcp__3b487ce0-62a7-4ea5-a190-bbb30bc85fad__get_runtime_logs"
     ]
   }
 }

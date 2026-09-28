@@ -190,4 +190,4 @@ No API call is made for filtering — it's pure client-side derivation from the 
 
 ## See also
 
-[App-Shell](App-Shell.md) · [Hooks](Hooks.md) · [Contexts](Contexts.md) · [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md) · [Search-Endpoint](../04-Backend-API/Search-Endpoint.md) · [Billing-Credits](../05-Billing/Billing-Credits.md)
+[App-Shell](App-Shell.md) · [Hooks](Hooks.md) · [Contexts](Contexts.md) · [[03-Search-Pipeline/Semantic-Rerank]] · [Search-Endpoint](../04-Backend-API/Search-Endpoint.md) · [Billing-Credits](../05-Billing/Billing-Credits.md)

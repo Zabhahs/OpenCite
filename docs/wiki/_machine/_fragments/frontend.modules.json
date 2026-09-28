@@ -6,12 +6,19 @@
     "runtime": "client",
     "loc": 9,
     "purpose": "Vite entry point — mounts the React tree via ReactDOM.createRoot with StrictMode.",
-    "exports": ["default (App)"],
-    "deps": ["App"],
+    "exports": [
+      "default (App)"
+    ],
+    "deps": [
+      "App"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/App-Shell.md",
-    "tags": ["entry", "mount"]
+    "tags": [
+      "entry",
+      "mount"
+    ]
   },
   {
     "id": "App",
@@ -20,12 +27,48 @@
     "runtime": "client",
     "loc": 471,
     "purpose": "Root orchestrator — owns all top-level state, calls every hook, and renders the full UI tree; wraps with AuthProvider + Vercel analytics.",
-    "exports": ["default (App)", "OpenCITE (internal)"],
-    "deps": ["hooks.useTheme", "hooks.useSettings", "hooks.useHistory", "hooks.useLibrary", "hooks.useSearch", "hooks.useSemanticRerank", "hooks.useFilters", "contexts.AuthContext", "contexts.BillingContext", "lib.admin", "lib.log", "lib.platform", "components.SearchInput", "components.SearchControls", "components.FilterBar", "components.SourceSection", "components.UnifiedResultList", "components.SearchStatusBar", "components.LauncherBlock", "components.Layout", "components.Panels", "components.AdminConsole", "adapters.index", "launchers.index", "constants.defaults", "constants.app"],
+    "exports": [
+      "default (App)",
+      "OpenCITE (internal)"
+    ],
+    "deps": [
+      "hooks.useTheme",
+      "hooks.useSettings",
+      "hooks.useHistory",
+      "hooks.useLibrary",
+      "hooks.useSearch",
+      "hooks.useSemanticRerank",
+      "hooks.useFilters",
+      "contexts.AuthContext",
+      "contexts.BillingContext",
+      "lib.admin",
+      "lib.log",
+      "lib.platform",
+      "components.SearchInput",
+      "components.SearchControls",
+      "components.FilterBar",
+      "components.SourceSection",
+      "components.UnifiedResultList",
+      "components.SearchStatusBar",
+      "components.LauncherBlock",
+      "components.Layout",
+      "components.Panels",
+      "components.AdminConsole",
+      "adapters.index",
+      "launchers.index",
+      "constants.defaults",
+      "constants.app"
+    ],
     "status": "healthy",
-    "findings": ["F-302"],
+    "findings": [
+      "F-302"
+    ],
     "wiki": "01-Frontend/App-Shell.md",
-    "tags": ["orchestrator", "shell", "state"],
+    "tags": [
+      "orchestrator",
+      "shell",
+      "state"
+    ],
     "notes": "v0.41: BillingProvider now mounted inside AuthProvider (F-300) and PricingPanel reads useBilling().tier (F-315). resultsReady gate is the anti-reshuffle guard (v.31)."
   },
   {
@@ -35,12 +78,23 @@
     "runtime": "client",
     "loc": 58,
     "purpose": "Admin console shell with two tabs — F1 Score Explainer and F2 Gold-Set Harness — gated by isAdmin().",
-    "exports": ["AdminConsole"],
-    "deps": ["contexts.AuthContext", "lib.admin", "components.admin.ScoreExplainer", "components.admin.GoldSetHarness"],
+    "exports": [
+      "AdminConsole"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "lib.admin",
+      "components.admin.ScoreExplainer",
+      "components.admin.GoldSetHarness"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Components/_index.md#adminconsole",
-    "tags": ["admin", "debug", "relevance"]
+    "tags": [
+      "admin",
+      "debug",
+      "relevance"
+    ]
   },
   {
     "id": "components.admin.ScoreExplainer",
@@ -49,12 +103,19 @@
     "runtime": "client",
     "loc": 212,
     "purpose": "F1 admin tool — debug-mode search showing ranked results with expandable BM25F/RRF score breakdowns and gate dispositions.",
-    "exports": ["ScoreExplainer"],
+    "exports": [
+      "ScoreExplainer"
+    ],
     "deps": [],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "01-Frontend/Components/_index.md#adminconsole",
-    "tags": ["admin", "debug", "scoring"]
+    "wiki": "99-Archive/_quarantine/_index.md",
+    "tags": [
+      "admin",
+      "debug",
+      "scoring"
+    ],
+    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve."
   },
   {
     "id": "components.admin.GoldSetHarness",
@@ -63,12 +124,22 @@
     "runtime": "client",
     "loc": 397,
     "purpose": "F2 admin tool — localStorage-backed gold-set regression harness computing nDCG@10/MRR/Recall metrics with run-to-run diff.",
-    "exports": ["GoldSetHarness"],
-    "deps": ["lib.goldSetMetrics"],
+    "exports": [
+      "GoldSetHarness"
+    ],
+    "deps": [
+      "lib.goldSetMetrics"
+    ],
     "status": "healthy",
-    "findings": ["F-310"],
+    "findings": [
+      "F-310"
+    ],
     "wiki": "01-Frontend/Components/_index.md#adminconsole",
-    "tags": ["admin", "testing", "metrics"],
+    "tags": [
+      "admin",
+      "testing",
+      "metrics"
+    ],
     "notes": "Stores data in bare localStorage keys outside the opencite: namespace."
   },
   {
@@ -78,12 +149,18 @@
     "runtime": "client",
     "loc": 71,
     "purpose": "Inline brand tooltip — eagle image + speech bubble, auto-dismisses after 4s or on any click.",
-    "exports": ["EagleTooltip"],
+    "exports": [
+      "EagleTooltip"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Components/_index.md",
-    "tags": ["ui", "tooltip", "brand"]
+    "tags": [
+      "ui",
+      "tooltip",
+      "brand"
+    ]
   },
   {
     "id": "components.FilterBar",
@@ -92,12 +169,22 @@
     "runtime": "client",
     "loc": 281,
     "purpose": "Client-side facet filter bar — sort, type, language (dropdown with counts), topics, year range, OA-only, derived from live sectionStates.",
-    "exports": ["FilterBar"],
-    "deps": ["lib.langNormalize"],
+    "exports": [
+      "FilterBar"
+    ],
+    "deps": [
+      "lib.langNormalize"
+    ],
     "status": "healthy",
-    "findings": ["F-303"],
+    "findings": [
+      "F-303"
+    ],
     "wiki": "01-Frontend/UI-Map.md#filterbar",
-    "tags": ["filter", "facets", "sort"]
+    "tags": [
+      "filter",
+      "facets",
+      "sort"
+    ]
   },
   {
     "id": "components.LauncherBlock",
@@ -106,12 +193,20 @@
     "runtime": "client",
     "loc": 60,
     "purpose": "External archive launcher panel — groups 23 launchers by region into collapsible details elements with pre-filled search links.",
-    "exports": ["LauncherBlock"],
-    "deps": ["constants.vocabulary", "constants.defaults"],
+    "exports": [
+      "LauncherBlock"
+    ],
+    "deps": [
+      "constants.vocabulary",
+      "constants.defaults"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#launcherblock",
-    "tags": ["launchers", "external"]
+    "tags": [
+      "launchers",
+      "external"
+    ]
   },
   {
     "id": "components.Layout",
@@ -120,12 +215,32 @@
     "runtime": "client",
     "loc": 389,
     "purpose": "Top-level layout sub-components: Header (nav + logo + ticker), ThemeStrip, Footer, KofiOverlay, AuthModal, ConnectCard, AuthButton.",
-    "exports": ["Header", "Footer", "ThemeStrip", "KofiOverlay", "AuthModal", "ConnectCard"],
-    "deps": ["contexts.AuthContext", "constants.themes", "constants.app"],
+    "exports": [
+      "Header",
+      "Footer",
+      "ThemeStrip",
+      "KofiOverlay",
+      "AuthModal",
+      "ConnectCard"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "constants.themes",
+      "constants.app"
+    ],
     "status": "healthy",
-    "findings": ["F-303", "F-305", "F-312"],
+    "findings": [
+      "F-303",
+      "F-305",
+      "F-312"
+    ],
     "wiki": "01-Frontend/UI-Map.md#header",
-    "tags": ["layout", "header", "auth", "theme"],
+    "tags": [
+      "layout",
+      "header",
+      "auth",
+      "theme"
+    ],
     "notes": "Apple + Microsoft OAuth providers in AuthButton are dead UI (rendered as disabled). AuthModal has no focus trap."
   },
   {
@@ -135,12 +250,41 @@
     "runtime": "client",
     "loc": 562,
     "purpose": "Four side panels (Settings, History, Library, Pricing) + AddJournalForm + SourcesPanel sub-components; LibraryPanel supports multi-format export.",
-    "exports": ["SettingsPanel", "HistoryPanel", "LibraryPanel", "PricingPanel", "AddJournalForm", "SourcesPanel"],
-    "deps": ["components.ResultCard", "lib.citations", "lib.library", "lib.log", "lib.platform", "lib.checkout", "adapters.shared.normalize", "adapters.shared.base", "constants.vocabulary", "constants.defaults", "constants.pricing"],
+    "exports": [
+      "SettingsPanel",
+      "HistoryPanel",
+      "LibraryPanel",
+      "PricingPanel",
+      "AddJournalForm",
+      "SourcesPanel"
+    ],
+    "deps": [
+      "components.ResultCard",
+      "lib.citations",
+      "lib.library",
+      "lib.log",
+      "lib.platform",
+      "lib.checkout",
+      "adapters.shared.normalize",
+      "adapters.shared.base",
+      "constants.vocabulary",
+      "constants.defaults",
+      "constants.pricing"
+    ],
     "status": "healthy",
-    "findings": ["F-304", "F-313", "F-315"],
+    "findings": [
+      "F-304",
+      "F-313",
+      "F-315"
+    ],
     "wiki": "01-Frontend/UI-Map.md#panels",
-    "tags": ["panels", "settings", "library", "history", "pricing"],
+    "tags": [
+      "panels",
+      "settings",
+      "library",
+      "history",
+      "pricing"
+    ],
     "notes": "currentPlan hardcoded 'free' in PricingPanel. confirm() used for destructive action. Stale comment re: slider/search-toggles location."
   },
   {
@@ -150,12 +294,25 @@
     "runtime": "client",
     "loc": 238,
     "purpose": "Single search result display — title/authors/abstract, enrichment metadata, citation accordion (MLA 9 + APA 7), ★ save, EagleTooltip on first save.",
-    "exports": ["ResultCard"],
-    "deps": ["lib.citations", "lib.helpers", "components.EagleTooltip", "hooks.useEagleTooltip"],
+    "exports": [
+      "ResultCard"
+    ],
+    "deps": [
+      "lib.citations",
+      "lib.helpers",
+      "components.EagleTooltip",
+      "hooks.useEagleTooltip"
+    ],
     "status": "healthy",
-    "findings": ["F-314"],
+    "findings": [
+      "F-314"
+    ],
     "wiki": "01-Frontend/Components/_index.md#resultcard",
-    "tags": ["result", "card", "citation"]
+    "tags": [
+      "result",
+      "card",
+      "citation"
+    ]
   },
   {
     "id": "components.SearchControls",
@@ -164,12 +321,19 @@
     "runtime": "client",
     "loc": 141,
     "purpose": "Always-visible relevance controls under the search bar: Lexical↔Semantic RRF slider + 'Search settings' disclosure (layout toggle, semantic/synonym/author/simpleSearch toggles).",
-    "exports": ["SearchControls"],
+    "exports": [
+      "SearchControls"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#searchcontrols",
-    "tags": ["search", "relevance", "settings", "slider"]
+    "tags": [
+      "search",
+      "relevance",
+      "settings",
+      "slider"
+    ]
   },
   {
     "id": "components.SearchInput",
@@ -178,12 +342,20 @@
     "runtime": "client",
     "loc": 57,
     "purpose": "Sticky search bar with cycling placeholder (3.5s), Enter-to-search, and 'Search →' button — blurred backdrop, bleeds to viewport edges.",
-    "exports": ["SearchInput"],
-    "deps": ["constants.app"],
+    "exports": [
+      "SearchInput"
+    ],
+    "deps": [
+      "constants.app"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#searchinput",
-    "tags": ["search", "input", "sticky"]
+    "tags": [
+      "search",
+      "input",
+      "sticky"
+    ]
   },
   {
     "id": "components.SearchStatusBar",
@@ -192,12 +364,18 @@
     "runtime": "client",
     "loc": 43,
     "purpose": "Compact in-progress/done status bar for unified view — shows loading source count, auto-hides 2s after all settle.",
-    "exports": ["SearchStatusBar"],
+    "exports": [
+      "SearchStatusBar"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#searchstatusbar",
-    "tags": ["search", "status", "progress"]
+    "tags": [
+      "search",
+      "status",
+      "progress"
+    ]
   },
   {
     "id": "components.SourceSection",
@@ -206,12 +384,23 @@
     "runtime": "client",
     "loc": 142,
     "purpose": "Per-adapter result section (source view) with book-chapter grouping, 'loose match' badge, and per-adapter load-more.",
-    "exports": ["SourceSection"],
-    "deps": ["components.ResultCard", "lib.groupResults"],
+    "exports": [
+      "SourceSection"
+    ],
+    "deps": [
+      "components.ResultCard",
+      "lib.groupResults"
+    ],
     "status": "healthy",
-    "findings": ["F-314"],
+    "findings": [
+      "F-314"
+    ],
     "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
-    "tags": ["result", "source-view", "adapter"]
+    "tags": [
+      "result",
+      "source-view",
+      "adapter"
+    ]
   },
   {
     "id": "components.UnifiedResultList",
@@ -220,12 +409,24 @@
     "runtime": "client",
     "loc": 229,
     "purpose": "Cross-adapter ranked result list (unified view) — pools all sections, sorts by _score, paginates by group (20+10), triggers remote load-more when local pool exhausted.",
-    "exports": ["UnifiedResultList"],
-    "deps": ["components.ResultCard", "adapters.index", "lib.groupResults"],
+    "exports": [
+      "UnifiedResultList"
+    ],
+    "deps": [
+      "components.ResultCard",
+      "adapters.index",
+      "lib.groupResults"
+    ],
     "status": "healthy",
-    "findings": ["F-314"],
+    "findings": [
+      "F-314"
+    ],
     "wiki": "01-Frontend/Components/_index.md#sourcesection-vs-unifiedresultlist",
-    "tags": ["result", "unified-view", "pagination"]
+    "tags": [
+      "result",
+      "unified-view",
+      "pagination"
+    ]
   },
   {
     "id": "hooks.useSearch",
@@ -234,12 +435,26 @@
     "runtime": "client",
     "loc": 159,
     "purpose": "Fan-out search engine — fires all enabled adapters in parallel, runs cross-adapter dedup + BM25F scoring + confidence gate, manages sectionStates.",
-    "exports": ["useSearch"],
-    "deps": ["adapters.index", "lib.scoring", "lib.dedup", "lib.synonyms"],
+    "exports": [
+      "useSearch"
+    ],
+    "deps": [
+      "adapters.index",
+      "lib.scoring",
+      "lib.dedup",
+      "lib.synonyms"
+    ],
     "status": "buggy",
-    "findings": ["F-307"],
+    "findings": [
+      "F-307"
+    ],
     "wiki": "01-Frontend/Hooks.md#usesearch",
-    "tags": ["search", "dedup", "scoring", "hook"],
+    "tags": [
+      "search",
+      "dedup",
+      "scoring",
+      "hook"
+    ],
     "notes": "No AbortController — stale adapter responses from a superseded search can land in state."
   },
   {
@@ -249,12 +464,28 @@
     "runtime": "client",
     "loc": 154,
     "purpose": "Auth-aware settings — localStorage read/write + DB sync on sign-in; manages adapter enable/disable; one-time v.31 migration.",
-    "exports": ["useSettings"],
-    "deps": ["contexts.AuthContext", "lib.api", "lib.storage", "adapters.index", "constants.defaults", "constants.vocabulary"],
+    "exports": [
+      "useSettings"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api",
+      "lib.storage",
+      "adapters.index",
+      "constants.defaults",
+      "constants.vocabulary"
+    ],
     "status": "healthy",
-    "findings": ["F-308"],
+    "findings": [
+      "F-308"
+    ],
     "wiki": "01-Frontend/Hooks.md#usesettings",
-    "tags": ["settings", "localStorage", "DB-sync", "hook"]
+    "tags": [
+      "settings",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ]
   },
   {
     "id": "hooks.useLibrary",
@@ -263,12 +494,23 @@
     "runtime": "client",
     "loc": 89,
     "purpose": "Auth-aware saved library — localStorage + DB sync on sign-in; toggle (add/remove), clear, isInLibrary check.",
-    "exports": ["useLibrary"],
-    "deps": ["contexts.AuthContext", "lib.library", "lib.api"],
+    "exports": [
+      "useLibrary"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "lib.library",
+      "lib.api"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#uselibrary",
-    "tags": ["library", "localStorage", "DB-sync", "hook"]
+    "tags": [
+      "library",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ]
   },
   {
     "id": "hooks.useHistory",
@@ -277,12 +519,23 @@
     "runtime": "client",
     "loc": 88,
     "purpose": "Auth-aware search history — localStorage + DB sync on sign-in; add (dedup+cap at 50), remove, clear.",
-    "exports": ["useHistory"],
-    "deps": ["contexts.AuthContext", "lib.history", "lib.api"],
+    "exports": [
+      "useHistory"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "lib.history",
+      "lib.api"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#usehistory",
-    "tags": ["history", "localStorage", "DB-sync", "hook"],
+    "tags": [
+      "history",
+      "localStorage",
+      "DB-sync",
+      "hook"
+    ],
     "notes": "v0.41 (R-300): shared localStorage↔DB plumbing extracted to hooks.useSyncedStore; only history-specific mutations remain here."
   },
   {
@@ -291,11 +544,18 @@
     "kind": "hook",
     "runtime": "client",
     "purpose": "Shared localStorage↔DB sync plumbing for the auth-aware hooks — load-on-mount, sync-from-DB on sign-in (DB wins), first-time push, and fire-and-forget mutation writes. Shapes injected via a config object.",
-    "exports": ["useSyncedStore"],
+    "exports": [
+      "useSyncedStore"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#usesyncedstore",
-    "tags": ["localStorage", "DB-sync", "hook", "reuse"],
+    "tags": [
+      "localStorage",
+      "DB-sync",
+      "hook",
+      "reuse"
+    ],
     "notes": "v0.41 (R-300): extracted from the identical 4-step sync pattern in useHistory/useLibrary/useSettings."
   },
   {
@@ -304,11 +564,17 @@
     "kind": "component",
     "runtime": "client",
     "purpose": "Parent-work header for a cluster of book chapters (chapter-count badge, year, container title, editors, publisher). Shared by SourceSection and UnifiedResultList.",
-    "exports": ["BookGroupHeader"],
+    "exports": [
+      "BookGroupHeader"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Components/_index.md#bookgroupheader",
-    "tags": ["component", "results", "reuse"],
+    "tags": [
+      "component",
+      "results",
+      "reuse"
+    ],
     "notes": "v0.41 (R-301/F-314): extracted from the verbatim-duplicated header block in SourceSection and UnifiedResultList."
   },
   {
@@ -318,12 +584,20 @@
     "runtime": "client",
     "loc": 63,
     "purpose": "Pure memoized derivation of filteredSections from sectionStates — applies global low-confidence gate, all facet filters, and sort.",
-    "exports": ["useFilters"],
-    "deps": ["lib.langNormalize"],
+    "exports": [
+      "useFilters"
+    ],
+    "deps": [
+      "lib.langNormalize"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#usefilters",
-    "tags": ["filter", "memoized", "hook"]
+    "tags": [
+      "filter",
+      "memoized",
+      "hook"
+    ]
   },
   {
     "id": "hooks.useTheme",
@@ -332,12 +606,22 @@
     "runtime": "client",
     "loc": 43,
     "purpose": "Theme state — reads localStorage + OS preference, follows system dark-mode changes when no manual override is stored.",
-    "exports": ["useTheme"],
-    "deps": ["constants.themes"],
+    "exports": [
+      "useTheme"
+    ],
+    "deps": [
+      "constants.themes"
+    ],
     "status": "healthy",
-    "findings": ["F-309"],
+    "findings": [
+      "F-309"
+    ],
     "wiki": "01-Frontend/Hooks.md#usetheme",
-    "tags": ["theme", "localStorage", "hook"],
+    "tags": [
+      "theme",
+      "localStorage",
+      "hook"
+    ],
     "notes": "v0.41 (F-309): LIGHT_DEFAULT now aliases the imported DEFAULT_THEME from themes.js (SSOT); DARK_DEFAULT stays 'oled'."
   },
   {
@@ -347,12 +631,17 @@
     "runtime": "client",
     "loc": 39,
     "purpose": "Eagle tooltip lifecycle — show (with optional one-time localStorage flag), dismiss, and props bundle for EagleTooltip component.",
-    "exports": ["useEagleTooltip"],
+    "exports": [
+      "useEagleTooltip"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#useeagletooltip",
-    "tags": ["tooltip", "hook"]
+    "tags": [
+      "tooltip",
+      "hook"
+    ]
   },
   {
     "id": "contexts.AuthContext",
@@ -361,12 +650,21 @@
     "runtime": "client",
     "loc": 60,
     "purpose": "Live auth context — resolves Auth.js v5 session on mount, exposes user/status/signIn/signOut; Phase 4 hook point for SIWE wallet auth.",
-    "exports": ["AuthProvider", "useAuth"],
-    "deps": ["lib.auth-client"],
+    "exports": [
+      "AuthProvider",
+      "useAuth"
+    ],
+    "deps": [
+      "lib.auth-client"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Contexts.md#authcontext",
-    "tags": ["auth", "context", "live"]
+    "tags": [
+      "auth",
+      "context",
+      "live"
+    ]
   },
   {
     "id": "contexts.BillingContext",
@@ -375,12 +673,23 @@
     "runtime": "client",
     "loc": 56,
     "purpose": "Billing context — exposes the signed-in user's credits + tier. Mounted in App.jsx (v0.41); fetches GET /api/credits on sign-in, falls back to Infinity/'free' stub when anonymous or on error. deduct() is still a no-op (spend stays server-side).",
-    "exports": ["BillingProvider", "useBilling"],
-    "deps": ["contexts.AuthContext", "lib.api", "api.credits"],
+    "exports": [
+      "BillingProvider",
+      "useBilling"
+    ],
+    "deps": [
+      "contexts.AuthContext",
+      "lib.api",
+      "api.shared.handlers.credits"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Contexts.md#billingcontext",
-    "tags": ["billing", "context", "live"],
+    "tags": [
+      "billing",
+      "context",
+      "live"
+    ],
     "notes": "v0.41 (F-300): mounted + wired to /api/credits. Real credit gating remains server-side (api/_shared/billing.js). Spend-side deduct() wiring is v0.42 (F-311)."
   },
   {
@@ -390,12 +699,25 @@
     "runtime": "client",
     "loc": 15,
     "purpose": "Thin wrapper context for useSettings — provided SettingsProvider and useSettingsContext, but neither was ever mounted or consumed.",
-    "exports": ["SettingsProvider", "useSettingsContext"],
-    "deps": ["hooks.useSettings"],
+    "exports": [
+      "SettingsProvider",
+      "useSettingsContext"
+    ],
+    "deps": [
+      "hooks.useSettings"
+    ],
     "status": "quarantined",
-    "findings": ["F-301", "F-308"],
+    "findings": [
+      "F-301",
+      "F-308"
+    ],
     "wiki": "01-Frontend/Contexts.md#settingscontext",
-    "tags": ["settings", "context", "dead", "quarantined"],
+    "tags": [
+      "settings",
+      "context",
+      "dead",
+      "quarantined"
+    ],
     "notes": "Quarantined + deleted in v0.41 (F-301/F-308) — never mounted, never consumed. Dossier: 99-Archive/_quarantine/context-settings.md."
   },
   {
@@ -405,12 +727,17 @@
     "runtime": "client",
     "loc": 10,
     "purpose": "Factory function createLauncher() — enforces the launcher object shape (id, name, tagline, region, archiveType, contentType, buildUrl).",
-    "exports": ["createLauncher"],
+    "exports": [
+      "createLauncher"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#launcherblock",
-    "tags": ["launcher", "factory"]
+    "tags": [
+      "launcher",
+      "factory"
+    ]
   },
   {
     "id": "launchers.index",
@@ -419,12 +746,20 @@
     "runtime": "client",
     "loc": 28,
     "purpose": "Registry of 23 external archive launchers (no queryable API — opens pre-filled search in new tab), grouped by region.",
-    "exports": ["LAUNCHERS"],
-    "deps": ["launchers.factory"],
+    "exports": [
+      "LAUNCHERS"
+    ],
+    "deps": [
+      "launchers.factory"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#launcherblock",
-    "tags": ["launcher", "external", "registry"]
+    "tags": [
+      "launcher",
+      "external",
+      "registry"
+    ]
   },
   {
     "id": "lib.history",
@@ -433,12 +768,20 @@
     "runtime": "client",
     "loc": 27,
     "purpose": "localStorage-backed search history CRUD — add (dedup+cap at HISTORY_MAX=50), remove, load, clear.",
-    "exports": ["history"],
-    "deps": ["lib.storage", "constants.defaults"],
+    "exports": [
+      "history"
+    ],
+    "deps": [
+      "lib.storage",
+      "constants.defaults"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#usehistory",
-    "tags": ["history", "localStorage"]
+    "tags": [
+      "history",
+      "localStorage"
+    ]
   },
   {
     "id": "lib.library",
@@ -447,12 +790,20 @@
     "runtime": "client",
     "loc": 35,
     "purpose": "localStorage-backed library CRUD — add/remove/has/load/clear, keyed by DOI or source:id.",
-    "exports": ["library", "libraryKey"],
-    "deps": ["lib.storage"],
+    "exports": [
+      "library",
+      "libraryKey"
+    ],
+    "deps": [
+      "lib.storage"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#uselibrary",
-    "tags": ["library", "localStorage"]
+    "tags": [
+      "library",
+      "localStorage"
+    ]
   },
   {
     "id": "lib.storage",
@@ -461,12 +812,19 @@
     "runtime": "client",
     "loc": 22,
     "purpose": "Namespaced localStorage wrapper — prefixes all keys with 'opencite:'; get/set/remove with JSON serialization and try/catch.",
-    "exports": ["storage"],
-    "deps": ["constants.defaults"],
+    "exports": [
+      "storage"
+    ],
+    "deps": [
+      "constants.defaults"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md#localstorage-key-inventory",
-    "tags": ["storage", "localStorage"]
+    "tags": [
+      "storage",
+      "localStorage"
+    ]
   },
   {
     "id": "lib.helpers",
@@ -475,12 +833,19 @@
     "runtime": "shared",
     "loc": 14,
     "purpose": "Utility functions: reconstructAbstract (OpenAlex inverted index), truncate (word-boundary safe), stripHtml.",
-    "exports": ["reconstructAbstract", "truncate", "stripHtml"],
+    "exports": [
+      "reconstructAbstract",
+      "truncate",
+      "stripHtml"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Components/_index.md",
-    "tags": ["util", "shared"]
+    "tags": [
+      "util",
+      "shared"
+    ]
   },
   {
     "id": "lib.platform",
@@ -489,12 +854,20 @@
     "runtime": "client",
     "loc": 32,
     "purpose": "Runtime platform detection (web/ios/android) — routes subscription checkout to Stripe or IAP; reads window.__OPENCITE_PLATFORM__ or Capacitor.",
-    "exports": ["getPlatform", "isNativeMobile", "subscriptionRail", "storeName"],
+    "exports": [
+      "getPlatform",
+      "isNativeMobile",
+      "subscriptionRail",
+      "storeName"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
-    "tags": ["platform", "billing"]
+    "tags": [
+      "platform",
+      "billing"
+    ]
   },
   {
     "id": "lib.log",
@@ -503,12 +876,22 @@
     "runtime": "client",
     "loc": 63,
     "purpose": "Client-side ring buffer logger (500 entries) — structured [opencite:adapter:event] format; installDebugLog() activates buffering + global error handlers for admins.",
-    "exports": ["log", "installDebugLog", "getDebugLog", "clearDebugLog", "downloadDebugLog"],
+    "exports": [
+      "log",
+      "installDebugLog",
+      "getDebugLog",
+      "clearDebugLog",
+      "downloadDebugLog"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#settingspanel",
-    "tags": ["log", "debug", "admin"],
+    "tags": [
+      "log",
+      "debug",
+      "admin"
+    ],
     "notes": "Buffer only active when installDebugLog() is called (admin sign-in). Distinct from api/_shared/log.js (server-side)."
   },
   {
@@ -518,12 +901,17 @@
     "runtime": "client",
     "loc": 9,
     "purpose": "Client-side admin gate — isAdmin(user) checks user.email against VITE_ADMIN_EMAILS env var (comma-separated).",
-    "exports": ["isAdmin"],
+    "exports": [
+      "isAdmin"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/App-Shell.md#admin-console-routing",
-    "tags": ["admin", "auth"]
+    "tags": [
+      "admin",
+      "auth"
+    ]
   },
   {
     "id": "constant.themes",
@@ -532,12 +920,20 @@
     "runtime": "client",
     "loc": 49,
     "purpose": "Theme definitions — 3 themes (tan/blueGrey/oled) with full token sets for bg, fg, border, surface, accent, eagle blend, sticky-bg, title color.",
-    "exports": ["THEMES", "DEFAULT_THEME"],
+    "exports": [
+      "THEMES",
+      "DEFAULT_THEME"
+    ],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-309"],
+    "findings": [
+      "F-309"
+    ],
     "wiki": "01-Frontend/Hooks.md#usetheme",
-    "tags": ["theme", "constant"],
+    "tags": [
+      "theme",
+      "constant"
+    ],
     "notes": "DEFAULT_THEME exported but never imported by useTheme.js."
   },
   {
@@ -547,12 +943,19 @@
     "runtime": "client",
     "loc": 26,
     "purpose": "App identity constants — APP_VERSION (v.35), APP_NAME (OpenCITE), SEARCH_PLACEHOLDER_ITEMS (9 cycling placeholder strings).",
-    "exports": ["APP_VERSION", "APP_NAME", "SEARCH_PLACEHOLDER_ITEMS"],
+    "exports": [
+      "APP_VERSION",
+      "APP_NAME",
+      "SEARCH_PLACEHOLDER_ITEMS"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md",
-    "tags": ["constant", "identity"]
+    "tags": [
+      "constant",
+      "identity"
+    ]
   },
   {
     "id": "constant.defaults",
@@ -561,12 +964,23 @@
     "runtime": "client",
     "loc": 58,
     "purpose": "App-wide defaults — STORAGE_NS, HISTORY_MAX, page sizes, REGION_ORDER, DEFAULT_CURATED_JOURNALS, DEFAULT_SETTINGS (all search/source/key defaults).",
-    "exports": ["STORAGE_NS", "HISTORY_MAX", "INITIAL_PAGE_SIZE", "LOAD_MORE_PAGE_SIZE", "REGION_ORDER", "DEFAULT_CURATED_JOURNALS", "DEFAULT_SETTINGS"],
+    "exports": [
+      "STORAGE_NS",
+      "HISTORY_MAX",
+      "INITIAL_PAGE_SIZE",
+      "LOAD_MORE_PAGE_SIZE",
+      "REGION_ORDER",
+      "DEFAULT_CURATED_JOURNALS",
+      "DEFAULT_SETTINGS"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/Hooks.md",
-    "tags": ["constant", "defaults"]
+    "tags": [
+      "constant",
+      "defaults"
+    ]
   },
   {
     "id": "constant.pricing",
@@ -575,12 +989,21 @@
     "runtime": "client",
     "loc": 82,
     "purpose": "Display-only pricing constants — SUBSCRIPTION_PLANS (Free/Student/Pro), CREDIT_PACKS (10k/60k/300k), SOURCE_COUNT, COVERAGE_NOTE.",
-    "exports": ["SUBSCRIPTION_PLANS", "CREDIT_PACKS", "SOURCE_COUNT", "COVERAGE_NOTE"],
+    "exports": [
+      "SUBSCRIPTION_PLANS",
+      "CREDIT_PACKS",
+      "SOURCE_COUNT",
+      "COVERAGE_NOTE"
+    ],
     "deps": [],
     "status": "healthy",
     "findings": [],
     "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
-    "tags": ["constant", "billing", "pricing"],
+    "tags": [
+      "constant",
+      "billing",
+      "pricing"
+    ],
     "notes": "Presentation only — authoritative billing numbers are in api/_shared/plans.js."
   }
 ]

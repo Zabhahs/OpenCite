@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { ADAPTERS, runSearch } from "../adapters/index.js";
-import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins } from "../lib/dedup.js";
-import { expandTerms } from "../lib/synonyms.js";
 
+// v0.44 — engine teardown (sprint D-2): the browser pipeline is raw pass-through +
+// streaming dedup. Retrieval order from each source IS the display order; no BM25F
+// scoring, no synonym expansion, no confidence gate. Dedup (verdict-HEALTHY in the
+// v0.36 diagnostic) is the only post-retrieve step that remains.
 export function useSearch(settings, isEnabled) {
   const [sectionStates, setSectionStates] = useState({});
   const [hasSearched, setHasSearched] = useState(false);
@@ -16,6 +18,10 @@ export function useSearch(settings, isEnabled) {
   // callback from a superseded search no longer matches the current id and silently
   // discards its result instead of overwriting the new search's loading state.
   const searchIdRef = useRef(0);
+
+  // F-A3 — loadMore must page the query that PRODUCED the current results, not whatever
+  // is in the live input box. search() records its executed query here; loadMore reads it.
+  const executedQueryRef = useRef("");
 
   const reset = useCallback(() => {
     setHasSearched(false);
@@ -31,9 +37,7 @@ export function useSearch(settings, isEnabled) {
     seenDOIs.current.clear();
     seenTitles.current.clear();
     const thisId = ++searchIdRef.current;
-
-    // v0.36 — raw diagnostic mode: skip dedup/score/gate, show adapter output as-is.
-    const simple = !!settings.simpleSearch;
+    executedQueryRef.current = query; // F-A3 — pin the query loadMore will page
 
     // C3 — multi-keyword parsing
     const terms = query.split(";").map(s => s.trim()).filter(Boolean);
@@ -53,45 +57,32 @@ export function useSearch(settings, isEnabled) {
         let results, hasMore, nextPageToken;
 
         if (isMulti) {
-          // C3 — run all terms in parallel per adapter, then merge. Within-batch dedup is
-          // skipped in simple mode (raw passthrough).
+          // C3 — run all terms in parallel per adapter, then merge with a within-batch
+          // DOI dedup (the same record often matches several of the user's terms).
           const batches = await Promise.all(
             terms.map(t => runSearch(adapter, t, settings, { offset: 0, pageToken: undefined }))
           );
           const merged = batches.flatMap(b => b.results || []);
-          results = simple ? merged : dedupFirstWins(merged, doiKey, new Set());
+          results = dedupFirstWins(merged, doiKey, new Set());
           hasMore = false; // load more not supported for multi-keyword
           nextPageToken = undefined;
         } else {
           ({ results, hasMore, nextPageToken } = await runSearch(adapter, terms[0], settings, { offset: 0, pageToken: undefined }));
         }
 
-        let filtered, lowConfidence;
-        if (simple) {
-          // v0.36 — raw: no cross-adapter dedup, no score, no confidence gate.
-          filtered = results;
-          lowConfidence = undefined;
-        } else {
-          // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
-          // (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
-          const deduped = dedupFirstWins(
-            dedupFirstWins(results, doiKey, seenDOIs.current),
-            titleFingerprint, seenTitles.current
-          );
-
-          // C4 — BM25F relevance scoring with optional synonym expansion.
-          // v.29 Sprint 2 — pass the adapter's capability so the scorer can gate the citation
-          // tiebreak and apply the thin-source prior (batch is homogeneous → constant capability).
-          const scoringTerms = await expandTerms(terms, settings.synonyms);
-          const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-          ({ results: filtered, lowConfidence } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms)));
-        }
+        // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
+        // (catches one work registered under multiple DOIs — e.g. JSTOR + publisher).
+        // First-wins streaming: whichever adapter delivers a work first keeps it (D-2).
+        const filtered = dedupFirstWins(
+          dedupFirstWins(results, doiKey, seenDOIs.current),
+          titleFingerprint, seenTitles.current
+        );
 
         if (searchIdRef.current !== thisId) return; // stale — a newer search superseded this one
         setSectionStates(prev => ({
           ...prev,
           // pageToken: stored generically; undefined for offset-based adapters (harmless).
-          [adapter.id]: { loading: false, results: filtered, lowConfidence, error: null, hasMore, loadingMore: false, offset: filtered.length, pageToken: nextPageToken }
+          [adapter.id]: { loading: false, results: filtered, error: null, hasMore, loadingMore: false, offset: filtered.length, pageToken: nextPageToken }
         }));
       } catch (err) {
         if (searchIdRef.current !== thisId) return; // stale — discard the error too
@@ -103,15 +94,21 @@ export function useSearch(settings, isEnabled) {
     });
   }, [settings, isEnabled]);
 
-  const loadMore = useCallback(async (adapterId, query) => {
+  const loadMore = useCallback(async (adapterId) => {
     const adapter = ADAPTERS.find(a => a.id === adapterId);
     if (!adapter) return;
     const current = sectionStates[adapterId];
     if (!current || current.loadingMore || !current.hasMore) return;
 
+    // F-A4 — stale-guard: capture the search generation this loadMore belongs to. If a
+    // new search (or reset) supersedes it mid-flight, discard the response/error instead
+    // of writing pages from the OLD query into the NEW search's sections.
+    const thisId = searchIdRef.current;
+
     setSectionStates(prev => ({ ...prev, [adapterId]: { ...prev[adapterId], loadingMore: true } }));
 
-    const terms = query.split(";").map(s => s.trim()).filter(Boolean);
+    // F-A3 — page the executed query (recorded by search()), not the live input box.
+    const terms = executedQueryRef.current.split(";").map(s => s.trim()).filter(Boolean);
 
     try {
       // Thread both offset (for offset-based adapters) and pageToken (for token-based adapters,
@@ -121,24 +118,13 @@ export function useSearch(settings, isEnabled) {
         { offset: current.offset, pageToken: current.pageToken }
       );
 
-      let filtered;
-      if (settings.simpleSearch) {
-        // v0.36 — raw passthrough: no dedup/score/gate on load-more either.
-        filtered = newResults;
-      } else {
-        // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
-        const deduped = dedupFirstWins(
-          dedupFirstWins(newResults, doiKey, seenDOIs.current),
-          titleFingerprint, seenTitles.current
-        );
+      // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
+      const filtered = dedupFirstWins(
+        dedupFirstWins(newResults, doiKey, seenDOIs.current),
+        titleFingerprint, seenTitles.current
+      );
 
-        // C4 — BM25F score load-more results (capability-aware, per Sprint 2), then gate so
-        // loose matches stay flagged _lowConfidence and don't slip past the unified-view filter.
-        const scoringTerms = await expandTerms(terms, settings.synonyms);
-        const scored = scoreResults(deduped, scoringTerms, () => adapter.capability);
-        ({ results: filtered } = applyConfidenceGate(scored, meaningfulTerms(scoringTerms)));
-      }
-
+      if (searchIdRef.current !== thisId) return; // stale — superseded while fetching (F-A4)
       setSectionStates(prev => {
         const existing = prev[adapterId];
         const combined = [...(existing.results || []), ...filtered];
@@ -147,6 +133,7 @@ export function useSearch(settings, isEnabled) {
         return { ...prev, [adapterId]: { ...existing, results: combined, hasMore, loadingMore: false, offset: combined.length, pageToken: nextPageToken } };
       });
     } catch (err) {
+      if (searchIdRef.current !== thisId) return; // stale — discard the error too (F-A4)
       setSectionStates(prev => ({
         ...prev,
         [adapterId]: { ...prev[adapterId], loadingMore: false, error: err.message || "Couldn't load more" }

@@ -9,9 +9,10 @@
 // Why a single dynamic route: each of these was an identical per-source file (api/search/dpla.js,
 // /europeana.js, /smithsonian.js). On Vercel Hobby every Node file under /api is its own
 // Serverless Function (12-per-deployment cap); collapsing the three into one [source].js frees two
-// slots with zero behaviour change. The KEYLESS edge shims (bdh, bl, gallica, mexicana,
-// opencontext, openedition) stay as their own static files — Edge Functions don't count toward the
-// Serverless cap, and Vercel resolves those exact filenames before this dynamic param.
+// slots with zero behaviour change. The KEYLESS edge shims (gallica, opencontext, openedition)
+// stay as their own static files — Edge Functions don't count toward the Serverless cap, and
+// Vercel resolves those exact filenames before this dynamic param. (bdh/bl/mexicana were
+// quarantined in v0.44 T5 — dead upstreams, live-probed 2026-06-09.)
 //
 // GET /api/search/<source>?q=&offset=    source ∈ { dpla, europeana, smithsonian }
 // Fail-soft: always 200 with { results:[], hasMore:false, error? } so one source erroring never

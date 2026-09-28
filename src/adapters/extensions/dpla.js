@@ -1,7 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
-import { proxiedFetch } from "../_shared/proxy.js";
+import { proxiedFetch, fetchWithTimeout } from "../_shared/proxy.js";
 
 // R3: DPLA sourceResource.type → UnifiedResult type
 const DPLA_TYPE_MAP = {
@@ -33,7 +33,7 @@ export const DPLA_ADAPTER = {
     const offset = opts.offset || 0;
     if (typeof window !== "undefined") {
       // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
-      const r = await fetch(`/api/search/dpla?q=${encodeURIComponent(query)}&offset=${offset}`);
+      const r = await fetchWithTimeout(`/api/search/dpla?q=${encodeURIComponent(query)}&offset=${offset}`);
       if (!r.ok) throw new Error(`DPLA ${r.status}`);
       return await r.json();                       // { results, hasMore } — already normalized server-side
     }

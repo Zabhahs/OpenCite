@@ -2,8 +2,9 @@
 // Auth-aware user settings. Signed-in users sync to DB via /api/settings (the row is
 // AES-256-GCM encrypted server-side); anonymous users fall through to localStorage
 // unchanged. Shared localStorage↔DB plumbing lives in useSyncedStore (v0.41 R-300).
-// Settings-specific logic — legacy-key migration, the v.31 one-time defaults flip, the
-// DEFAULT_SETTINGS-spread merge, and adapter enable/toggle — stays here.
+// Settings-specific logic — legacy-key migration, the DEFAULT_SETTINGS-spread merge,
+// and adapter enable/toggle — stays here. (The v.31 one-time semantic/synonym defaults
+// flip was removed in v0.44 with the ranking engine; stale flags are inert.)
 
 import { useSyncedStore } from "./useSyncedStore.js";
 import { DEFAULT_SETTINGS, DEFAULT_CURATED_JOURNALS } from "../constants/defaults.js";
@@ -61,26 +62,16 @@ function migrateLegacyKeys() {
 // Single namespaced write — shared by load(), syncFromDB(), and save().
 const persistLocally = (next) => storage.set("settings", next);
 
-// loadLocal — reads namespaced storage; migrates legacy bare keys on first run; applies
-// the v.31 one-time defaults. Returns the seed value, or undefined to keep DEFAULT_SETTINGS.
+// loadLocal — reads namespaced storage; migrates legacy bare keys on first run.
+// Returns the seed value, or undefined to keep DEFAULT_SETTINGS.
 function loadLocalSettings() {
   try {
     const stored = storage.get("settings");
-    let base;
     if (stored && typeof stored === "object" && !Array.isArray(stored)) {
-      base = { ...DEFAULT_SETTINGS, ...stored };
-    } else {
-      const migrated = migrateLegacyKeys();
-      base = migrated ? { ...DEFAULT_SETTINGS, ...migrated } : { ...DEFAULT_SETTINGS };
+      return { ...DEFAULT_SETTINGS, ...stored };
     }
-    // v.31 one-time: enable semantic + synonym ranking for existing users whose saved
-    // settings predate the always-on defaults. Flips on once, then respects any later
-    // toggle (the flag is persisted alongside their choice).
-    if (!base.searchDefaultsV31) {
-      base = { ...base, semanticSearch: true, synonyms: true, searchDefaultsV31: true };
-      persistLocally(base);
-    }
-    return base;
+    const migrated = migrateLegacyKeys();
+    return migrated ? { ...DEFAULT_SETTINGS, ...migrated } : { ...DEFAULT_SETTINGS };
   } catch {
     return undefined; // keep DEFAULT_SETTINGS
   }

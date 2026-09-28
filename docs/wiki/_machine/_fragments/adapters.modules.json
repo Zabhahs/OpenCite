@@ -946,16 +946,16 @@
       "constants.defaults",
       "constants.vocabulary"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#bdh",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "heritage",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.bnfApi",
@@ -1001,9 +1001,9 @@
       "constants.defaults",
       "constants.vocabulary"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#britishlibrary",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
@@ -1011,7 +1011,7 @@
       "sparql",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve. Prior notes: Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.lcDatasets",
@@ -1052,18 +1052,19 @@
       "constants.defaults",
       "constants.vocabulary"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [
       "F-106"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#mexicana",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "latin-america",
       "oai-pmh",
       "thin-shim"
-    ]
+    ],
+    "notes": "Quarantined v0.44 T5 (dead upstream, live-probed 2026-06-09): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_adapters/. Virtual record kept so cross-refs resolve."
   },
   {
     "id": "adapters.extensions.wikidata",
@@ -1113,5 +1114,24 @@
       "deprecated"
     ],
     "notes": "Removed from build v0.42 (was deregistered v0.27); full source preserved in the wiki quarantine."
+  },
+  {
+    "id": "adapters.shared.contentMatch",
+    "path": "src/adapters/_shared/contentMatch.js",
+    "kind": "lib",
+    "runtime": "both",
+    "purpose": "Content-scope match predicate (hasContentMatch): retrieval-correctness filter behind the author-search-off contract; relocated verbatim from the quarantined lib/scoring.js in v0.44 T5. Not ranking.",
+    "exports": [
+      "hasContentMatch"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md",
+    "tags": [
+      "adapter",
+      "shared",
+      "retrieval"
+    ],
+    "notes": "Sole consumer: src/adapters/core/crossref.js."
   }
 ]

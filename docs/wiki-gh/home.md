@@ -9,7 +9,10 @@ tags: [moc, home]
 > **Single source of truth.** Free meta-search across open-access scholarly databases + a sellable
 > origin-blind `/api/search` grounding endpoint for AI agents. React/Vite · Vercel serverless ·
 > Prisma/Supabase · Auth.js v5. This wiki supersedes the per-version `architecture_report_*.md`
-> and `sprint_log_*.md` files (archived → [Index](99-Archive/Index.md)).
+> and `sprint_log_*.md` files (deleted v0.44 — git history is the archive).
+>
+> **Content policy:** every page follows [WIKI-RULES](WIKI-RULES.md) — merged-`main` only, contracts not
+> walkthroughs, no facts that rot.
 >
 > **Two layers, maintained in parallel:** this human wiki, and a machine-native twin under
 > `_machine/` (see [machine schema](_machine/schema.md)) optimized for Claude — module registry,
@@ -24,7 +27,7 @@ tags: [moc, home]
 
 ### 00 — Overview
 - [System-Architecture](00-Overview/System-Architecture.md) — the whole machine
-- [Search-Lifecycle](00-Overview/Search-Lifecycle.md) — keystroke → adapters → rank → render
+- [Search-Lifecycle](00-Overview/Search-Lifecycle.md) — keystroke → adapters → dedupe → render
 - [Tech-Stack](00-Overview/Tech-Stack.md) · [Glossary](00-Overview/Glossary.md)
 
 ### 01 — Frontend
@@ -38,9 +41,9 @@ tags: [moc, home]
 - [Adapter-Health-Matrix](02-Adapters/Adapter-Health-Matrix.md) 🟢🔴🔑
 
 ### 03 — Search Pipeline
-- [Ranking-Scoring](03-Search-Pipeline/Ranking-Scoring.md) (BM25F) · [RRF-Fusion](03-Search-Pipeline/RRF-Fusion.md) · [Semantic-Rerank](03-Search-Pipeline/Semantic-Rerank.md)
-- [Dedup-Grouping](03-Search-Pipeline/Dedup-Grouping.md) · [Confidence-Gate](03-Search-Pipeline/Confidence-Gate.md) · [Synonyms-Vocab](03-Search-Pipeline/Synonyms-Vocab.md)
-- [Known-Defects](03-Search-Pipeline/Known-Defects.md) (D1–D5)
+- [Pipeline](03-Search-Pipeline/Pipeline.md) — pass-through design (v0.44): retrieval → dedupe → native order
+- [Dedup-Grouping](03-Search-Pipeline/Dedup-Grouping.md) · [Citations](03-Search-Pipeline/Citations.md)
+- [Known-Defects](03-Search-Pipeline/Known-Defects.md)
 
 ### 04 — Backend API
 - [Search-Endpoint](04-Backend-API/Search-Endpoint.md) · [Shared-Modules](04-Backend-API/Shared-Modules.md) · [Per-Source-Routes](04-Backend-API/Per-Source-Routes.md)

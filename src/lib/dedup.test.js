@@ -1,6 +1,10 @@
 /**
- * Unit tests for dedup.js — dedupHighestScore O(1) replacement (F-206) and the
- * field-merge-on-collapse policy (F-208).
+ * Unit tests for dedup.js — dedupHighestScore O(1) replacement (F-206), the
+ * field-merge-on-collapse policy (F-208), and doiKey normalization (v0.44 D-2).
+ *
+ * `_score` values here are synthetic test inputs exercising the retained comparator;
+ * the field itself no longer exists in the live pipeline (v0.44 engine teardown),
+ * where the comparator degrades to first-wins.
  *
  * Standalone Node runner (mirrors goldSetMetrics.test.js): `node src/lib/dedup.test.js`.
  * No test framework — pure assertions against pure functions.
@@ -116,6 +120,28 @@ function test_dedupFirstWins_unchanged() {
   assert(out.length === 2, `first-wins should drop the 2nd 'a', got ${out.length}`);
 }
 
+// ─── v0.44 D-2: doiKey normalization — trim, lowercase, strip doi.org prefix ───
+
+function test_doiKey_normalization() {
+  assert(doiKey({ doi: "10.1/X" }) === "10.1/x", "doiKey must lowercase");
+  assert(doiKey({ doi: "  10.1/x  " }) === "10.1/x", "doiKey must trim");
+  assert(doiKey({ doi: "https://doi.org/10.1/x" }) === "10.1/x", "doiKey must strip https://doi.org/");
+  assert(doiKey({ doi: "http://dx.doi.org/10.1/X" }) === "10.1/x", "doiKey must strip http://dx.doi.org/ and lowercase");
+  assert(doiKey({ doi: "" }) === null, "empty doi → null");
+  assert(doiKey({ doi: "  " }) === null, "whitespace-only doi → null");
+  assert(doiKey({}) === null, "missing doi → null");
+  assert(doiKey({ doi: "https://doi.org/" }) === null, "prefix-only doi → null");
+}
+
+function test_doiKey_variants_collapse_in_dedup() {
+  const seen = new Set();
+  const out = dedupFirstWins(
+    [{ doi: "10.5/ABC" }, { doi: "https://doi.org/10.5/abc" }, { doi: " 10.5/abc " }],
+    doiKey, seen
+  );
+  assert(out.length === 1, `all three DOI spellings should collapse to one record, got ${out.length}`);
+}
+
 // ─── Runner ───
 
 const tests = [
@@ -128,6 +154,8 @@ const tests = [
   test_order_preserved_on_replacement,
   test_large_pool_dedups_correctly,
   test_dedupFirstWins_unchanged,
+  test_doiKey_normalization,
+  test_doiKey_variants_collapse_in_dedup,
 ];
 
 // Run when invoked directly (cross-platform: pathToFileURL handles Windows drive paths).

@@ -113,11 +113,22 @@ function AuthButton() {
 
 // ---------- CreditsChip ----------
 // F-311: live monthly-search balance. Reads BillingContext (mounted in App.jsx via
-// BillingProvider, v0.41 F-300). Anonymous users / any DB-fetch failure fall back to
-// the Infinity stub → chip renders nothing. Finite balance → shows "N left".
+// BillingProvider, v0.41 F-300). v0.44 T3 contract: `unlimited` (admin/unmetered
+// plan) → "∞" chip; balance unknown (anonymous, fetch failure, 503) → render
+// nothing — never a fake 0. Finite balance → "N left".
 function CreditsChip() {
-  const { credits } = useBilling();
-  if (credits === Infinity || credits == null) return null;
+  const { credits, unlimited } = useBilling();
+  if (unlimited) {
+    return (
+      <span
+        className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"
+        title="Unlimited searches"
+      >
+        ∞ unlimited
+      </span>
+    );
+  }
+  if (credits == null || !Number.isFinite(credits)) return null;
   return (
     <span
       className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"

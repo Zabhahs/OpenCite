@@ -55,7 +55,7 @@ Client `isAdmin()` (`VITE_ADMIN_EMAILS`) and server `resolveSessionAdmin()` (`AD
 
 <a id="f-205"></a>
 ### f-205 — Semantic rerank is client-only
-`useSemanticRerank` + `embed.worker.js` need a Web Worker and the ~23MB MiniLM model — neither runs in a Vercel function. So even after F-209 is fixed, **`/api/search` consumers get lexical+native RRF but no *semantic* signal.** Closing the semantic gap needs a server-side embedding service (hosted model or vector API), not code-sharing. See [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md#overengineering-assessment).
+`useSemanticRerank` + `embed.worker.js` need a Web Worker and the ~23MB MiniLM model — neither runs in a Vercel function. So even after F-209 is fixed, **`/api/search` consumers get lexical+native RRF but no *semantic* signal.** Closing the semantic gap needs a server-side embedding service (hosted model or vector API), not code-sharing. See [[03-Search-Pipeline/Semantic-Rerank#overengineering-assessment]].
 
 ## See also
 [Health-Dashboard](Health-Dashboard.md) · [Tech-Debt-Overengineering](Tech-Debt-Overengineering.md) · `_machine/reuse.json`

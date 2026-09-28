@@ -396,4 +396,4 @@ The name is descriptive and undefensible — do not contest either party.
 
 ## See also
 
-[Adapter-Architecture](Adapter-Architecture.md) · [Adapter-Health-Matrix](Adapter-Health-Matrix.md) · [Core-Adapters](Core-Adapters.md) · [Extension-Adapters](Extension-Adapters.md) · [Ranking-Scoring](../03-Search-Pipeline/Ranking-Scoring.md)
+[Adapter-Architecture](Adapter-Architecture.md) · [Adapter-Health-Matrix](Adapter-Health-Matrix.md) · [Core-Adapters](Core-Adapters.md) · [Extension-Adapters](Extension-Adapters.md) · [[03-Search-Pipeline/Ranking-Scoring]]

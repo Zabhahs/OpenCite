@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:css": "tailwindcss -i ./src/input.css -o ./public/output.css --watch",
-    "build": "node scripts/migrate.mjs; npx tailwindcss -i ./src/input.css -o ./public/output.css --minify && vite build",
+    "build": "node scripts/migrate.mjs && npx tailwindcss -i ./src/input.css -o ./public/output.css --minify && vite build",
     "preview": "vite preview",
     "postinstall": "npx prisma generate",
     "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks')}catch(e){}\""

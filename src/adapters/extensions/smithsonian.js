@@ -1,5 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const SMITHSONIAN_ADAPTER = {
   id: "SMITHSONIAN", name: "Smithsonian",
@@ -19,7 +20,7 @@ export const SMITHSONIAN_ADAPTER = {
     const offset = opts.offset || 0;
     if (typeof window !== "undefined") {
       // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
-      const r = await fetch(`/api/search/smithsonian?q=${encodeURIComponent(query)}&offset=${offset}`);
+      const r = await fetchWithTimeout(`/api/search/smithsonian?q=${encodeURIComponent(query)}&offset=${offset}`);
       if (!r.ok) throw new Error(`Smithsonian ${r.status}`);
       return await r.json();                       // { results, hasMore } — already normalized server-side
     }
@@ -27,7 +28,7 @@ export const SMITHSONIAN_ADAPTER = {
     if (!settings.smithsonianKey) throw new Error("SMITHSONIAN_API_KEY not configured");  // backend config error
     const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
     const url = `https://api.si.edu/openaccess/api/v1.0/search?q=${encodeURIComponent(query)}&start=${offset}&rows=${rows}&api_key=${encodeURIComponent(settings.smithsonianKey)}`;
-    const r = await fetch(url);
+    const r = await fetchWithTimeout(url);
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("Smithsonian API key invalid or unauthorized.");
       throw new Error(`Smithsonian ${r.status}`);

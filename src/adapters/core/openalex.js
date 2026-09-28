@@ -1,6 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { parseOpenAlexWork, OA_SELECT } from "../_shared/parseOpenAlex.js";
+import { fetchWithTimeout } from "../_shared/proxy.js";
 
 export const OPENALEX_ADAPTER = {
   id: "OPENALEX",
@@ -43,7 +44,7 @@ export const OPENALEX_ADAPTER = {
     // Top-level fields only (OpenAlex select can't address nested subfields). host_venue is
     // deprecated/removed — including it would 400 the request, so it's intentionally absent.
     const url = `https://api.openalex.org/works?filter=${filter}&sort=relevance_score:desc&per_page=${pageSize}&page=${page}&select=${OA_SELECT}${auth}`;
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });
     if (!r.ok) {
       if (r.status === 401 || r.status === 403) throw new Error("OpenAlex rejected the request. Verify your key in settings or remove it.");
       if (r.status === 429) throw new Error("OpenAlex rate limit hit. Adding a free API key in settings raises your quota.");

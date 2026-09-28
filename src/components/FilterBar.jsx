@@ -13,9 +13,10 @@ const TYPE_LABELS = {
   "misc":           "Other",
 };
 
+// "Relevance" removed v0.44 — local scoring is gone; "Default" IS each source's
+// native relevance order.
 const SORT_OPTIONS = [
   { value: "default",   label: "Default" },
-  { value: "relevance", label: "Relevance" },
   { value: "citations", label: "Citations ↓" },
   { value: "year",      label: "Year ↓" },
 ];

@@ -304,10 +304,10 @@
     "shared_module": "api.shared.parseBody",
     "client_users": [],
     "server_users": [
-      "api.history",
-      "api.library",
+      "api.shared.handlers.history",
+      "api.shared.handlers.library",
       "api.checkout",
-      "api.settings"
+      "api.shared.handlers.settings"
     ],
     "opportunity": "extract-shared",
     "detail": "api/settings.js reads req.body directly (Vercel auto-parses JSON for Node functions) while api/history.js, api/library.js, and api/checkout.js use parseBody() for stream-based reading. This inconsistency means settings.js would silently break if the route ever gains bodyParser:false config (e.g. for raw-body access like the Stripe webhook). All POST routes should use the same body-reading strategy. Low effort to fix: replace req.body in settings.js with await parseBody(req).",
@@ -320,12 +320,10 @@
     "client_users": [],
     "server_users": [
       "api.search",
-      "api.route.europeana",
-      "api.route.dpla",
-      "api.route.smithsonian"
+      "api.route.[source]"
     ],
     "opportunity": "extract-shared",
-    "detail": "api/search.js:196 defines KEYED_ENV = { EUROPEANA: 'europeanaKey', DPLA: 'dplaKey', SMITHSONIAN: 'smithsonianKey' } which maps adapter IDs to the key names returned by serverInjectedKeys(). serverKeys.js defines the same mapping implicitly (env var name → object key). If a new keyed source is added, three places need updating: serverKeys.js (env read), api/search.js KEYED_ENV (presence guard), and a new per-source route. Low effort: export the KEYED_ENV map from serverKeys.js so api/search.js imports it rather than redeclaring it.",
+    "detail": "api/search.js:196 defines KEYED_ENV = { EUROPEANA: 'europeanaKey', DPLA: 'dplaKey', SMITHSONIAN: 'smithsonianKey' } which maps adapter IDs to the key names returned by serverInjectedKeys(). serverKeys.js defines the same mapping implicitly (env var name → object key); the v0.43.1 api/search/[source].js dispatcher adds a third (its ADAPTERS slug→adapter map). If a new keyed source is added, those three places need updating: serverKeys.js (env read), api/search.js KEYED_ENV (presence guard), and the keyedSearch dispatcher's ADAPTERS map. Low effort: export the KEYED_ENV map from serverKeys.js so the others import it rather than redeclaring it.",
     "wiki": "09-Audit/Duplication-and-Reuse.md#r-404"
   },
   {

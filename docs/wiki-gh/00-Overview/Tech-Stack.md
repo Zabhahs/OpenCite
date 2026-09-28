@@ -21,7 +21,7 @@ OpenCITE is a React/Vite SPA that fans out to ~25 scholarly-source adapters in p
 | UI | React 18 + Vite | SPA, hash routing for admin (`#/admin/console`) |
 | Styling | Tailwind CSS | built to `public/output.css`; themes in [Contexts](../01-Frontend/Contexts.md) |
 | Client search | per-source adapters (`src/adapters/`) | run in-browser, CORS-proxied where needed → see [Adapter-Architecture](../02-Adapters/Adapter-Architecture.md) |
-| Ranking | BM25F + RRF + MiniLM semantic rerank | pure JS, runs client-side (web worker for embeddings) → [Ranking-Scoring](../03-Search-Pipeline/Ranking-Scoring.md) |
+| Ranking | BM25F + RRF + MiniLM semantic rerank | pure JS, runs client-side (web worker for embeddings) → [[03-Search-Pipeline/Ranking-Scoring]] |
 | Backend | Vercel serverless (Node) + Edge | `api/*` functions → [Search-Endpoint](../04-Backend-API/Search-Endpoint.md) |
 | CORS proxy | `api/proxy.js` | allowlisted upstreams → [Proxy](../04-Backend-API/Proxy.md) |
 | Auth | Auth.js (NextAuth) v5, Google OAuth | session + API-key auth → [Auth-Sessions](../04-Backend-API/Auth-Sessions.md) |
@@ -29,7 +29,7 @@ OpenCITE is a React/Vite SPA that fans out to ~25 scholarly-source adapters in p
 | KV / rate-limit | Vercel KV | credit + leaky-bucket → [Billing-Credits](../05-Billing/Billing-Credits.md) |
 | Billing | Stripe | checkout + webhook → [Billing-Credits](../05-Billing/Billing-Credits.md) |
 | AI integration | MCP server (`mcp/`) | exposes search to external models → [MCP-Server](../06-MCP-Server/MCP-Server.md) |
-| Embeddings | MiniLM (~23MB), in-browser | downloaded once, cached → [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md) |
+| Embeddings | MiniLM (~23MB), in-browser | downloaded once, cached → [[03-Search-Pipeline/Semantic-Rerank]] |
 | Deploy | Vercel, auto-deploy `main` | aliases `citation.today`, `opencite.space` → [Build-Deploy](../08-Build-Deploy/Build-Deploy.md) |
 | Build chain | `scripts/migrate.mjs` → tailwind → `vite build` | P3005-safe migrate, never hard-fails |
 

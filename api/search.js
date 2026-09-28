@@ -2,9 +2,11 @@
 // Route: /api/search
 // Runtime: Node.js (default for api/*.js without an edge config export)
 //
-// Runs the same retrieval + normalize + BM25F ranking pipeline the UI uses
-// (runSearch + scoreResults + buildMLA/APA), so API results match the app and
-// the endpoint doubles as a headless test harness for relevance work.
+// Pipeline (v0.44 pass-through): retrieval fan-out → normalize → round-robin
+// interleave of each adapter's NATIVE upstream order → DOI/title dedupe with
+// field-merge → coverage-prorated billing. There is no server-side ranking
+// layer: relevance ordering comes from the sources' own ranking, preserved
+// per-adapter and merged fairly across adapters (D-3).
 //
 // v1 covers the core scholarly adapters only (OpenAlex, Crossref, DOAJ,
 // Curated). These use plain fetch() to public JSON APIs — no browser proxy and
@@ -34,12 +36,11 @@
 //
 // Admin path: an admin identity (master key, or a user with plan='admin') runs at
 // 0 credits, no rate cap, all-tier, and may pass ?debug=1 for an ORIGIN-REVEALING
-// envelope (per-result source + raw score + pipeline telemetry). debug is gated
-// strictly on the server-derived identity.admin — a non-admin ?debug=1 is a silent
-// no-op, so origin-blindness can never be pierced by a normal caller.
+// envelope (per-result source + pipeline telemetry). debug is gated strictly on
+// the server-derived identity.admin — a non-admin ?debug=1 is a silent no-op, so
+// origin-blindness can never be pierced by a normal caller.
 
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
-import { scoreResults, meaningfulTerms, applyConfidenceGate } from "../src/lib/scoring.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
 import { resolveIds } from "../src/lib/idResolve.js";
 import { exportAs } from "../src/lib/citations.js";
@@ -107,6 +108,21 @@ async function canonicalizeDois(records, { apiKey, email } = {}) {
   } catch { /* best-effort — leave records unchanged on any failure */ }
 }
 
+// D-3 round-robin interleave: merge per-adapter result lists by taking result #1
+// of each adapter (in adapter order), then #2 of each, and so on — preserving each
+// adapter's native upstream order while ensuring no single source can starve the
+// `limit` the way plain concatenation would.
+function interleave(arrays) {
+  const out = [];
+  const longest = Math.max(0, ...arrays.map((a) => a.length));
+  for (let i = 0; i < longest; i++) {
+    for (const arr of arrays) {
+      if (i < arr.length) out.push(arr[i]);
+    }
+  }
+  return out;
+}
+
 // Race an adapter run against a timeout so one slow source can't hang the function.
 const withTimeout = (promise, ms, label) =>
   Promise.race([
@@ -146,7 +162,7 @@ export default async function handler(req, res) {
   // 1. Identity — fail-closed. Retires the old OPENCITE_API_KEY endpoint gate; auth
   // is now per-identity (apiAuth maps x-api-key/?key= → billing identity, or null).
   // Fallback: no API key but an allowlisted Auth.js admin session → admin identity
-  // (cost 0, debug/simple unlocked) so the browser admin console works without a key.
+  // (cost 0, debug unlocked) so the browser admin console works without a key.
   // Non-admin sessions stay null → standard 401 (endpoint remains key-only otherwise).
   const identity = (await resolveApiKey(req)) || (await resolveSessionAdmin(req));
   if (!identity) {
@@ -161,15 +177,6 @@ export default async function handler(req, res) {
   // Origin-revealing debug — SERVER-DERIVED gate. A non-admin ?debug=1 is treated as
   // absent (silent no-op): standard origin-blind cards, no telemetry, normal cache.
   const debug = !!identity.admin && isTruthy(firstParam(req.query?.debug));
-
-  // v0.36 DIAGNOSTIC — DEVELOPER-ONLY raw-pipeline mode. Same SERVER-DERIVED admin gate
-  // as debug: a non-admin ?simple=1 is a silent no-op (falls through to the production
-  // pipeline). Simple mode runs the SAME fan-out, then SKIPS dedup/score/confidence-gate/
-  // coverage and returns the raw merged pool in fan-out order with `source` VISIBLE — so
-  // we can tell whether 403s/timeouts/poor relevance originate upstream (adapter) or in
-  // our post-retrieve pipeline. Bypasses cache (always fresh). Admin cost is 0, so no
-  // settle/refund applies. NOT a user feature — gate or remove before any public release.
-  const simpleMode = !!identity.admin && isTruthy(firstParam(req.query?.simple));
 
   const startMs = Date.now();
 
@@ -262,7 +269,7 @@ export default async function handler(req, res) {
     authors: settings.authorSearch,
     format,
   });
-  if (format === "json" && !debug && !simpleMode) {
+  if (format === "json" && !debug) {
     const cached = await readCache(ck);
     if (cached) {
       const charge = await chargeForBand(identity, cached.coverage);
@@ -279,9 +286,9 @@ export default async function handler(req, res) {
   const pre = await preAuthorize(identity.userId, identity.plan.creditCost);
   if (!pre.ok) return sendJson(res, 402, { error: "Insufficient credits." });
 
-  // 6. Fan-out + score + dedup + coverage — wrapped so ANY throw refunds the pre-auth
-  // (R1: never bill a failed search).
-  let limited, coverageBand, deduped, debugMeta, lowConfidence;
+  // 6. Fan-out + interleave + dedup + coverage — wrapped so ANY throw refunds the
+  // pre-auth (R1: never bill a failed search).
+  let limited, coverageBand, deduped, debugMeta;
   try {
     // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
     // signal (an empty result set is NOT a failure — it means "no match", full coverage).
@@ -322,73 +329,39 @@ export default async function handler(req, res) {
       })
     );
 
-    const allRaw = perAdapter.flat();
-
-    // v0.36 SIMPLE MODE — raw merged pool, in fan-out order. SKIPS score/dedup/gate/
-    // coverage entirely. `source` is NOT stripped (we need to know which adapter produced
-    // what). No `_score`, no `inferred-*`, no anonymized id. perAdapter telemetry +
-    // failedAdapters isolate adapter-level failures (403/timeout) from pipeline ones.
-    // Admin-only + cost 0, so we return straight out — no settle, no cache write.
-    if (simpleMode) {
-      const rawResults = allRaw.map((r) => ({
-        id: r.id,
-        title: r.title,
-        url: r.url,
-        source: r.source,
-        year: r.year || null,
-        authorCount: Array.isArray(r.authors) ? r.authors.length : null,
-        citedBy: r.citedBy ?? null,
-      }));
-      return sendJson(res, 200, {
-        query: q,
-        terms,
-        simpleMode: true,
-        pipeline: "raw",
-        count: rawResults.length,
-        perAdapter: adapterStats,
-        failedAdapters: failedAdapters.map((a) => a.id),
-        tookMs: Date.now() - startMs,
-        results: rawResults,
-        note: "Unprocessed adapter output, in fan-out order. Developer diagnostic only.",
-      });
-    }
+    // D-3 ordering: round-robin interleave across adapters, preserving each adapter's
+    // native upstream order (relevance ranking is the sources' job now, not ours).
+    const pool = interleave(perAdapter);
 
     // v0.43 T2.2 — env-gated, default-off DOI canonicalization (see helper above). No-op in
-    // production until IDRESOLVE_CANONICALIZE is set; runs before scoring/dedup so a resolved
-    // DOI feeds doiKey and the F-208/F-210 merge. Skipped for simpleMode (returned above).
+    // production until IDRESOLVE_CANONICALIZE is set; runs before dedup so a resolved
+    // DOI feeds doiKey and the F-208/F-210 merge.
     if (isTruthy(process.env.IDRESOLVE_CANONICALIZE)) {
-      await canonicalizeDois(allRaw, {
+      await canonicalizeDois(pool, {
         apiKey: process.env.NCBI_API_KEY || undefined,
         email: settings.crossrefEmail,
       });
     }
 
-    // Score once over the full candidate set so IDF is consistent, then dedup keeping
-    // the highest-scored copy of each work (DOI first, then same-paper title fingerprint).
-    const capBySource = Object.fromEntries(ADAPTERS.map((a) => [a.id, a.capability]));
-    const scored = scoreResults(allRaw, terms, (r) => capBySource[r.source]);
-    const afterDoi = dedupHighestScore(scored, doiKey);
+    // Dedup the interleaved pool: DOI key first, then same-paper title fingerprint.
+    // With no score field present, dedupHighestScore's tie-break (0 > 0 is false) keeps the
+    // FIRST occurrence per key — i.e. the interleave order — while still field-merging
+    // the duplicate's richer fields via mergeRecords (F-208/F-210). That first-wins
+    // behavior is INTENDED: it preserves the D-3 ordering through dedup.
+    const afterDoi = dedupHighestScore(pool, doiKey);
     deduped = dedupHighestScore(afterDoi, titleFingerprint);
-
-    // Global low-confidence gate (v0.27 useFilters parity): if any genuine match exists
-    // anywhere, drop every zero-score loose match; only when nothing matched do we surface
-    // best guesses, flagged lowConfidence.
-    const gated = applyConfidenceGate(deduped, meaningfulTerms(terms));
-    const finalResults = gated.results;
-    lowConfidence = gated.lowConfidence;
 
     // Corpus-weighted, bucketed coverage band (origin-blind health signal). Denominator =
     // the eligible set for THIS request, so coverage is honest relative to what was searched.
     const cov = computeCoverage(adapters, failedAdapters);
     coverageBand = cov.band;
 
-    finalResults.sort((a, b) => (b._score || 0) - (a._score || 0));
-    limited = finalResults.slice(0, limit);
+    limited = deduped.slice(0, limit);
 
     if (debug) {
       debugMeta = {
         perAdapter: adapterStats,
-        dedup: { raw: scored.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
+        dedup: { raw: pool.length, afterDoi: afterDoi.length, afterTitle: deduped.length },
         coverage: { rawPercent: Math.round(cov.coverage * 1000) / 10, failedCount: failedAdapters.length, band: cov.band },
         // v0.38 T1: circuit-breaker visibility (admin-only). `circuitBreaker` is the
         // streak snapshot for every tracked adapter; `cbDropped` lists ids dropped from
@@ -409,7 +382,7 @@ export default async function handler(req, res) {
   });
   const balance = await getBalance(identity.userId);
 
-  // Non-JSON formats — flat bibliography of the ranked results. Still metered; billing
+  // Non-JSON formats — flat bibliography of the returned results. Still metered; billing
   // headers carry the charge. (Non-json is not cached — text body ≠ structured payload,
   // and debug cards don't apply since exportAs renders from the raw record.)
   if (format !== "json") {
@@ -440,7 +413,6 @@ export default async function handler(req, res) {
     query: q,
     terms,
     coverage: coverageBand,
-    lowConfidence,
     count: results.length,
     totalCandidates: deduped.length,
     tookMs: Date.now() - startMs,

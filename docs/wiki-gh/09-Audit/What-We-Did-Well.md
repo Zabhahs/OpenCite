@@ -19,8 +19,8 @@ tags: [audit, strengths]
 
 ## Relevance pipeline
 - **The v0.35 relevance fixes actually landed**: IA download-as-citation ([Bugs](Bugs.md#f-202)), popularity-sort ([Bugs](Bugs.md#f-203)), diacritic fragmentation ([Bugs](Bugs.md#f-204)) are all genuinely fixed in source.
-- **`hasContentMatch()` SSOT** killed the Crossref author-bleed bug for both browser and API paths in one place. See [Confidence-Gate](../03-Search-Pipeline/Confidence-Gate.md).
-- **Two-phase semantic rerank** keeps slider drags as pure arithmetic — a thoughtful UX-perf design. See [Semantic-Rerank](../03-Search-Pipeline/Semantic-Rerank.md).
+- **`hasContentMatch()` SSOT** killed the Crossref author-bleed bug for both browser and API paths in one place. See [[03-Search-Pipeline/Confidence-Gate]].
+- **Two-phase semantic rerank** keeps slider drags as pure arithmetic — a thoughtful UX-perf design. See [[03-Search-Pipeline/Semantic-Rerank]].
 - **RRF fusion in the browser** (`useSemanticRerank` → `fuseRanks`) cleanly combines lexical + semantic ranks for the SPA. *(Caveat — it is NOT wired into the server `/api/search` path; see the [F-209 correction](../03-Search-Pipeline/Known-Defects.md#f-209). The browser implementation itself is sound.)*
 
 ## Billing & security posture (verified, not assumed)

@@ -7,11 +7,16 @@
     "loc": 8,
     "purpose": "Shebang stdio entrypoint for the MCP server; calls startStdioServer() and exits 1 on failure.",
     "exports": [],
-    "deps": ["mcp.server"],
+    "deps": [
+      "mcp.server"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "entrypoint"]
+    "tags": [
+      "mcp",
+      "entrypoint"
+    ]
   },
   {
     "id": "mcp.server",
@@ -20,12 +25,22 @@
     "runtime": "server",
     "loc": 66,
     "purpose": "Creates the MCP Server object; registers ListTools and CallTool handlers; reads OPENCITE_API_KEY and OPENCITE_API_BASE_URL from env.",
-    "exports": ["createServer", "startStdioServer"],
-    "deps": ["mcp.contract", "mcp.schema", "mcp.client"],
+    "exports": [
+      "createServer",
+      "startStdioServer"
+    ],
+    "deps": [
+      "mcp.contract",
+      "mcp.schema",
+      "mcp.client"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "server"],
+    "tags": [
+      "mcp",
+      "server"
+    ],
     "notes": "v0.43: two new tools added — search_citations (wraps /api/citations, dir=cited-by|refs) and resolve_ids (wraps /api/ids, DOI↔PMID↔PMCID). Structural scan will pick up code; this note records the curated intent."
   },
   {
@@ -35,12 +50,21 @@
     "runtime": "server",
     "loc": 74,
     "purpose": "REST client for /api/search: enforces TLS, 30s timeout, forwards x-api-key, never logs headers.",
-    "exports": ["searchScholarlySources", "resolveBaseUrl", "DEFAULT_BASE_URL"],
-    "deps": ["mcp.contract"],
+    "exports": [
+      "searchScholarlySources",
+      "resolveBaseUrl",
+      "DEFAULT_BASE_URL"
+    ],
+    "deps": [
+      "mcp.contract"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "http-client"],
+    "tags": [
+      "mcp",
+      "http-client"
+    ],
     "notes": "v0.43: extended with client functions for /api/citations and /api/ids (searchCitations, resolveIds). Structural scan will pick up the new exports."
   },
   {
@@ -50,12 +74,30 @@
     "runtime": "server",
     "loc": 57,
     "purpose": "DRY-4 bridge: re-exports API_CONTRACT/PARAMS/RESULT_FIELDS/RESPONSE_SHAPE/COVERAGE_BANDS from apiContract.js; defines TOOL_PARAM_MAP (query→q, limit, format) and toRestQuery().",
-    "exports": ["API_CONTRACT", "PARAMS", "RESULT_FIELDS", "RESPONSE_SHAPE", "COVERAGE_BANDS", "TOOL_NAME", "TOOL_PARAM_MAP", "toolParamDefs", "toRestQuery"],
-    "deps": ["api.shared.apiContract"],
+    "exports": [
+      "API_CONTRACT",
+      "PARAMS",
+      "RESULT_FIELDS",
+      "RESPONSE_SHAPE",
+      "COVERAGE_BANDS",
+      "TOOL_NAME",
+      "TOOL_PARAM_MAP",
+      "toolParamDefs",
+      "toRestQuery"
+    ],
+    "deps": [
+      "api.shared.apiContract"
+    ],
     "status": "healthy",
-    "findings": ["F-501"],
+    "findings": [
+      "F-501"
+    ],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "contract", "dry"]
+    "tags": [
+      "mcp",
+      "contract",
+      "dry"
+    ]
   },
   {
     "id": "mcp.schema",
@@ -64,12 +106,24 @@
     "runtime": "server",
     "loc": 182,
     "purpose": "Schema generators driven from contract.js: mcpInputSchema(), functionSchemas() (OpenAI + Anthropic), openApiSpec() — single source produces all agent-integration artifacts.",
-    "exports": ["mcpInputSchema", "mcpToolDefinition", "functionSchemas", "openApiSpec", "TOOL_DESCRIPTION"],
-    "deps": ["mcp.contract"],
+    "exports": [
+      "mcpInputSchema",
+      "mcpToolDefinition",
+      "functionSchemas",
+      "openApiSpec",
+      "TOOL_DESCRIPTION"
+    ],
+    "deps": [
+      "mcp.contract"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "06-MCP-Server/MCP-Server.md",
-    "tags": ["mcp", "schema", "openapi"]
+    "tags": [
+      "mcp",
+      "schema",
+      "openapi"
+    ]
   },
   {
     "id": "prisma.schema",
@@ -81,9 +135,17 @@
     "exports": [],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-502", "F-503", "F-505"],
+    "findings": [
+      "F-502",
+      "F-503",
+      "F-505"
+    ],
     "wiki": "07-Data-Layer/Data-Layer.md",
-    "tags": ["database", "prisma", "schema"]
+    "tags": [
+      "database",
+      "prisma",
+      "schema"
+    ]
   },
   {
     "id": "scripts.migrate",
@@ -97,7 +159,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "07-Data-Layer/Data-Layer.md#migratejs----p3005-safe-runner",
-    "tags": ["migrations", "build", "prisma"]
+    "tags": [
+      "migrations",
+      "build",
+      "prisma"
+    ]
   },
   {
     "id": "config.package",
@@ -109,9 +175,15 @@
     "exports": [],
     "deps": [],
     "status": "healthy",
-    "findings": ["F-507"],
+    "findings": [
+      "F-507"
+    ],
     "wiki": "08-Build-Deploy/Build-Deploy.md",
-    "tags": ["build", "config", "npm"]
+    "tags": [
+      "build",
+      "config",
+      "npm"
+    ]
   },
   {
     "id": "config.vite",
@@ -125,7 +197,10 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#vite-config-viteconfigjs",
-    "tags": ["build", "vite"]
+    "tags": [
+      "build",
+      "vite"
+    ]
   },
   {
     "id": "config.tailwind",
@@ -139,7 +214,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#tailwind-config-tailwindconfigjs",
-    "tags": ["build", "css", "tailwind"]
+    "tags": [
+      "build",
+      "css",
+      "tailwind"
+    ]
   },
   {
     "id": "config.vercel",
@@ -153,7 +232,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#vercel-deploy-model-verceljson",
-    "tags": ["deploy", "vercel", "routing"]
+    "tags": [
+      "deploy",
+      "vercel",
+      "routing"
+    ]
   },
   {
     "id": "scripts.admin.probe",
@@ -167,7 +250,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsadminprobemjs",
-    "tags": ["scripts", "admin", "debug"]
+    "tags": [
+      "scripts",
+      "admin",
+      "debug"
+    ]
   },
   {
     "id": "scripts.admin.probe-blind-check",
@@ -181,7 +268,12 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsadminprobe-blind-checkmjs",
-    "tags": ["scripts", "admin", "security", "regression"]
+    "tags": [
+      "scripts",
+      "admin",
+      "security",
+      "regression"
+    ]
   },
   {
     "id": "scripts.stress.probe",
@@ -195,7 +287,11 @@
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsstressprobemjs",
-    "tags": ["scripts", "stress", "quality"]
+    "tags": [
+      "scripts",
+      "stress",
+      "quality"
+    ]
   },
   {
     "id": "scripts.stress.simple-smoke",
@@ -205,10 +301,16 @@
     "loc": 75,
     "purpose": "In-process smoke test for ?simple=1 diagnostic mode (v0.36): imports api/search.js handler directly with mock req/res; asserts T1.3 invariants (simpleMode, source visible, no score).",
     "exports": [],
-    "deps": ["api.search"],
+    "deps": [
+      "api.search"
+    ],
     "status": "healthy",
     "findings": [],
     "wiki": "08-Build-Deploy/Build-Deploy.md#scriptsstresssimple_smokemjs",
-    "tags": ["scripts", "stress", "diagnostic"]
+    "tags": [
+      "scripts",
+      "stress",
+      "diagnostic"
+    ]
   }
 ]

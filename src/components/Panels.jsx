@@ -377,7 +377,7 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
           )}
         </div>
 
-        {/* Relevance slider, synonyms, semantic, and layout controls live in SearchControls (under the search bar). */}
+        {/* Result-layout and author-search controls live in SearchControls (under the search bar). */}
 
         <div className="pt-4 border-t border-stone-300">
           <label className="mono-font text-xs uppercase tracking-wider text-stone-700 block mb-3">Sources</label>
@@ -416,7 +416,7 @@ export function SettingsPanel({ settings, onSave, adapters, isEnabled, onToggle,
         )}
 
         <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 pt-2 border-t border-stone-300">
-          Saved locally — never sent anywhere except the relevant API.
+          Signed in: settings sync to your account (encrypted server-side). Signed out: saved in this browser only.
         </p>
       </div>
     </section>

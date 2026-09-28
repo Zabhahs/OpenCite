@@ -31,7 +31,8 @@ const MIGRATIONS = readdirSync("prisma/migrations")
 const DIRECT_URL = process.env.POSTGRES_URL_NON_POOLING || "";
 
 function run(cmd, label) {
-  console.log(`[migrate] $ ${cmd}`);
+  // Redact credentials: the fallback path interpolates POSTGRES_URL_NON_POOLING (password included).
+  console.log(`[migrate] $ ${cmd.replace(/:\/\/[^@\s]+@/g, "://***@")}`);
   try {
     execSync(cmd, { stdio: "inherit" });
     if (label) console.log(`[migrate] ✓ ${label}`);

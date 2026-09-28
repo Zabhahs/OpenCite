@@ -1,7 +1,7 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
 import { stripHtml } from "../../lib/helpers.js";
-import { proxiedFetch } from "../_shared/proxy.js";
+import { proxiedFetch, fetchWithTimeout } from "../_shared/proxy.js";
 
 export const NORTHWESTERN_ADAPTER = {
   id: "NORTHWESTERN", name: "Northwestern Digital",
@@ -27,7 +27,7 @@ export const NORTHWESTERN_ADAPTER = {
     // always proxies. No SSR today, so the `window` guard is correct for this architecture.
     let r;
     if (typeof window === 'undefined') {
-      r = await fetch(nuUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+      r = await fetchWithTimeout(nuUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
     } else {
       r = await proxiedFetch(nuUrl, { method: "POST", body: JSON.stringify(body) }, { adapterId: "NORTHWESTERN" });
     }

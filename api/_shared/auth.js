@@ -1,6 +1,9 @@
 // OpenCITE — Server-side auth helpers
-// Imported by: api/auth/handler.js, api/history.js, api/library.js, api/settings.js
+// Imported by: api/auth/handler.js, api/checkout.js, api/_shared/apiAuth.js, and the
+// session-authed handlers (history, library, settings, keys, credits).
 // Never duplicate these inline in route files.
+
+import { prisma } from "./prisma.js";
 
 // ── Trusted origins ───────────────────────────────────────────────────────────
 // SSOT for both the Auth.js redirect callback and CORS headers.
@@ -25,15 +28,6 @@ export function isTrustedOrigin(origin) {
   try { return OWN_VERCEL_HOST_RE.test(new URL(origin).host); } catch { return false; }
 }
 
-// True if `host` (a bare "host[:port]") is one of ours, or a local dev host. Used to
-// pin the getSession loopback below to a known host (F-401).
-export function isTrustedHost(host) {
-  if (!host) return false;
-  if (host === "localhost" || host.startsWith("localhost:") || host.startsWith("127.0.0.1")) return true;
-  if (TRUSTED_ORIGINS.some((o) => new URL(o).host === host)) return true;
-  return OWN_VERCEL_HOST_RE.test(host);
-}
-
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // Sets origin-aware CORS headers. Wildcard is intentionally avoided —
 // browsers reject cookies with credentials:include when origin is *.
@@ -49,26 +43,64 @@ export function setCorsHeaders(req, res, methods = "GET, POST, DELETE, OPTIONS")
 }
 
 // ── getSession ────────────────────────────────────────────────────────────────
-// Resolves the Auth.js session from the incoming request's cookie.
-// Returns the user object ({ id, name, email }) or null.
-// x-forwarded-proto split handles Vercel edge "https,https" format.
+// Resolves the Auth.js session from the incoming request's cookie, IN-PROCESS.
+//
+// v0.44 T3: replaces the old loopback self-fetch (`fetch https://<host>/api/auth/session`),
+// which doubled serverless invocations and added a full HTTP round-trip of latency to
+// every session-authed request — and needed host-pinning (isTrustedHost, F-401) purely
+// to stop the cookie-bearing loopback being redirected via a spoofed x-forwarded-host.
+// With the loopback gone, that pinning helper is gone too (nothing else used it).
+//
+// We use DATABASE sessions: api/auth/handler.js configures PrismaAdapter with no
+// `session.strategy` override, so the Auth.js v5 default for adapter setups applies —
+// the cookie (`authjs.session-token`, or `__Secure-authjs.session-token` over HTTPS)
+// carries an opaque sessionToken that maps to a `sessions` row (prisma/schema.prisma:
+// Session.sessionToken → userId + expires). One indexed SELECT replaces the loopback;
+// expiry is enforced the same way Auth.js does (expires > now).
+//
+// Returns the SAME flat-user shape the loopback produced — { id, name, email, image }
+// or null. Callers (handlers/*, apiAuth.resolveSessionAdmin, checkout, meter) read
+// user.id / user.email directly; do not change this contract.
+
+// Secure-prefixed name first: when both are somehow present, the HTTPS cookie wins.
+const SESSION_COOKIE_NAMES = ["__Secure-authjs.session-token", "authjs.session-token"];
+
+// Minimal cookie-header parse — first occurrence of a name wins (RFC 6265 order:
+// most specific path first), value percent-decoded when possible.
+function sessionTokenFromCookies(cookieHeader) {
+  if (!cookieHeader) return null;
+  const jar = Object.create(null);
+  for (const part of cookieHeader.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq === -1) continue;
+    const name = part.slice(0, eq).trim();
+    if (name in jar) continue;
+    let value = part.slice(eq + 1).trim();
+    try { value = decodeURIComponent(value); } catch { /* keep raw */ }
+    jar[name] = value;
+  }
+  for (const name of SESSION_COOKIE_NAMES) {
+    if (jar[name]) return jar[name];
+  }
+  return null;
+}
 
 export async function getSession(req) {
-  const protocol = (req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
-  // F-401: the loopback fetch carries the session cookie, so an attacker-spoofed
-  // x-forwarded-host could redirect it to a host they control. Pin to a known-good
-  // host (prod domains, our Vercel previews, or localhost); otherwise fall back to
-  // the canonical prod origin. On Vercel this header is platform-set, so this is
-  // defence-in-depth for non-Vercel/edge-case deployments.
-  const rawHost = (req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
-  const host = isTrustedHost(rawHost) ? rawHost : new URL(TRUSTED_ORIGINS[0]).host;
+  const sessionToken = sessionTokenFromCookies(req.headers?.cookie);
+  if (!sessionToken) return null;
   try {
-    const res = await fetch(`${protocol}://${host}/api/auth/session`, {
-      headers: { cookie: req.headers.cookie ?? "" },
+    const session = await prisma.session.findUnique({
+      where: { sessionToken },
+      select: {
+        expires: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
+      },
     });
-    const data = await res.json();
-    return data?.user?.id ? data.user : null;
+    if (!session?.user?.id) return null;
+    if (new Date(session.expires).getTime() <= Date.now()) return null;
+    return session.user;
   } catch {
+    // DB hiccup → unauthenticated, matching the old loopback's catch behavior.
     return null;
   }
 }

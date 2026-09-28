@@ -7,7 +7,10 @@ tags: [moc, home]
 > **Single source of truth.** Free meta-search across open-access scholarly databases + a sellable
 > origin-blind `/api/search` grounding endpoint for AI agents. React/Vite · Vercel serverless ·
 > Prisma/Supabase · Auth.js v5. This wiki supersedes the per-version `architecture_report_*.md`
-> and `sprint_log_*.md` files (archived → [[99-Archive/Index]]).
+> and `sprint_log_*.md` files (deleted v0.44 — git history is the archive).
+>
+> **Content policy:** every page follows [[WIKI-RULES]] — merged-`main` only, contracts not
+> walkthroughs, no facts that rot.
 >
 > **Two layers, maintained in parallel:** this human wiki, and a machine-native twin under
 > `_machine/` (see [[_machine/schema|machine schema]]) optimized for Claude — module registry,
@@ -22,7 +25,7 @@ tags: [moc, home]
 
 ### 00 — Overview
 - [[00-Overview/System-Architecture]] — the whole machine
-- [[00-Overview/Search-Lifecycle]] — keystroke → adapters → rank → render
+- [[00-Overview/Search-Lifecycle]] — keystroke → adapters → dedupe → render
 - [[00-Overview/Tech-Stack]] · [[00-Overview/Glossary]]
 
 ### 01 — Frontend
@@ -36,9 +39,9 @@ tags: [moc, home]
 - [[02-Adapters/Adapter-Health-Matrix]] 🟢🔴🔑
 
 ### 03 — Search Pipeline
-- [[03-Search-Pipeline/Ranking-Scoring]] (BM25F) · [[03-Search-Pipeline/RRF-Fusion]] · [[03-Search-Pipeline/Semantic-Rerank]]
-- [[03-Search-Pipeline/Dedup-Grouping]] · [[03-Search-Pipeline/Confidence-Gate]] · [[03-Search-Pipeline/Synonyms-Vocab]]
-- [[03-Search-Pipeline/Known-Defects]] (D1–D5)
+- [[03-Search-Pipeline/Pipeline]] — pass-through design (v0.44): retrieval → dedupe → native order
+- [[03-Search-Pipeline/Dedup-Grouping]] · [[03-Search-Pipeline/Citations]]
+- [[03-Search-Pipeline/Known-Defects]]
 
 ### 04 — Backend API
 - [[04-Backend-API/Search-Endpoint]] · [[04-Backend-API/Shared-Modules]] · [[04-Backend-API/Per-Source-Routes]]
