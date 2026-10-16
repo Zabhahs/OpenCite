@@ -35,11 +35,13 @@ export const DPLA_ADAPTER = {
       // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
       const r = await fetchWithTimeout(`/api/search/dpla?q=${encodeURIComponent(query)}&offset=${offset}`);
       if (!r.ok) throw new Error(`DPLA ${r.status}`);
-      return await r.json();                       // { results, hasMore } — already normalized server-side
+      const data = await r.json();                 // { results, hasMore } — already normalized server-side
+      if (data.error) throw new Error(`DPLA: ${data.error}`); // v0.46: shim fails soft with 200 + error
+      return data;
     }
     // SERVER (the api/search/dpla route OR the /api/search fan-out): key injected by caller.
     if (!settings.dplaKey) throw new Error("DPLA_API_KEY not configured");  // backend config error
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     const doiMatch = query.match(/^10\.\d{4,}\/(.+)$/);
     const safeQuery = doiMatch ? doiMatch[1] : query;

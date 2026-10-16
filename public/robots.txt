@@ -14,3 +14,5 @@ Allow: /
 
 User-agent: Google-Extended
 Allow: /
+
+Sitemap: https://citation.today/sitemap.xml

@@ -22,10 +22,11 @@ export const GALLICA_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const r = await fetchWithTimeout(`/api/search/gallica?q=${encodeURIComponent(query)}&start=${offset}&rows=${pageSize}`);
     if (!r.ok) throw new Error(`Gallica ${r.status}`);
     const data = await r.json();
+    if (data.error) throw new Error(`Gallica: ${data.error}`); // v0.46: routes fail-soft with 200 + error
     return {
       results: data.results || [],
       hasMore: offset + (data.results?.length || 0) < (data.total || 0)

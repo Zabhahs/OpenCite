@@ -10,5 +10,11 @@ export function serverInjectedKeys() {
   if (process.env.EUROPEANA_API_KEY)  out.europeanaKey  = process.env.EUROPEANA_API_KEY;
   if (process.env.DPLA_API_KEY)        out.dplaKey        = process.env.DPLA_API_KEY;
   if (process.env.SMITHSONIAN_API_KEY) out.smithsonianKey = process.env.SMITHSONIAN_API_KEY;
+  // v0.46: OpenAlex bills $0.001 per search call and a keyless caller shares a $0.10/day budget.
+  // The project key ($1/day free, prepaid beyond) rides the existing `settings.openAlexKey`
+  // path in openalex.js / curatedJournals.js (`&api_key=`). Never reaches the browser.
+  if (process.env.OPENALEX_API_KEY)    out.openAlexKey    = process.env.OPENALEX_API_KEY;
+  // NCBI E-utilities: tool/email are mandatory per policy; the key lifts 3 → 10 req/s.
+  if (process.env.NCBI_API_KEY)        out.ncbiApiKey     = process.env.NCBI_API_KEY;
   return out;
 }

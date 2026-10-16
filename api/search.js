@@ -48,10 +48,11 @@ import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { toPublicResult } from "./_shared/publicResult.js";
 import { toDebugResult } from "./_shared/debugResult.js";
 import { computeCoverage } from "./_shared/coverage.js";
-import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS, FORMATS } from "./_shared/apiContract.js";
+import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS, FORMATS, API_VERSION, MAX_TERMS, MAX_QUERY_CHARS } from "./_shared/apiContract.js";
 import { resolveApiKey, resolveSessionAdmin } from "./_shared/apiAuth.js";
 import { allowedSourceIds } from "./_shared/plans.js";
-import { checkRateLimit } from "./_shared/ratelimit.js";
+import { checkRateLimit, ANON_PLAN } from "./_shared/ratelimit.js";
+import { insufficientCredits } from "./_shared/meter.js";
 import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
 import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
 import { serverInjectedKeys } from "./_shared/serverKeys.js";
@@ -123,6 +124,15 @@ function interleave(arrays) {
   return out;
 }
 
+// v0.46 lane order. Round-robin gives rank 1/2/3 to whichever adapter is first in the REGISTRY,
+// which put a weak source's top hit at rank 3 on every query (live-verified: Crossref's
+// query.bibliographic surfaced personal-name monographs for "ancient DNA Anatolia" while the
+// 1,043-citation OpenAlex paper sat at rank 5). Lanes now open in a static precision order —
+// scholarly indexes first, heritage/museum sources after — so the first screen is the strongest
+// hit from each of the most precise sources. Anything not listed keeps registry order after these.
+const LANE_ORDER = ["OPENALEX", "CROSSREF", "DOAJ", "NCBI", "OAPEN", "OPEN_LIBRARY", "INTERNET_ARCHIVE", "EUROPEANA", "DPLA", "SMITHSONIAN"];
+const laneRank = (id) => { const i = LANE_ORDER.indexOf(id); return i === -1 ? LANE_ORDER.length : i; };
+
 // Race an adapter run against a timeout so one slow source can't hang the function.
 const withTimeout = (promise, ms, label) =>
   Promise.race([
@@ -146,6 +156,13 @@ async function chargeForBand(identity, band) {
   return { ok: true, creditsCharged };
 }
 
+// v0.46: every response carries the contract version (also folded into the cache key) so the
+// public shape can evolve without silently breaking an integrator.
+const sendVersioned = (res, status, body) => {
+  res.setHeader("X-OpenCITE-API-Version", API_VERSION);
+  return sendJson(res, status, body);
+};
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -164,14 +181,27 @@ export default async function handler(req, res) {
   // Fallback: no API key but an allowlisted Auth.js admin session → admin identity
   // (cost 0, debug unlocked) so the browser admin console works without a key.
   // Non-admin sessions stay null → standard 401 (endpoint remains key-only otherwise).
+  // v0.46: per-IP window BEFORE any database touch — the 401 (bad key) path used to be
+  // unthrottled, so a key spray drove unbounded Prisma lookups through the pooler.
+  const ipRl = await checkRateLimit(`ip:${clientIp(req)}`, ANON_PLAN);
+  if (!ipRl.ok) {
+    res.setHeader("Retry-After", String(ipRl.retryAfter));
+    return sendJson(res, 429, { error: "Rate limit exceeded. Please retry later." });
+  }
+
   const identity = (await resolveApiKey(req)) || (await resolveSessionAdmin(req));
   if (!identity) {
-    return sendJson(res, 401, { error: "Invalid or missing API key." });
+    return sendJson(res, 401, { error: "Invalid or missing API key. Send it as the x-api-key header." });
   }
 
   const q = firstParam(req.query?.q).trim();
   if (!q) {
-    return sendJson(res, 200, { ok: true, usage: buildUsage() });
+    return sendVersioned(res, 200, { ok: true, usage: buildUsage() });
+  }
+  // v0.46: bound the fan-out amplifier. `;` splits into N upstream calls per adapter, so an
+  // unbounded term list was N × adapters upstream requests for one credit.
+  if (q.length > MAX_QUERY_CHARS) {
+    return sendVersioned(res, 400, { error: `Query too long (max ${MAX_QUERY_CHARS} characters).` });
   }
 
   // Origin-revealing debug — SERVER-DERIVED gate. A non-admin ?debug=1 is treated as
@@ -207,15 +237,16 @@ export default async function handler(req, res) {
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
+  // v0.46: CURATED (the developer's personal ISSN list, a second OpenAlex call per query) is
+  // opt-in on the API — it is excluded from the default set and only runs when named explicitly.
+  const defaultIds = [...tierIds].filter((id) => id !== "CURATED");
   const selectedIds = requested.length
     ? requested.filter((id) => tierIds.has(id))
-    : [...tierIds];
+    : defaultIds;
 
-  if (!selectedIds.length) {
-    return sendJson(res, 400, {
-      error: "No valid sources selected. Omit the 'sources' parameter to search the full available library.",
-    });
-  }
+  // v0.46: an unknown / out-of-tier selection silently falls back to the default set instead of
+  // a 400 — the 400 was an unmetered, unthrottled oracle for the internal source catalogue.
+  const effectiveIds = selectedIds.length ? selectedIds : defaultIds;
 
   // v0.34: env keys for the three keyed CC0 sources — lifted to a const so the same
   // object is reused in settings (server branch injection) AND the presence-guard below.
@@ -226,9 +257,9 @@ export default async function handler(req, res) {
   // Europeana/DPLA/Smithsonian auto-activate the moment their env var is set (no redeploy).
   const KEYED_ENV = { EUROPEANA: "europeanaKey", DPLA: "dplaKey", SMITHSONIAN: "smithsonianKey" };
   const eligible = ADAPTERS.filter(
-    (a) => tierIds.has(a.id) && selectedIds.includes(a.id)
+    (a) => tierIds.has(a.id) && effectiveIds.includes(a.id)
          && (!KEYED_ENV[a.id] || !!envKeys[KEYED_ENV[a.id]])
-  );
+  ).sort((a, b) => laneRank(a.id) - laneRank(b.id)); // v0.46 lane order (see LANE_ORDER)
 
   // v0.38 (T1, F-208): chronic-failure circuit-breaker. Drop any adapter whose
   // circuit is open (FAILURE_STREAK_THRESHOLD consecutive throws on this function
@@ -238,17 +269,32 @@ export default async function handler(req, res) {
   const cbDropped = eligible.filter((a) => isCircuitOpen(a.id));
   const adapters = eligible.filter((a) => !isCircuitOpen(a.id));
 
-  // Settings — defaults + per-request overrides.
+  // v0.46: nothing left to search (every source keyed-out or circuit-open) → say so BEFORE any
+  // charge. computeCoverage([]) used to report "full" and bill 100% for an empty answer.
+  if (!adapters.length) {
+    return sendVersioned(res, 503, { error: "No sources are available right now. Please retry shortly.", code: "no_sources_available" });
+  }
+
+  // Settings — defaults + per-request overrides. v0.46: the polite-pool identity is ALWAYS the
+  // project's own OPENCITE_MAILTO on the metered path — a caller-supplied `mailto` let abusive
+  // traffic be attributed to an arbitrary address at OpenAlex/Crossref.
   const settings = {
     ...DEFAULT_SETTINGS,
-    ...envKeys,   // v0.34: backend env keys for keyed CC0 sources (server branch)
+    ...envKeys,   // v0.34: backend env keys for keyed CC0 sources (server branch); v0.46: + OpenAlex/NCBI
     authorSearch: isTruthy(firstParam(req.query?.authors)),
-    crossrefEmail: firstParam(req.query?.mailto) || process.env.OPENCITE_MAILTO || DEFAULT_SETTINGS.crossrefEmail,
+    crossrefEmail: process.env.OPENCITE_MAILTO || "ops@citation.today",
   };
 
-  // Multi-keyword parsing — mirrors useSearch.
+  // Multi-keyword parsing — mirrors useSearch. v0.46: capped at MAX_TERMS.
   const terms = q.split(";").map((s) => s.trim()).filter(Boolean);
+  if (terms.length > MAX_TERMS) {
+    return sendVersioned(res, 400, { error: `Too many ';'-separated terms (max ${MAX_TERMS}).` });
+  }
   const isMulti = terms.length > 1;
+  // v0.46: page size threaded to the adapters. Every adapter used to answer with the browser's
+  // INITIAL_PAGE_SIZE (3) at offset 0, so `limit` above ~3 × sources was a silent no-op.
+  const perAdapter = Math.max(3, Math.min(limit, 25));
+  const runOpts = { offset: 0, pageSize: perAdapter };
 
   // 3. Rate limit — ephemeral KV burst cap, SEPARATE from credits, fail-open if KV is
   // down/unconfigured. Admin (max:0) always returns ok.
@@ -262,29 +308,31 @@ export default async function handler(req, res) {
   // payload, so a hit is billed the SAME coverage-prorated amount as the original.
   // Debug always runs fresh and is never cached (it must never poison the public
   // cache with origin-revealing cards).
+  // v0.46: `cite` and the contract version are part of the key — a cached payload rendered for
+  // another caller's citation formats must not be served to a caller who asked for different ones.
   const ck = cacheKey({
     query: q,
-    sources: selectedIds,
+    sources: adapters.map((a) => a.id),
     limit,
     authors: settings.authorSearch,
-    format,
+    format: `${format}|${citeFormats.join(",")}|v${API_VERSION}`,
   });
   if (format === "json" && !debug) {
     const cached = await readCache(ck);
     if (cached) {
       const charge = await chargeForBand(identity, cached.coverage);
-      if (!charge.ok) return sendJson(res, 402, { error: "Insufficient credits." });
+      if (!charge.ok) return sendVersioned(res, 402, insufficientCredits());
       const balance = await getBalance(identity.userId);
       const meta = { creditsCharged: charge.creditsCharged };
       if (balance != null) meta.balance = balance;
-      return sendJson(res, 200, { ...cached, tookMs: Date.now() - startMs, meta });
+      return sendVersioned(res, 200, { ...cached, tookMs: Date.now() - startMs, meta });
     }
   }
 
   // 5. Pre-authorize — gates the expensive fan-out (402 if short). Admin cost 0 → ok,
   // ledger untouched.
   const pre = await preAuthorize(identity.userId, identity.plan.creditCost);
-  if (!pre.ok) return sendJson(res, 402, { error: "Insufficient credits." });
+  if (!pre.ok) return sendVersioned(res, 402, insufficientCredits());
 
   // 6. Fan-out + interleave + dedup + coverage — wrapped so ANY throw refunds the
   // pre-auth (R1: never bill a failed search).
@@ -305,14 +353,14 @@ export default async function handler(req, res) {
           let results;
           if (isMulti) {
             const batches = await withTimeout(
-              Promise.all(terms.map((t) => runSearch(adapter, t, settings, { offset: 0 }))),
+              Promise.all(terms.map((t) => runSearch(adapter, t, settings, runOpts))),
               ADAPTER_TIMEOUT_MS,
               adapter.id
             );
             results = dedupFirstWins(batches.flatMap((b) => b.results || []), doiKey, new Set());
           } else {
             ({ results } = await withTimeout(
-              runSearch(adapter, terms[0], settings, { offset: 0 }),
+              runSearch(adapter, terms[0], settings, runOpts),
               ADAPTER_TIMEOUT_MS,
               adapter.id
             ));
@@ -353,7 +401,10 @@ export default async function handler(req, res) {
 
     // Corpus-weighted, bucketed coverage band (origin-blind health signal). Denominator =
     // the eligible set for THIS request, so coverage is honest relative to what was searched.
-    const cov = computeCoverage(adapters, failedAdapters);
+    // v0.46: circuit-open sources count as FAILED (they were requested and could not answer),
+    // not as never-eligible — otherwise five OpenAlex 429s made every later query bill 1.0× for
+    // the two sources that were left.
+    const cov = computeCoverage([...adapters, ...cbDropped], [...failedAdapters, ...cbDropped]);
     coverageBand = cov.band;
 
     limited = deduped.slice(0, limit);
@@ -371,15 +422,22 @@ export default async function handler(req, res) {
       };
     }
   } catch {
-    await refund(identity.userId, identity.plan.creditCost);
-    return sendJson(res, 500, { error: "Search failed." });
+    await refund(identity.userId, identity.plan.creditCost).catch(() => {});
+    return sendVersioned(res, 500, { error: "Search failed." });
   }
 
   // 7. Settle against the realized coverage band (refunds the unavailable-portion diff;
-  // freeBelowBand waives a sub-threshold answer entirely).
-  const creditsCharged = await settle(identity.userId, identity.plan.creditCost, coverageBand, {
-    freeBelowBand: identity.plan.freeBelowBand,
-  });
+  // freeBelowBand waives a sub-threshold answer entirely). v0.46: a settle failure refunds the
+  // pre-auth instead of escaping as a 500 with the credit still debited.
+  let creditsCharged;
+  try {
+    creditsCharged = await settle(identity.userId, identity.plan.creditCost, coverageBand, {
+      freeBelowBand: identity.plan.freeBelowBand,
+    });
+  } catch {
+    await refund(identity.userId, identity.plan.creditCost).catch(() => {});
+    return sendVersioned(res, 500, { error: "Billing failed; no credits were charged." });
+  }
   const balance = await getBalance(identity.userId);
 
   // Non-JSON formats — flat bibliography of the returned results. Still metered; billing
@@ -422,5 +480,5 @@ export default async function handler(req, res) {
   // 9. Cache the PUBLIC payload (json + non-debug). Best-effort, fail-open.
   if (format === "json" && !debug) await writeCache(ck, body);
 
-  return sendJson(res, 200, { ...body, meta });
+  return sendVersioned(res, 200, { ...body, meta });
 }

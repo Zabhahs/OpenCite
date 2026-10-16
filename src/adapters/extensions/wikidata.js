@@ -43,7 +43,7 @@ export const WIKIDATA_ADAPTER = {
 
   search: async (query, _settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const rows   = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const rows   = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
 
     // 1 — CirrusSearch: find scholarly articles matching the query
     const r1 = await fetchWithTimeout(

@@ -7,7 +7,11 @@ DEFINITIONS
 
 "Software" means OpenCITE and all associated source code, documentation,
 configuration files, and assets made available under this license, including
-any modified or derivative versions thereof.
+any modified or derivative versions thereof — EXCLUDING the contents of the
+`mcp/` directory (the OpenCITE MCP client package), which are licensed
+separately under the MIT License (see `mcp/LICENSE`) so that AI clients may
+install and redistribute the connector freely. The MCP package is only a client
+of the Hosted Service; this exclusion grants no rights to operate the Service.
 
 "Licensor" means Shahbaz Yusuf, the copyright holder of the Software.
 

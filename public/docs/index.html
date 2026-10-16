@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenCITE API</title>
+<meta name="description" content="Quickstart and reference for the OpenCITE search, citation-graph and ID-resolution API and MCP server." />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root { --bg:#fdf8ee; --fg:#1c1917; --muted:#57534e; --rule:#a8a29e; --accent:#7f1d1d; --code:#f5efe1; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1c1917; --fg:#f5f0e6; --muted:#c7bfb2; --rule:#57534e; --accent:#fca5a5; --code:#292524; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "Mulish", system-ui, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+  h1 { font-size:1.7rem; margin:0 0 .25rem; text-wrap: balance; }
+  h2 { font-size:1.05rem; margin:2.2rem 0 .6rem; text-transform: uppercase; letter-spacing:.08em; }
+  .meta { color:var(--muted); font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; }
+  a { color:var(--accent); }
+  pre { background:var(--code); padding:.9rem 1rem; overflow-x:auto; font: 13px/1.5 "JetBrains Mono", ui-monospace, monospace; border:1px solid var(--rule); }
+  code { font: 13px/1.5 "JetBrains Mono", ui-monospace, monospace; }
+  table { border-collapse: collapse; width:100%; font-size:.95rem; }
+  td, th { text-align:left; vertical-align:top; padding:.4rem .5rem .4rem 0; border-bottom:1px solid var(--rule); }
+  nav { border-top:1px solid var(--rule); margin-top:3rem; padding-top:1rem; font: 12px/1.6 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; display:flex; gap:1rem; flex-wrap:wrap; }
+  ul { padding-left:1.2rem; }
+</style>
+</head>
+<body>
+<main>
+  <p class="meta">OpenCITE · Developers</p>
+  <h1>One call across papers, museums and archives</h1>
+  <p>The OpenCITE API searches 250M+ open-access papers (OpenAlex, Crossref, DOAJ, PubMed) alongside library, museum, manuscript and Islamicate archives (Europeana, DPLA, Smithsonian, Gallica, Internet Archive, Open Library and more), deduplicates the results, labels each record with its source, and returns citations in MLA, APA, BibTeX, RIS and CSL-JSON. It also walks citation graphs and resolves DOI ↔ PMID ↔ PMCID. The same tools are available to AI assistants through the <a href="https://www.npmjs.com/package/opencite-mcp">opencite-mcp</a> server.</p>
+  <p class="meta">Contract v2 · <a href="/openapi.json">OpenAPI 3.1</a> · base URL https://citation.today</p>
+
+  <h2>1. Get a key</h2>
+  <p>Sign in at <a href="/#developers">citation.today → Developers</a> and click <em>Create key</em>. The key is shown once. Free accounts get 20 credits a month; packs start at $10 for 2,000 calls and unlock the full source library.</p>
+
+  <h2>2. Search</h2>
+<pre>curl -H "x-api-key: oc_live_..." \
+  "https://citation.today/api/search?q=ottoman+manuscripts&amp;limit=25&amp;cite=bibtex"</pre>
+  <table>
+    <tr><th>Param</th><th>Meaning</th></tr>
+    <tr><td><code>q</code></td><td>Query (required, ≤ 512 chars). Separate up to 5 terms with <code>;</code> to run them all.</td></tr>
+    <tr><td><code>limit</code></td><td>Max results, 1–100 (default 25).</td></tr>
+    <tr><td><code>cite</code></td><td>Extra citation formats per result: <code>bibtex,ris,csl-json</code> (MLA and APA are always included).</td></tr>
+    <tr><td><code>format</code></td><td><code>json</code> (default) or a flat bibliography: <code>mla</code>, <code>apa</code>, <code>bibtex</code>, <code>ris</code>, <code>csl-json</code>.</td></tr>
+    <tr><td><code>sources</code></td><td>Comma-separated source ids to restrict to (as returned in <code>source</code>). Unknown ids are ignored.</td></tr>
+    <tr><td><code>authors</code></td><td><code>1</code> to include author-name matches.</td></tr>
+  </table>
+  <p>Response: <code>{ query, terms, coverage, count, totalCandidates, tookMs, results[], meta }</code>. Each result carries <code>id</code>, <code>source</code>, <code>title</code>, <code>authors</code>, <code>year</code>, <code>journal</code>, <code>doi</code>, <code>url</code>, <code>abstract</code>, <code>isOA</code>, <code>type</code>, <code>citedBy</code> and <code>citations</code>. <code>coverage</code> is one of <code>full · near-full · high · partial · limited</code>; <code>meta.creditsCharged</code> and <code>meta.balance</code> tell you what the call cost.</p>
+
+  <h2>3. Citation graph</h2>
+<pre>curl -H "x-api-key: oc_live_..." \
+  "https://citation.today/api/citations?id=10.1038/nature14539&amp;dir=cited-by&amp;limit=50&amp;sort=impact"</pre>
+  <p><code>dir=cited-by</code> (works citing it) or <code>dir=refs</code> (its bibliography); <code>id</code> is a DOI or OpenAlex work id; <code>minCitations</code> filters citing works; <code>sort</code> is <code>impact</code> or <code>year</code>.</p>
+
+  <h2>4. Resolve identifiers</h2>
+<pre>curl -H "x-api-key: oc_live_..." \
+  "https://citation.today/api/ids?ids=10.1038/nbt.3642,27571352,PMC5034905"</pre>
+  <p>Any mix of DOIs, PMIDs and PMCIDs, up to 200. Returns <code>{ results: { [inputId]: { doi, pmid, pmcid } } }</code>.</p>
+
+  <h2>5. MCP (Claude Desktop, Cursor, any MCP client)</h2>
+<pre>{
+  "mcpServers": {
+    "opencite": {
+      "command": "npx",
+      "args": ["-y", "opencite-mcp"],
+      "env": { "OPENCITE_API_KEY": "oc_live_..." }
+    }
+  }
+}</pre>
+  <p>Tools: <code>search_scholarly_sources</code>, <code>search_citations</code>, <code>resolve_ids</code>.</p>
+
+  <h2>Billing</h2>
+  <ul>
+    <li>1 credit per call to any of the three endpoints, prorated by coverage: <code>full</code> 1.0 · <code>near-full</code> 0.99 · <code>high</code> 0.95 · <code>partial</code> 0.5 · <code>limited</code> free. Failed calls are never charged.</li>
+    <li><code>402</code> with <code>{ code: "insufficient_credits", upgrade_url }</code> when the balance is empty. <code>429</code> with <code>Retry-After</code> when rate limited (per key; and per IP before authentication).</li>
+    <li>Credits never expire. See the <a href="/legal/refunds.html">refund policy</a>.</li>
+  </ul>
+
+  <h2>Errors</h2>
+  <table>
+    <tr><td><code>400</code></td><td>Bad parameter (unknown format, too many terms, query too long).</td></tr>
+    <tr><td><code>401</code></td><td>Missing or invalid <code>x-api-key</code> header. Keys are never accepted in the query string.</td></tr>
+    <tr><td><code>402</code></td><td>Insufficient credits.</td></tr>
+    <tr><td><code>429</code></td><td>Rate limited.</td></tr>
+    <tr><td><code>503</code></td><td>No sources available right now (nothing was charged).</td></tr>
+  </table>
+  <p>Every response carries <code>X-OpenCITE-API-Version: 2</code>. Breaking changes bump the version.</p>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/openapi.json">OpenAPI</a>
+    <a href="/legal/terms.html">Terms</a>
+    <a href="/legal/privacy.html">Privacy</a>
+    <a href="/legal/contact.html">Contact</a>
+  </nav>
+</main>
+</body>
+</html>

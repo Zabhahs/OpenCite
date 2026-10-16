@@ -40,7 +40,7 @@ export const EUROPEANA_ADAPTER = {
     }
     // SERVER (env key injected by caller) OR BROWSER with a user-supplied key: direct upstream.
     if (!settings.europeanaKey) throw new Error("EUROPEANA_API_KEY not configured");  // backend config error
-    const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const rows = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const start = offset + 1;
     const url = `https://api.europeana.eu/record/v2/search.json?wskey=${encodeURIComponent(settings.europeanaKey)}&query=${encodeURIComponent(query)}&rows=${rows}&start=${start}&profile=rich`;
     const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } });

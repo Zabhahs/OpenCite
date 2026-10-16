@@ -119,7 +119,7 @@ The spoof headers are duplicated between `proxy.js:18–24` and `api/proxy.js:69
 
 ## See also
 
-[[02-Adapters/Core-Adapters]] · [[02-Adapters/Extension-Adapters]] · [[02-Adapters/Adapter-Health-Matrix]] · [[03-Search-Pipeline/Ranking-Scoring]] · [[09-Audit/Duplication-and-Reuse]]
+[[02-Adapters/Core-Adapters]] · [[02-Adapters/Extension-Adapters]] · [[02-Adapters/Adapter-Health-Matrix]] · [[03-Search-Pipeline/Pipeline|Ranking-Scoring (removed v0.44)]] · [[09-Audit/Duplication-and-Reuse]]
 
 ---
 

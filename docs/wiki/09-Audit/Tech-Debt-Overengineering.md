@@ -26,13 +26,13 @@ Settings flow through `useSettings` + prop-drilling; the context file is dead. *
 `themes.js:49` exports it; `useTheme.js:4` hardcodes `'tan'` again. **Fix:** consume the export. See [[01-Frontend/Hooks#usetheme]].
 
 ## 🏗️ Overengineering assessment (verdict: mostly justified — don't gut)
-- The **two-phase semantic rerank** (`useSemanticRerank`) is *justified* — it keeps slider drags pure arithmetic (no re-embed). Documented as a good pattern in [[03-Search-Pipeline/Semantic-Rerank]].
+- The **two-phase semantic rerank** (`useSemanticRerank`) is *justified* — it keeps slider drags pure arithmetic (no re-embed). Documented as a good pattern in [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]].
 - The **gold-set regression harness** (`goldSetMetrics` + admin `GoldSetHarness`) is well-built and unit-tested but admin-only and lightly used — keep, but know it's heavy for a solo product. See [[01-Frontend/Components/_index]].
 
 ## 🧹 Sloppiness / correctness-debt (data & config)
 
 ### f-200 — BM25F IDF over a 14–45-doc micro-pool is degenerate [med]
-IDF across the tiny merged pool is statistically meaningless; mitigated (not eliminated) by RRF weighting it 30–50%. `scoring.js:160-171`. **Fix:** corpus priors or lean on native+semantic. Accepted residual. See [[03-Search-Pipeline/Ranking-Scoring]].
+IDF across the tiny merged pool is statistically meaningless; mitigated (not eliminated) by RRF weighting it 30–50%. `scoring.js:160-171`. **Fix:** corpus priors or lean on native+semantic. Accepted residual. See [[03-Search-Pipeline/Pipeline|Ranking-Scoring (removed v0.44)]].
 
 ### f-201 — No display-side score normalization [low]
 Admin debug cards show raw BM25F magnitudes; not comparable cross-query. `scoring.js:13`. See [[03-Search-Pipeline/Known-Defects#d4]].
@@ -76,7 +76,7 @@ Met up to 3× pageSize concurrent (`met.js:27`); Rijksmuseum 2-hop image resolve
 `dedup.js:44` — O(n²) worst case if pools grow. **Fix:** a `Map<key,index>`. See [[03-Search-Pipeline/Dedup-Grouping#correctness-notes]].
 
 ### f-207 — Moby synonym shard `JSON.parse` synchronous on main thread [low]
-`synonyms.js:48` — jank on large letters (c~4MB). **Fix:** parse off-thread. See [[03-Search-Pipeline/Synonyms-Vocab#correctness-notes]].
+`synonyms.js:48` — jank on large letters (c~4MB). **Fix:** parse off-thread. See [[03-Search-Pipeline/Pipeline|Synonyms-Vocab (removed v0.44)]].
 
 ## 📦 Dependency / build debt
 

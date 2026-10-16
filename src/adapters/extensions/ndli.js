@@ -37,7 +37,7 @@ export const NDLI_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.ndliKey) throw new Error("NDLI needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
-    const size = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const size = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const url =
       `https://ndl.iitkgp.ac.in/rest-api/search` +
       `?query=${encodeURIComponent(query)}` +

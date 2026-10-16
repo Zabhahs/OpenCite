@@ -22,7 +22,7 @@ export const OAPEN_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const url = `https://library.oapen.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata&limit=${pageSize}&offset=${offset}`;
     const r = await proxiedFetch(url, { headers: { Accept: "application/json" } }, { adapterId: "OAPEN" });
     if (!r.ok) throw new Error(`OAPEN ${r.status}`);

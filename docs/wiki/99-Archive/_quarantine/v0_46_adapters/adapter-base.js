@@ -34,7 +34,7 @@ export const BASE_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const hits = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const hits = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     // Field-scope to content fields unless the user has enabled authorSearch.
     // Solr parentheses: (term1 term2) = term1 OR term2 within the field — acceptable breadth.
     const q = settings.authorSearch

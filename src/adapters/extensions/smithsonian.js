@@ -22,11 +22,13 @@ export const SMITHSONIAN_ADAPTER = {
       // BROWSER: no secret in the client — ask our own backend (same-origin, no key on the wire).
       const r = await fetchWithTimeout(`/api/search/smithsonian?q=${encodeURIComponent(query)}&offset=${offset}`);
       if (!r.ok) throw new Error(`Smithsonian ${r.status}`);
-      return await r.json();                       // { results, hasMore } — already normalized server-side
+      const data = await r.json();                 // { results, hasMore } — already normalized server-side
+      if (data.error) throw new Error(`Smithsonian: ${data.error}`); // v0.46: shim fails soft with 200 + error
+      return data;
     }
     // SERVER (the api/search/smithsonian route OR the /api/search fan-out): key injected by caller.
     if (!settings.smithsonianKey) throw new Error("SMITHSONIAN_API_KEY not configured");  // backend config error
-    const rows = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const rows = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const url = `https://api.si.edu/openaccess/api/v1.0/search?q=${encodeURIComponent(query)}&start=${offset}&rows=${rows}&api_key=${encodeURIComponent(settings.smithsonianKey)}`;
     const r = await fetchWithTimeout(url);
     if (!r.ok) {

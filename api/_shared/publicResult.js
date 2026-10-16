@@ -1,11 +1,12 @@
-// OpenCITE — origin-blind public card SSOT
+// OpenCITE — public card SSOT
 // `toPublicResult` is the LAST transform in the API pipeline: it maps an internal
-// normalized record to the public card. It deliberately DROPS `source` (origin) and
-// replaces the upstream id with an opaque, deterministic `anonymizeId`.
+// normalized record to the public card and replaces the upstream id with an opaque,
+// deterministic `anonymizeId`.
 //
-// Origin-blindness invariant: dedup runs on the internal record (which still
-// carries `source`/`id`); only this final map strips them. Never reintroduce
-// `source` here. Reused by any future export route so the contract stays in one place.
+// v0.46 (contract v2): ORIGIN-TRANSPARENT. `source` (the upstream database id) is now part of
+// the public card — the origin-blind design hid the one field grounding customers and MCP
+// directories require, blocked attribution-bound sources, and protected no real moat. Internal
+// upstream ids and telemetry still never leave the server. Reused by any future export route.
 import { createHash } from "node:crypto";
 import { buildMLA, buildAPA, segmentsToPlain, exportAs } from "../../src/lib/citations.js";
 
@@ -30,6 +31,7 @@ export function toPublicResult(r, citeFormats = []) {
   }
   return {
     id: anonymizeId(r),
+    source: r.source ?? null,
     title: r.title,
     authors: r.authors,
     year: r.year,

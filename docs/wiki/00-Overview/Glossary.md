@@ -12,10 +12,10 @@ tags: [overview, glossary]
 ## Search & ranking
 - **Adapter** — one module per scholarly source that queries an upstream API and returns `{ results: UnifiedResult[], hasMore }`. See [[02-Adapters/Adapter-Architecture]].
 - **UnifiedResult** — the normalized result shape every adapter emits after `sanitize()`. Lets the UI and ranker stay source-agnostic.
-- **BM25F** — field-weighted BM25 lexical scoring (title/abstract/keywords weighted differently). See [[03-Search-Pipeline/Ranking-Scoring]].
-- **RRF (Reciprocal Rank Fusion)** — combines multiple rank lists (lexical, semantic, native-upstream) into one. The `Lexical↔Semantic` slider sets the fusion weight. See [[03-Search-Pipeline/RRF-Fusion]].
-- **Semantic rerank** — MiniLM sentence-embedding cosine similarity used as a rank signal, fused via RRF. See [[03-Search-Pipeline/Semantic-Rerank]].
-- **Confidence gate** — `applyConfidenceGate()` drops/keeps results by match confidence; `hasContentMatch()` is the SSOT predicate that prevents author-only "best guess" bleed. See [[03-Search-Pipeline/Confidence-Gate]].
+- **BM25F** — field-weighted BM25 lexical scoring (title/abstract/keywords weighted differently). See [[03-Search-Pipeline/Pipeline|Ranking-Scoring (removed v0.44)]].
+- **RRF (Reciprocal Rank Fusion)** — combines multiple rank lists (lexical, semantic, native-upstream) into one. The `Lexical↔Semantic` slider sets the fusion weight. See [[03-Search-Pipeline/Pipeline|RRF-Fusion (removed v0.44)]].
+- **Semantic rerank** — MiniLM sentence-embedding cosine similarity used as a rank signal, fused via RRF. See [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]].
+- **Confidence gate** — `applyConfidenceGate()` drops/keeps results by match confidence; `hasContentMatch()` is the SSOT predicate that prevents author-only "best guess" bleed. See [[03-Search-Pipeline/Pipeline|Confidence-Gate (removed v0.44)]].
 - **Native (upstream) relevance** — the order the source API returned. Historically discarded; v0.35 plans to fuse it. See [[03-Search-Pipeline/Known-Defects]].
 - **Dedup / grouping** — merging the same work across sources and grouping by source/unified view. See [[03-Search-Pipeline/Dedup-Grouping]].
 

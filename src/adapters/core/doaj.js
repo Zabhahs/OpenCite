@@ -21,7 +21,7 @@ export const DOAJ_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     // Phase A — field-scoped retrieval via Elasticsearch query string. Default search hits
     // bibjson.author too; scoping to title/abstract/keywords keeps author matches out.

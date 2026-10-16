@@ -19,7 +19,7 @@
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession, TRUSTED_ORIGINS, isTrustedOrigin } from "./_shared/auth.js";
 import { parseBody } from "./_shared/parseBody.js";
-import { getPlan, getPack, stripePriceId, PLANS, CREDIT_PACKS } from "./_shared/plans.js";
+import { getPlan, getPack, stripePriceId, PLANS, CREDIT_PACKS, SUBSCRIPTIONS_ENABLED } from "./_shared/plans.js";
 import { log } from "./_shared/log.js";
 
 // Resolve a safe absolute base URL for success/cancel redirects.
@@ -52,6 +52,10 @@ export default async function handler(req, res) {
   // Validate the requested item and resolve its Stripe Price id (server-authoritative).
   let mode, priceId, metadata;
   if (wantPlan) {
+    // v0.46: subscription rail hidden (plans.js SUBSCRIPTIONS_ENABLED) — packs are the only SKU.
+    if (!SUBSCRIPTIONS_ENABLED) {
+      return res.status(400).json({ error: "Subscriptions are not available; buy an API credit pack instead.", code: "subscriptions_disabled" });
+    }
     const plan = PLANS[wantPlan];
     if (!plan || !plan.subscription) return res.status(400).json({ error: "Unknown plan" });
     // Student tier is gated on verification (decision: ID upload + approval).
@@ -89,12 +93,14 @@ export default async function handler(req, res) {
     });
     let customerId = row?.stripe_customer_id || null;
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: row?.email || user.email || undefined,
-        metadata: { userId: user.id },
-      });
+      // v0.46: idempotency key = user id, so two concurrent first checkouts cannot mint two
+      // Stripe Customers (the orphan would never map back to the user on renewals).
+      const customer = await stripe.customers.create(
+        { email: row?.email || user.email || undefined, metadata: { userId: user.id } },
+        { idempotencyKey: `cust_${user.id}` }
+      );
       customerId = customer.id;
-      await prisma.user.update({ where: { id: user.id }, data: { stripe_customer_id: customerId } });
+      await prisma.user.updateMany({ where: { id: user.id, stripe_customer_id: null }, data: { stripe_customer_id: customerId } });
     }
 
     const base = baseUrl(req);
@@ -106,7 +112,16 @@ export default async function handler(req, res) {
       metadata,
       // Mirror metadata onto the subscription so subscription.* events carry it too.
       ...(mode === "subscription" ? { subscription_data: { metadata } } : {}),
+      // v0.46: packs mirror metadata onto the PaymentIntent so charge.refunded / dispute events
+      // (which reference the PI, not the session) can identify the pack to claw back.
+      ...(mode === "payment" ? { payment_intent_data: { metadata: { ...metadata, userId: user.id } } } : {}),
       allow_promotion_codes: true,
+      // v0.46: Stripe checklist — explicit ToS consent + billing address (tax location) on every sale.
+      consent_collection: { terms_of_service: "required" },
+      billing_address_collection: "required",
+      custom_text: {
+        terms_of_service_acceptance: { message: "I agree to the [Terms of Service](https://citation.today/legal/terms.html) and [Refund Policy](https://citation.today/legal/refunds.html)." },
+      },
       success_url: `${base}/?checkout=success`,
       cancel_url: `${base}/?checkout=cancel`,
     });

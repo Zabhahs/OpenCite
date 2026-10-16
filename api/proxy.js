@@ -4,30 +4,32 @@ export const config = {
   runtime: 'edge',
 };
 
+// v0.46: exactly the hosts a REGISTERED adapter reaches via proxiedFetch (browser branch). Hosts of
+// quarantined adapters (BL, Mexicana, SciELO, OpenNeuro, BASE, LA Referencia, PANGAEA, Open Context)
+// were removed: each was a free anonymous relay target with no product value. Rijksmuseum, CORE and
+// NDLI were MISSING (their adapters had been 403ing through this proxy since they shipped).
 const ALLOWED_DOMAINS = new Set([
-  'dpul.princeton.edu',
-  'ws.pangaea.de',
-  'doi.pangaea.de',
-  'opencontext.org',
-  'api.dc.library.northwestern.edu',
-  'openneuro.org',
-  'www.ebi.ac.uk',
-  'eutils.ncbi.nlm.nih.gov',
-  'api.dp.la',
-  'gallica.bnf.fr',
-  'www.iberoamericadigital.net',
-  'obv-at-oenb.alma.exlibrisgroup.com',
-  'datos.bne.es',
-  'api.bnf.fr',
-  'catalogue.bnf.fr',
-  'api.bl.uk',
-  'data.bl.uk',
-  'www.loc.gov',
-  'search.scielo.org',
-  'www.lareferencia.info',
-  'library.oapen.org',
-  'openlibrary.org',
+  "dpul.princeton.edu",
+  "api.dc.library.northwestern.edu",
+  "www.ebi.ac.uk",
+  "eutils.ncbi.nlm.nih.gov",
+  "api.dp.la",
+  "gallica.bnf.fr",
+  "obv-at-oenb.alma.exlibrisgroup.com",
+  "api.bnf.fr",
+  "catalogue.bnf.fr",
+  "www.loc.gov",
+  "library.oapen.org",
+  "openlibrary.org",
+  "data.rijksmuseum.nl",
+  "api.core.ac.uk",
+  "ndl.iitkgp.ac.in",
 ]);
+// v0.46: streamed-byte budget — the relay used to hand back whatever the upstream sent (895 KB
+// loc.gov pages measured live), an unmetered path to Vercel's transfer cap and a site-wide pause.
+const MAX_UPSTREAM_BYTES = 2 * 1024 * 1024;
+const UPSTREAM_TIMEOUT_MS = 10000;
+const SERVER_USER_AGENT = "OpenCITE/0.46 (+https://citation.today; mailto:ops@citation.today)";
 
 // F-411: fetch while validating every redirect hop ourselves. An allowlisted host that
 // 30x-redirects to an internal/un-allowlisted target (e.g. cloud metadata 169.254.169.254)
@@ -97,7 +99,7 @@ export default async function handler(req) {
   log("proxy", "request", { hostname: targetUrl.hostname, method: targetMethod });
 
   const headers = new Headers();
-  headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    headers.set('User-Agent', SERVER_USER_AGENT); // v0.46: honest identity (no Chrome spoof)
   headers.set('Accept', 'application/json, text/javascript, */*; q=0.01');
   headers.set('Accept-Language', 'en-US,en;q=0.9');
   headers.set('Referer', `https://${targetUrl.hostname}/`);
@@ -120,7 +122,19 @@ export default async function handler(req) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
-    return new Response(upstreamRes.body, {
+    // v0.46: cap what we relay — read up to MAX_UPSTREAM_BYTES, then cut the stream. Before this
+    // the proxy streamed whatever the upstream sent (895 KB loc.gov pages measured live), an
+    // unmetered path to Vercel's transfer cap.
+    let sent = 0;
+    const budget = new TransformStream({
+      transform(chunk, controller) {
+        sent += chunk.byteLength;
+        if (sent > MAX_UPSTREAM_BYTES) { controller.terminate(); return; }
+        controller.enqueue(chunk);
+      },
+    });
+    responseHeaders.delete('content-length'); // body may be truncated by the budget
+    return new Response(upstreamRes.body ? upstreamRes.body.pipeThrough(budget) : null, {
       status: upstreamRes.status,
       headers: responseHeaders,
     });

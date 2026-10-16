@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   const mailto = process.env.OPENCITE_MAILTO || undefined;
 
   const outcome = await charge(identity, () => resolveIds(ids, { apiKey, email: mailto }));
-  if (!outcome.ok) return sendJson(res, outcome.status, { error: outcome.error });
+  if (!outcome.ok) return sendJson(res, outcome.status, outcome.body);
 
   // Map → plain object keyed by input id for JSON serialization.
   const results = Object.fromEntries(outcome.result);

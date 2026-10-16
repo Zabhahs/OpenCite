@@ -1,0 +1,294 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenCITE Scholarly Search API",
+    "version": "2",
+    "description": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives. Each result names its source database and carries DOI/URL provenance and formatted citations (MLA, APA, BibTeX, RIS, CSL-JSON). Results keep each source's native relevance order, interleaved scholarly-first. Billed 1 credit per call, prorated by the coverage actually delivered; requires an x-api-key header."
+  },
+  "servers": [
+    {
+      "url": "https://citation.today",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/api/search": {
+      "get": {
+        "operationId": "searchScholarlySources",
+        "summary": "Search open-access scholarly, museum and archive sources in one call.",
+        "description": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives. Each result names its source database and carries DOI/URL provenance and formatted citations (MLA, APA, BibTeX, RIS, CSL-JSON). Results keep each source's native relevance order, interleaved scholarly-first. Billed 1 credit per call, prorated by the coverage actually delivered; requires an x-api-key header.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'.",
+            "schema": {
+              "type": "string",
+              "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'."
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max merged results, 1..100.",
+            "schema": {
+              "type": "integer",
+              "description": "Max merged results, 1..100.",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "sources",
+            "in": "query",
+            "required": false,
+            "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended).",
+            "schema": {
+              "type": "string",
+              "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended)."
+            }
+          },
+          {
+            "name": "authors",
+            "in": "query",
+            "required": false,
+            "description": "1/true to include author-name matches in retrieval.",
+            "schema": {
+              "type": "boolean",
+              "description": "1/true to include author-name matches in retrieval."
+            }
+          },
+          {
+            "name": "cite",
+            "in": "query",
+            "required": false,
+            "description": "Extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
+            "schema": {
+              "type": "string",
+              "description": "Extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
+              "enum": [
+                "bibtex",
+                "ris",
+                "csl-json"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
+            "schema": {
+              "type": "string",
+              "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
+              "enum": [
+                "json",
+                "mla",
+                "apa",
+                "bibtex",
+                "ris",
+                "csl-json"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "security": [
+          {
+            "ApiKeyHeader": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deduped result cards in native upstream order, interleaved scholarly-first; each names its source.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Echo of the q parameter."
+                    },
+                    "terms": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Parsed keyword terms."
+                    },
+                    "coverage": {
+                      "type": "string",
+                      "enum": [
+                        "full",
+                        "near-full",
+                        "high",
+                        "partial",
+                        "limited"
+                      ],
+                      "description": "Corpus-weighted coverage band for this request: one of full, near-full, high, partial, limited."
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of results returned."
+                    },
+                    "totalCandidates": {
+                      "type": "integer",
+                      "description": "Total deduped candidates considered before the limit."
+                    },
+                    "tookMs": {
+                      "type": "integer",
+                      "description": "Server processing time in milliseconds."
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Opaque, deterministic result identifier (prefix oc_). Not an upstream id."
+                          },
+                          "source": {
+                            "type": "string",
+                            "description": "Upstream database that served this record (e.g. OPENALEX, CROSSREF, DOAJ, NCBI, EUROPEANA)."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Work title."
+                          },
+                          "authors": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Author display names."
+                          },
+                          "year": {
+                            "type": "string",
+                            "description": "Publication year."
+                          },
+                          "journal": {
+                            "type": "string",
+                            "description": "Containing journal / venue / collection title."
+                          },
+                          "publisher": {
+                            "type": "string",
+                            "description": "Publisher."
+                          },
+                          "volume": {
+                            "type": "string",
+                            "description": "Volume."
+                          },
+                          "issue": {
+                            "type": "string",
+                            "description": "Issue."
+                          },
+                          "pages": {
+                            "type": "string",
+                            "description": "Page range."
+                          },
+                          "doi": {
+                            "type": "string",
+                            "description": "DOI, when known."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "Canonical URL to the work."
+                          },
+                          "abstract": {
+                            "type": "string",
+                            "description": "Abstract / description, when available."
+                          },
+                          "isOA": {
+                            "type": "boolean",
+                            "description": "Whether the work is open access."
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "Work type (article, book-chapter, dataset, …)."
+                          },
+                          "editors": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Editors, for edited volumes."
+                          },
+                          "keywords": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Author/publisher keywords."
+                          },
+                          "subjects": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Controlled-vocabulary subject terms."
+                          },
+                          "language": {
+                            "type": "string",
+                            "description": "ISO-639 language code, when known."
+                          },
+                          "citedBy": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "description": "Citation count, when the work carries one (else null)."
+                          },
+                          "citations": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Formatted citations: { mla, apa, …extra requested formats }."
+                          }
+                        }
+                      },
+                      "description": "Array of origin-blind result cards (see fields below)."
+                    },
+                    "meta": {
+                      "type": "string",
+                      "description": "Billing metadata: { creditsCharged, balance } — credits spent on this call (coverage-prorated; 0 for unmetered tiers) and the caller's remaining balance."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (e.g. no valid sources selected)."
+          },
+          "401": {
+            "description": "Invalid or missing x-api-key header (a key is always required)."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", upgrade_url }."
+          },
+          "405": {
+            "description": "Method not allowed — use GET."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header set."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    }
+  }
+}

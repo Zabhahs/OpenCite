@@ -16,8 +16,10 @@ import history from "../_shared/handlers/history.js";
 import keys from "../_shared/handlers/keys.js";
 import library from "../_shared/handlers/library.js";
 import settings from "../_shared/handlers/settings.js";
+import health from "../_shared/handlers/health.js";
 
-const HANDLERS = { credits, history, keys, library, settings };
+// v0.46: `health` rides this dispatcher too (see handlers/health.js) — no new function file.
+const HANDLERS = { credits, history, keys, library, settings, health };
 
 export default async function handler(req, res) {
   const resource = (Array.isArray(req.query?.resource) ? req.query.resource[0] : req.query?.resource) || "";

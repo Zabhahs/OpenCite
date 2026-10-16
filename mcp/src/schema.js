@@ -6,6 +6,7 @@
 //   - openApiSpec()         → OpenAPI 3.1 doc for the raw REST endpoint
 // Nothing re-describes a param. Run `node src/schema.js` to print all three.
 
+import { pathToFileURL } from "node:url";
 import {
   API_CONTRACT,
   PARAMS,
@@ -84,11 +85,11 @@ export function functionSchemas() {
   };
 }
 
-// Describe the origin-blind result card from RESULT_FIELDS (best-effort JSON types).
+// Describe the result card from RESULT_FIELDS (best-effort JSON types). v2: includes `source`.
 function resultCardSchema() {
   const arrayFields = new Set(["authors", "editors", "keywords", "subjects"]);
-  const boolFields = new Set(["isOA", "lowConfidence"]);
-  const numFields = new Set(["citedBy", "score"]);
+  const boolFields = new Set(["isOA"]);
+  const numFields = new Set(["citedBy"]);
   const objFields = new Set(["citations"]);
   const properties = {};
   for (const [name, description] of Object.entries(RESULT_FIELDS)) {
@@ -114,8 +115,6 @@ function responseSchema() {
       properties.coverage = { type: "string", enum: [...COVERAGE_BANDS], description };
     } else if (name === "terms") {
       properties.terms = { type: "array", items: { type: "string" }, description };
-    } else if (name === "lowConfidence") {
-      properties.lowConfidence = { type: "boolean", description };
     } else if (name === "count" || name === "totalCandidates" || name === "tookMs") {
       properties[name] = { type: "integer", description };
     } else {
@@ -224,7 +223,7 @@ export function openApiSpec({ servers } = {}) {
     openapi: "3.1.0",
     info: {
       title: "OpenCITE Scholarly Search API",
-      version: "1.0.0",
+      version: String(API_CONTRACT.version || "2"),
       description: API_CONTRACT.description,
     },
     servers: servers || [
@@ -234,17 +233,19 @@ export function openApiSpec({ servers } = {}) {
       [API_CONTRACT.endpoint]: {
         get: {
           operationId: "searchScholarlySources",
-          summary: "Search open-access scholarly sources (origin-blind).",
+          summary: "Search open-access scholarly, museum and archive sources in one call.",
           description: API_CONTRACT.description,
           parameters,
-          security: [{ ApiKeyHeader: [] }, {}],
+          security: [{ ApiKeyHeader: [] }],
           responses: {
             200: {
-              description: "Ranked, deduped, origin-blind result cards.",
+              description: "Deduped result cards in native upstream order, interleaved scholarly-first; each names its source.",
               content: { "application/json": { schema: responseSchema() } },
             },
             400: { description: "Invalid request (e.g. no valid sources selected)." },
-            401: { description: "Invalid or missing API key (when key auth is enabled)." },
+            401: { description: "Invalid or missing x-api-key header (a key is always required)." },
+            402: { description: "Insufficient credits — body carries { code: \"insufficient_credits\", upgrade_url }." },
+            429: { description: "Rate limited (per key, and per IP before auth). Retry-After header set." },
             405: { description: "Method not allowed — use GET." },
           },
         },
@@ -259,7 +260,7 @@ export function openApiSpec({ servers } = {}) {
 }
 
 // `node src/schema.js` → print all generated schemas (handy for docs/registries).
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const out = {
     mcpTool: mcpToolDefinition(),
     functionSchemas: functionSchemas(),

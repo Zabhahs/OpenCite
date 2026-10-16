@@ -19,7 +19,7 @@ OpenCITE is a React/Vite SPA that fans out to ~25 scholarly-source adapters in p
 | UI | React 18 + Vite | SPA, hash routing for admin (`#/admin/console`) |
 | Styling | Tailwind CSS | built to `public/output.css`; themes in [[01-Frontend/Contexts]] |
 | Client search | per-source adapters (`src/adapters/`) | run in-browser, CORS-proxied where needed → see [[02-Adapters/Adapter-Architecture]] |
-| Ranking | BM25F + RRF + MiniLM semantic rerank | pure JS, runs client-side (web worker for embeddings) → [[03-Search-Pipeline/Ranking-Scoring]] |
+| Ranking | BM25F + RRF + MiniLM semantic rerank | pure JS, runs client-side (web worker for embeddings) → [[03-Search-Pipeline/Pipeline|Ranking-Scoring (removed v0.44)]] |
 | Backend | Vercel serverless (Node) + Edge | `api/*` functions → [[04-Backend-API/Search-Endpoint]] |
 | CORS proxy | `api/proxy.js` | allowlisted upstreams → [[04-Backend-API/Proxy]] |
 | Auth | Auth.js (NextAuth) v5, Google OAuth | session + API-key auth → [[04-Backend-API/Auth-Sessions]] |
@@ -27,7 +27,7 @@ OpenCITE is a React/Vite SPA that fans out to ~25 scholarly-source adapters in p
 | KV / rate-limit | Vercel KV | credit + leaky-bucket → [[05-Billing/Billing-Credits]] |
 | Billing | Stripe | checkout + webhook → [[05-Billing/Billing-Credits]] |
 | AI integration | MCP server (`mcp/`) | exposes search to external models → [[06-MCP-Server/MCP-Server]] |
-| Embeddings | MiniLM (~23MB), in-browser | downloaded once, cached → [[03-Search-Pipeline/Semantic-Rerank]] |
+| Embeddings | MiniLM (~23MB), in-browser | downloaded once, cached → [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]] |
 | Deploy | Vercel, auto-deploy `main` | aliases `citation.today`, `opencite.space` → [[08-Build-Deploy/Build-Deploy]] |
 | Build chain | `scripts/migrate.mjs` → tailwind → `vite build` | P3005-safe migrate, never hard-fails |
 

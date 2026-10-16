@@ -21,7 +21,7 @@ export const CHRONICLING_AMERICA_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://www.loc.gov/collections/chronicling-america/?q=${encodeURIComponent(query)}&fo=json&c=${pageSize}&sp=${page}`;
     const r = await proxiedFetch(url, { headers: { Accept: "application/json" } }, { adapterId: "CHRONICLING_AMERICA" });

@@ -18,7 +18,7 @@ export const THAQALAYN_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const r = await fetchWithTimeout(`https://www.thaqalayn-api.net/api/v2/query?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" } });
     if (!r.ok) throw new Error(`Thaqalayn ${r.status}`);
     const data = await r.json();

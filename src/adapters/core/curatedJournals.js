@@ -27,7 +27,7 @@ export const CURATED_JOURNALS_ADAPTER = {
     // v0.38 (T10, F-103): use the shared page-size constants instead of a hardcoded 5.
     // The hardcoded value made Math.floor(offset/pageSize)+1 compute the wrong OpenAlex
     // page on load-more (offset is advanced by INITIAL/LOAD_MORE_PAGE_SIZE), skipping a page.
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     const issnFilter = issns.join("|");
     let auth = "";

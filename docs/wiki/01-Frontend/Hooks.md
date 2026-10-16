@@ -8,7 +8,7 @@ tags: [hooks, state, localStorage, DB-sync]
 
 # Hooks
 
-> **Seven custom hooks** own all significant client-side state: search execution, settings persistence, library/history sync, filtering, theming, and tooltip lifecycle. `useSemanticRerank` is owned by the Search Pipeline agent — see [[03-Search-Pipeline/Semantic-Rerank]].
+> **Seven custom hooks** own all significant client-side state: search execution, settings persistence, library/history sync, filtering, theming, and tooltip lifecycle. `useSemanticRerank` is owned by the Search Pipeline agent — see [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]].
 
 ---
 
@@ -179,4 +179,4 @@ Bare (un-namespaced) keys:
 
 ## See also
 
-[[01-Frontend/App-Shell]] · [[01-Frontend/Contexts]] · [[01-Frontend/State-Flow]] · [[03-Search-Pipeline/Semantic-Rerank]] · [[09-Audit/Bugs]]
+[[01-Frontend/App-Shell]] · [[01-Frontend/Contexts]] · [[01-Frontend/State-Flow]] · [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]] · [[09-Audit/Bugs]]

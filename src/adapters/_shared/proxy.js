@@ -24,8 +24,17 @@ export function timeoutSignal(ms = FETCH_TIMEOUT_MS) {
   return c.signal;
 }
 
+// v0.46: on the server (Node) identify honestly to upstream polite pools; browsers set their own UA
+// and forbid overriding it. Never spoof a desktop Chrome UA from the server (it trips Anubis-style
+// bot walls and weakens any good-faith standing with upstream operators).
+export const SERVER_USER_AGENT = "OpenCITE/0.46 (+https://citation.today; mailto:ops@citation.today)";
+
 export function fetchWithTimeout(url, options = {}) {
-  return fetch(url, { signal: timeoutSignal(FETCH_TIMEOUT_MS), ...options });
+  const opts = { signal: timeoutSignal(FETCH_TIMEOUT_MS), ...options };
+  if (typeof window === "undefined") {
+    opts.headers = { "User-Agent": SERVER_USER_AGENT, ...(options.headers || {}) };
+  }
+  return fetch(url, opts);
 }
 
 export async function proxiedFetch(url, options = {}, ctx = {}) {

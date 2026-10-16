@@ -89,13 +89,31 @@ export const PLANS = {
 
 export const DEFAULT_PLAN_ID = "free";
 
-// One-time credit packs for PAYG / machine callers. `priceEnv` names the Stripe
-// Price id env var; `credits` are granted on checkout.session.completed.
+// v0.46 product decision of record: ONE paid SKU — prepaid API/MCP credit packs. The human
+// subscription rail (Student/Pro) is hidden behind this flag: the web app is free and unmetered
+// by design (it is the demo), so a subscription bought nothing a browser user could see. Flip to
+// true only when the web app has a paid-only feature to sell. checkout.js refuses plan checkouts
+// while false; PricingPanel hides the cards.
+export const SUBSCRIPTIONS_ENABLED = false;
+
+// One-time credit packs for PAYG / machine callers. `priceEnv` names the Stripe Price id env
+// var; `credits` are granted on checkout.session.completed (webhook), which ALSO moves a free
+// user to the `machine` plan so the credits are spendable across the full tier.
+//
+// v0.46 repricing (cost-plus): OpenAlex bills $0.001 per search call (since Feb 2026), so the old
+// $0.00067–$0.001/query packs lost money on the flagship source alone. The Stripe Prices (env var
+// names) are unchanged — only the credits granted per price changed: $10 → 2,000 · $50 → 12,000 ·
+// $200 → 60,000 ($5.00 / $4.17 / $3.33 per 1k queries). Pack ids keep their historical names so
+// existing checkout metadata keeps resolving.
 export const CREDIT_PACKS = {
-  pack_10k:  { id: "pack_10k",  credits: 10000,  usd: 10,  priceEnv: "STRIPE_PRICE_PACK_10K" },
-  pack_60k:  { id: "pack_60k",  credits: 60000,  usd: 50,  priceEnv: "STRIPE_PRICE_PACK_60K" },
-  pack_300k: { id: "pack_300k", credits: 300000, usd: 200, priceEnv: "STRIPE_PRICE_PACK_300K" },
+  pack_10k:  { id: "pack_10k",  credits: 2000,  usd: 10,  priceEnv: "STRIPE_PRICE_PACK_10K" },
+  pack_60k:  { id: "pack_60k",  credits: 12000, usd: 50,  priceEnv: "STRIPE_PRICE_PACK_60K" },
+  pack_300k: { id: "pack_300k", credits: 60000, usd: 200, priceEnv: "STRIPE_PRICE_PACK_300K" },
 };
+
+// Plan a pack buyer lands on when they are still on the free tier: the full server-safe set at the
+// machine burst cap. Subscribers keep their plan (packs never downgrade).
+export const PACK_BUYER_PLAN_ID = "machine";
 
 export function getPlan(planId) {
   return PLANS[planId] || PLANS[DEFAULT_PLAN_ID];

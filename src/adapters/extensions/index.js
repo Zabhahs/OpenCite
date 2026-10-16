@@ -19,18 +19,14 @@ export { RIJKSMUSEUM_ADAPTER }      from "./rijksmuseum.js";
 export { INTERNET_ARCHIVE_ADAPTER } from "./internetArchive.js";
 // BDPI_ADAPTER — /gdl/ExternalSearch.do JSONP endpoint removed; new /BDPI/Search.do is JS-only, no JSON API
 export { GALLICA_ADAPTER }          from "./gallica.js";
-export { THAQALAYN_ADAPTER }        from "./thaqalayn.js";
 export { NCBI_ADAPTER }             from "./ncbi.js";
-export { OPENCONTEXT_ADAPTER }      from "./openContext.js";
 export { NORTHWESTERN_ADAPTER }     from "./northwestern.js";
 export { PRINCETON_DPUL_ADAPTER }   from "./princetonDpul.js";
-export { PANGAEA_ADAPTER }          from "./pangaea.js";
 // OPENNEURO_ADAPTER (openNeuro.js), ENA_ADAPTER (ena.js), SCIELO_ADAPTER (scielo.js) —
 // QUARANTINED v0.38: always-dead (0 results every query → false `partial` coverage → billing
 // discount). Full source preserved at docs/wiki/99-Archive/_quarantine/. Findings F-107/F-109/F-110/F-208.
 
 // v.29 — humanities worldwide-coverage adapters (verified contracts)
-export { LA_REFERENCIA_ADAPTER }       from "./laReferencia.js";
 export { OAPEN_ADAPTER }               from "./oapen.js";
 export { OPENEDITION_ADAPTER }         from "./openEdition.js";
 export { OPEN_LIBRARY_ADAPTER }        from "./openLibrary.js";
@@ -38,7 +34,6 @@ export { OPEN_LIBRARY_ADAPTER }        from "./openLibrary.js";
 // v.29 — South Asia & subcontinent humanities adapters
 export { CORE_ADAPTER }  from "./coreAc.js";
 export { NDLI_ADAPTER }  from "./ndli.js";
-export { BASE_ADAPTER }  from "./base.js";
 
 // PHILPAPERS_ADAPTER — excluded (Wave A premise disproved on live verification):
 // no public keyword-search JSON endpoint (only a key-gated taxonomy feed at
@@ -46,6 +41,12 @@ export { BASE_ADAPTER }  from "./base.js";
 // contact-gated + ToS-restricted ("severely restrict redistribution"); the only open
 // self-serve interface is OAI-PMH (oai.pl) — harvest-only, the Mexicana anti-pattern.
 // Philosophy-coverage gap remains open; revisit via an OA-licensed alternative.
+
+// THAQALAYN_ADAPTER, OPENCONTEXT_ADAPTER, PANGAEA_ADAPTER, LA_REFERENCIA_ADAPTER, BASE_ADAPTER —
+// QUARANTINED v0.46: live-probed 2026-09-04 as silently dead (Thaqalayn /query ignores q; Open Context
+// API shape changed + Anubis bot-wall; PANGAEA ES _source no longer carries a title; LA Referencia
+// Anubis-blocked; BASE requires IP registration and answers 200 {error}) — each returned [] while
+// counting as covered. Source preserved at docs/wiki/99-Archive/_quarantine/v0_46_adapters/.
 
 // v.18 SOW heritage adapters
 export { CHRONICLING_AMERICA_ADAPTER } from "./chroniclingAmerica.js";

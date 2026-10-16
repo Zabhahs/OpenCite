@@ -4,7 +4,7 @@
  * Consumed by Layout.jsx (version + name) and SearchInput.jsx (placeholders).
  */
 
-export const APP_VERSION = "v.44";
+export const APP_VERSION = "v.46";
 
 export const APP_NAME = "OpenCITE";
 
@@ -14,7 +14,7 @@ export const APP_NAME = "OpenCITE";
  * Keep items short enough to read on a 320px screen (≤ ~45 chars recommended).
  */
 export const SEARCH_PLACEHOLDER_ITEMS = [
-  "Search across 20 open-access databases…",
+  "Search across open-access databases, museums and archives…",
   "Tip: use ; to search multiple terms at once",
   "Try: ancient DNA Anatolia",
   "Try: climate change coral reefs",

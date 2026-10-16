@@ -19,7 +19,7 @@ export const ONB_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const startRecord = offset + 1;
     const sruUrl = `https://obv-at-oenb.alma.exlibrisgroup.com/view/sru/43ACC_ONB?version=1.2&operation=searchRetrieve&query=${encodeURIComponent(`alma.all_for_ui="${query}"`)}&maximumRecords=${pageSize}&startRecord=${startRecord}&recordSchema=dc`;
     // v0.38 (T7, F-102): browser direct fetch throws a CORS error before the proxy fallback

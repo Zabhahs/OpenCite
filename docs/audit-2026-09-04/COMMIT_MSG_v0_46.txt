@@ -1,0 +1,50 @@
+feat(v0.46): make the paid API sellable — money-path fixes, developer path, honest sources, legal pages
+
+Product decision of record (audit docs/audit-2026-09-04): ONE paid SKU — prepaid API/MCP
+credit packs. The web app stays free and unmetered (it is the demo); subscriptions are
+hidden behind plans.js SUBSCRIPTIONS_ENABLED=false. Results become origin-transparent
+(contract v2: every card names its `source`; X-OpenCITE-API-Version header).
+
+Money path (closes v0.45 T3/T4 + audit P0/P1):
+- webhook: fulfil packs only when payment_status is paid (+ async_payment_succeeded);
+  pack buyers on `free` move to plan `machine`; charge.refunded / dispute claw the pack's
+  credits back (clamped at 0); basil `line.pricing.price_details.price` invoice shape;
+  P2002 catch scoped to the processed_events PK; customer id claimed only when null
+- billing: applyMonthlyGrant is one atomic UPDATE (no lost concurrent increments);
+  clawbackCredits; lazy 20-credit monthly grant for free users (apiAuth + /api/credits)
+- search/meter: settle failures refund instead of escaping; 402 body carries
+  code + upgrade_url; per-IP limiter BEFORE any DB touch; header-only keys with a
+  format check; `;` terms capped at 5, q at 512 chars; empty adapter set -> 503 before
+  pre-auth; circuit-open sources count as failed; coverage total 0 -> limited; `cite`
+  + contract version in the cache key; caller mailto ignored on the metered path
+- packs repriced cost-plus by changing credits per existing Stripe price:
+  $10 -> 2,000 . $50 -> 12,000 . $200 -> 60,000; checkout collects ToS consent + billing
+  address; PaymentIntent metadata carries the pack for reversals; idempotent customer create
+
+Retrieval honesty:
+- pageSize threaded to every adapter (API `limit` was capped at 3 per source)
+- lane order: scholarly indexes first, heritage after (was registry order)
+- CURATED excluded from the API default set (second OpenAlex call per query)
+- quarantined (live-probed silently dead 2026-09-04): BASE, Thaqalayn, LA Referencia,
+  PANGAEA, Open Context (+ its edge route) -> 99-Archive/_quarantine/v0_46_adapters/
+- Gallica edge route: regex DC parsing (DOMParser never existed in Edge); Met: dropped the
+  artistOrCulture flag that returned 0 for every query; shim adapters throw on the
+  route's error envelope instead of showing "no matches"; titleFingerprint ignores the
+  "Untitled" sentinel
+- upstream identity: OpenAlex + NCBI keys injected server-side (OPENALEX_API_KEY,
+  NCBI_API_KEY), NCBI tool/email on every call, honest OpenCITE User-Agent (no Chrome spoof)
+- proxy: allowlist = hosts registered adapters actually use (+ Rijksmuseum/CORE/NDLI which
+  had 403'd since they shipped), 10 s upstream timeout, 2 MB relay budget
+
+Developer path + legal:
+- DevelopersPanel: balance, key list/mint/revoke via existing /api/keys, curl + MCP
+  quickstart; header/footer entry points; #developers deep link; ?checkout=success|cancel
+  handled (confirmation + balance polling); credits chip labelled as API credits
+- public/legal/{terms,privacy,refunds,contact}.html, public/docs/index.html,
+  public/openapi.json (generated from the contract), sitemap + robots, real JSON-LD + OG
+- /api/health (DB SELECT 1) via the user dispatcher + daily Vercel cron keepalive
+- mcp: package `opencite-mcp` (publishable, MIT, LICENSE added; root LICENSE carves mcp/
+  out), schema/README aligned to contract v2 (no lowConfidence/score, key required)
+- README rewritten; Health-Dashboard reduced to generated counts; dead engine links re-pointed
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>

@@ -35,7 +35,7 @@ export const CORE_ADAPTER = {
   search: async (query, settings, opts = {}) => {
     if (!settings.coreKey) throw new Error("CORE needs a free API key. Add yours in settings (⚙).");
     const offset = opts.offset || 0;
-    const limit = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const limit = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const url =
       `https://api.core.ac.uk/v3/search/works` +
       `?q=${encodeURIComponent(query)}` +

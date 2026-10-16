@@ -20,7 +20,7 @@ export const BNF_API_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const startRecord = offset + 1;
     const sruUrl = `https://catalogue.bnf.fr/api/SRU?version=1.2&operation=searchRetrieve&query=${encodeURIComponent(`bib.anywhere="${query}"`)}&maximumRecords=${pageSize}&startRecord=${startRecord}&recordSchema=unimarcxchange`;
     // v0.38 (T7, F-102): in the browser a direct cross-origin fetch to catalogue.bnf.fr

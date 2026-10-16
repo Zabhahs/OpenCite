@@ -17,9 +17,9 @@ export const MET_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const q = encodeURIComponent(query);
-    const r = await fetchWithTimeout(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${q}&hasImages=true&artistOrCulture=true`);
+    const r = await fetchWithTimeout(`https://collectionapi.metmuseum.org/public/collection/v1/search?q=${q}&hasImages=true`  /* v0.46: artistOrCulture=true returned total=0 for every query (live 2026-09-04) */);
     if (!r.ok) throw new Error(`Met ${r.status}`);
     const data = await r.json();
     const allIds = data.objectIDs || [];

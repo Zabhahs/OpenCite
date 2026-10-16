@@ -10,6 +10,13 @@
 
 export const DEFAULT_LIMIT = 25;
 export const MAX_LIMIT = 100;
+// v0.46: contract version, echoed as X-OpenCITE-API-Version and folded into the result cache key.
+// Bump on any change to RESULT_FIELDS / RESPONSE_SHAPE. v1 = pre-v0.44 (score/lowConfidence);
+// v2 = pass-through pipeline + origin-transparent `source`.
+export const API_VERSION = "2";
+// v0.46: fan-out bounds — `;` splits into one upstream call per term per source.
+export const MAX_TERMS = 5;
+export const MAX_QUERY_CHARS = 512;
 
 // Output bibliography formats (json = structured cards; others = flat bibliography).
 export const FORMATS = ["json", "mla", "apa", "bibtex", "ris", "csl-json"];
@@ -25,7 +32,7 @@ export const PARAMS = {
   q: {
     type: "string",
     required: true,
-    description: "Search query. Separate multiple keywords with ';'.",
+    description: `Search query (max ${MAX_QUERY_CHARS} chars). Separate up to ${MAX_TERMS} keywords with ';'.`,
   },
   limit: {
     type: "integer",
@@ -39,18 +46,13 @@ export const PARAMS = {
     type: "string",
     required: false,
     description:
-      "Advanced: comma-separated subset of available source IDs to restrict the " +
-      "search to. Omit to search the full available library (recommended).",
+      "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) " +
+      "to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended).",
   },
   authors: {
     type: "boolean",
     required: false,
     description: "1/true to include author-name matches in retrieval.",
-  },
-  mailto: {
-    type: "string",
-    required: false,
-    description: "Contact email for the polite request pool.",
   },
   cite: {
     type: "string",
@@ -69,11 +71,14 @@ export const PARAMS = {
   },
 };
 
-// Origin-blind response card — the shape of each item in `results` (format=json).
-// Deliberately omits `source`: the caller gets verifiable provenance (doi, url,
-// journal, publisher, authors, citations) WITHOUT learning which upstream served it.
+// Response card — the shape of each item in `results` (format=json).
+// v0.46 (contract v2): ORIGIN-TRANSPARENT. `source` names the upstream database that served the
+// record. Provenance is what grounding buyers select for, and the MCP directories require the
+// underlying APIs to be disclosed; the old origin-blind card hid the one attribute that made a
+// citation checkable. `id` stays opaque (a stable hash, not an upstream id).
 export const RESULT_FIELDS = {
   id: "Opaque, deterministic result identifier (prefix oc_). Not an upstream id.",
+  source: "Upstream database that served this record (e.g. OPENALEX, CROSSREF, DOAJ, NCBI, EUROPEANA).",
   title: "Work title.",
   authors: "Author display names.",
   year: "Publication year.",
@@ -95,8 +100,8 @@ export const RESULT_FIELDS = {
   citations: "Formatted citations: { mla, apa, …extra requested formats }.",
 };
 
-// Top-level response envelope (format=json). Note: no per-result source attribution
-// and no `sources` meta block — only a bucketed `coverage` band.
+// Top-level response envelope (format=json). Coverage is a bucketed band, never a raw
+// percentage or a list of which sources failed.
 export const RESPONSE_SHAPE = {
   query: "Echo of the q parameter.",
   terms: "Parsed keyword terms.",
@@ -112,11 +117,13 @@ export const RESPONSE_SHAPE = {
 export const API_CONTRACT = {
   endpoint: "/api/search",
   method: "GET",
+  version: API_VERSION,
   description:
-    "One verifiable, deduped, citation-ready call across many open-access scholarly " +
-    "sources. Results preserve each source's native relevance order, fairly " +
-    "interleaved across sources. Origin-blind: provenance fields are returned, " +
-    "but the serving upstream is not disclosed.",
+    "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, " +
+    "manuscript and Islamicate archives. Each result names its source database and carries " +
+    "DOI/URL provenance and formatted citations (MLA, APA, BibTeX, RIS, CSL-JSON). Results keep " +
+    "each source's native relevance order, interleaved scholarly-first. Billed 1 credit per call, " +
+    "prorated by the coverage actually delivered; requires an x-api-key header.",
   params: PARAMS,
   response: { shape: RESPONSE_SHAPE, resultFields: RESULT_FIELDS, coverageBands: COVERAGE_BANDS },
 };

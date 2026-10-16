@@ -20,7 +20,7 @@ export const LC_DATASETS_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://loc.gov/search/?q=${encodeURIComponent(query)}&fo=json&c=${pageSize}&sp=${page}`;
     const r = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });

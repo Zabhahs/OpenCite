@@ -106,30 +106,27 @@
   {
     "id": "adapters.extensions.base",
     "path": "src/adapters/extensions/base.js",
-    "loc": 93,
-    "deps": [
-      "adapters.shared.proxy",
-      "constants.defaults",
-      "constants.vocabulary",
-      "lib.helpers"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "both",
     "purpose": "BASE Bielefeld 300M+ OA records adapter: Solr field-scoped query (dctitle/dcdescription/dcsubject); missing serverSafe/corpusSize.",
     "exports": [
       "BASE_ADAPTER"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [
       "F-112"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "aggregator",
       "south-asia"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.bdh",
@@ -265,7 +262,7 @@
   {
     "id": "adapters.extensions.dpla",
     "path": "src/adapters/extensions/dpla.js",
-    "loc": 86,
+    "loc": 88,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -343,7 +340,7 @@
   {
     "id": "adapters.extensions.gallica",
     "path": "src/adapters/extensions/gallica.js",
-    "loc": 35,
+    "loc": 36,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -369,9 +366,8 @@
   {
     "id": "adapters.extensions.index",
     "path": "src/adapters/extensions/index.js",
-    "loc": 63,
+    "loc": 64,
     "deps": [
-      "adapters.extensions.base",
       "adapters.extensions.bnfApi",
       "adapters.extensions.chroniclingAmerica",
       "adapters.extensions.coreAc",
@@ -379,7 +375,6 @@
       "adapters.extensions.europeana",
       "adapters.extensions.gallica",
       "adapters.extensions.internetArchive",
-      "adapters.extensions.laReferencia",
       "adapters.extensions.lcDatasets",
       "adapters.extensions.met",
       "adapters.extensions.ncbi",
@@ -387,14 +382,11 @@
       "adapters.extensions.northwestern",
       "adapters.extensions.oapen",
       "adapters.extensions.onb",
-      "adapters.extensions.openContext",
       "adapters.extensions.openEdition",
       "adapters.extensions.openLibrary",
-      "adapters.extensions.pangaea",
       "adapters.extensions.princetonDpul",
       "adapters.extensions.rijksmuseum",
       "adapters.extensions.smithsonian",
-      "adapters.extensions.thaqalayn",
       "adapters.extensions.wikidata"
     ],
     "kind": "adapter",
@@ -443,26 +435,24 @@
   {
     "id": "adapters.extensions.laReferencia",
     "path": "src/adapters/extensions/laReferencia.js",
-    "loc": 63,
-    "deps": [
-      "adapters.shared.proxy",
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "both",
     "purpose": "LA Referencia federated Latin American OA repositories (VuFind v1): 3M+ records, rich subjects, no abstract.",
     "exports": [
       "LA_REFERENCIA_ADAPTER"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#lareferencia",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "latin-america"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.lcDatasets",
@@ -545,7 +535,7 @@
   {
     "id": "adapters.extensions.ncbi",
     "path": "src/adapters/extensions/ncbi.js",
-    "loc": 87,
+    "loc": 90,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -677,33 +667,30 @@
   {
     "id": "adapters.extensions.openContext",
     "path": "src/adapters/extensions/openContext.js",
-    "loc": 32,
-    "deps": [
-      "adapters.shared.proxy",
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "client",
     "purpose": "Open Context archaeological data thin shim: delegates to /api/search/opencontext backend route.",
     "exports": [
       "OPENCONTEXT_ADAPTER"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#opencontext",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "archaeological",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.openEdition",
     "path": "src/adapters/extensions/openEdition.js",
-    "loc": 36,
+    "loc": 37,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -781,29 +768,27 @@
   {
     "id": "adapters.extensions.pangaea",
     "path": "src/adapters/extensions/pangaea.js",
-    "loc": 113,
-    "deps": [
-      "adapters.shared.proxy",
-      "constants.defaults",
-      "constants.vocabulary"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "both",
     "purpose": "PANGAEA earth/env data adapter: Elasticsearch + per-hit RIS fetch for abstract/DOI; pageSize fan-out.",
     "exports": [
       "PANGAEA_ADAPTER"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-116"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "science",
       "data"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.princetonDpul",
@@ -910,7 +895,7 @@
   {
     "id": "adapters.extensions.smithsonian",
     "path": "src/adapters/extensions/smithsonian.js",
-    "loc": 67,
+    "loc": 69,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -935,29 +920,26 @@
   {
     "id": "adapters.extensions.thaqalayn",
     "path": "src/adapters/extensions/thaqalayn.js",
-    "loc": 52,
-    "deps": [
-      "adapters.shared.proxy",
-      "constants.defaults",
-      "constants.vocabulary",
-      "lib.helpers"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "adapter",
     "runtime": "both",
     "purpose": "Thaqalayn Shi'i hadith library adapter: fetches full match set, client-side slice; url always homepage (no deep link).",
     "exports": [
       "THAQALAYN_ADAPTER"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-108"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "islamicate"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.wikidata",
@@ -986,7 +968,7 @@
   {
     "id": "adapters.index",
     "path": "src/adapters/index.js",
-    "loc": 145,
+    "loc": 136,
     "deps": [
       "adapters.core.crossref",
       "adapters.core.curatedJournals",
@@ -1107,7 +1089,7 @@
   {
     "id": "adapters.shared.proxy",
     "path": "src/adapters/_shared/proxy.js",
-    "loc": 94,
+    "loc": 103,
     "deps": [
       "lib.log"
     ],
@@ -1190,7 +1172,7 @@
   {
     "id": "api.checkout",
     "path": "api/checkout.js",
-    "loc": 121,
+    "loc": 136,
     "deps": [
       "api.shared.auth",
       "api.shared.log",
@@ -1270,7 +1252,7 @@
   {
     "id": "api.proxy",
     "path": "api/proxy.js",
-    "loc": 139,
+    "loc": 153,
     "deps": [
       "api.shared.log"
     ],
@@ -1379,7 +1361,7 @@
   {
     "id": "api.route.gallica",
     "path": "api/search/gallica.js",
-    "loc": 130,
+    "loc": 122,
     "deps": [
       "api.shared.log"
     ],
@@ -1431,10 +1413,9 @@
   {
     "id": "api.route.opencontext",
     "path": "api/search/opencontext.js",
-    "loc": 119,
-    "deps": [
-      "api.shared.log"
-    ],
+    "loc": 0,
+    "deps": [],
+    "quarantined": true,
     "kind": "api-route",
     "runtime": "server",
     "purpose": "Edge proxy for Open Context JSON-LD API; filters out region items and unlabeled records.",
@@ -1442,16 +1423,16 @@
       "default",
       "config"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "per-source",
       "edge",
       "json-ld",
       "cors"
     ],
-    "notes": null
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "api.route.openedition",
@@ -1481,7 +1462,7 @@
   {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 427,
+    "loc": 485,
     "deps": [
       "adapters.index",
       "api.shared.adapterHealth",
@@ -1491,6 +1472,7 @@
       "api.shared.cache",
       "api.shared.coverage",
       "api.shared.debugResult",
+      "api.shared.meter",
       "api.shared.plans",
       "api.shared.publicResult",
       "api.shared.ratelimit",
@@ -1561,9 +1543,10 @@
   {
     "id": "api.shared.apiAuth",
     "path": "api/_shared/apiAuth.js",
-    "loc": 103,
+    "loc": 132,
     "deps": [
       "api.shared.auth",
+      "api.shared.billing",
       "api.shared.crypto",
       "api.shared.plans",
       "api.shared.prisma"
@@ -1593,7 +1576,7 @@
   {
     "id": "api.shared.apiContract",
     "path": "api/_shared/apiContract.js",
-    "loc": 141,
+    "loc": 148,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1654,7 +1637,7 @@
   {
     "id": "api.shared.billing",
     "path": "api/_shared/billing.js",
-    "loc": 132,
+    "loc": 142,
     "deps": [
       "api.shared.coverage",
       "api.shared.prisma"
@@ -1740,7 +1723,7 @@
   {
     "id": "api.shared.coverage",
     "path": "api/_shared/coverage.js",
-    "loc": 74,
+    "loc": 78,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1815,10 +1798,11 @@
   {
     "id": "api.shared.handlers.credits",
     "path": "api/_shared/handlers/credits.js",
-    "loc": 61,
+    "loc": 68,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.auth",
+      "api.shared.billing",
       "api.shared.plans",
       "api.shared.prisma"
     ],
@@ -1837,6 +1821,29 @@
       "session-auth"
     ],
     "notes": "v0.41 (F-300): backs the client BillingProvider. Reads User.total_credits + User.plan (same columns billing.js settles). DB error degrades to the Infinity/'free' stub so the UI never blocks."
+  },
+  {
+    "id": "api.shared.handlers.health",
+    "path": "api/_shared/handlers/health.js",
+    "loc": 29,
+    "deps": [
+      "api.shared.prisma"
+    ],
+    "kind": "handler",
+    "runtime": "server",
+    "purpose": "v0.46 GET /api/health — the one unauthenticated endpoint that exercises the database (SELECT 1 → 200/503). Uptime-monitor target and the daily Vercel cron keepalive that stops the free-tier database from auto-pausing.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "handler",
+      "ops",
+      "health"
+    ],
+    "notes": "Mounted through api/user/[resource].js; vercel.json rewrites /api/health and schedules the cron."
   },
   {
     "id": "api.shared.handlers.history",
@@ -1995,7 +2002,7 @@
   {
     "id": "api.shared.meter",
     "path": "api/_shared/meter.js",
-    "loc": 74,
+    "loc": 95,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.billing",
@@ -2049,7 +2056,7 @@
   {
     "id": "api.shared.plans",
     "path": "api/_shared/plans.js",
-    "loc": 141,
+    "loc": 159,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2102,7 +2109,7 @@
   {
     "id": "api.shared.publicResult",
     "path": "api/_shared/publicResult.js",
-    "loc": 54,
+    "loc": 56,
     "deps": [
       "lib.citations"
     ],
@@ -2126,7 +2133,7 @@
   {
     "id": "api.shared.ratelimit",
     "path": "api/_shared/ratelimit.js",
-    "loc": 55,
+    "loc": 60,
     "deps": [
       "api.shared.kv"
     ],
@@ -2177,7 +2184,7 @@
   {
     "id": "api.shared.serverKeys",
     "path": "api/_shared/serverKeys.js",
-    "loc": 15,
+    "loc": 21,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2198,8 +2205,9 @@
   {
     "id": "api.stripe.webhook",
     "path": "api/stripe/webhook.js",
-    "loc": 212,
+    "loc": 266,
     "deps": [
+      "api.shared.apiAuth",
       "api.shared.billing",
       "api.shared.log",
       "api.shared.plans",
@@ -2229,9 +2237,10 @@
   {
     "id": "api.user.[resource]",
     "path": "api/user/[resource].js",
-    "loc": 32,
+    "loc": 34,
     "deps": [
       "api.shared.handlers.credits",
+      "api.shared.handlers.health",
       "api.shared.handlers.history",
       "api.shared.handlers.keys",
       "api.shared.handlers.library",
@@ -2258,9 +2267,10 @@
   {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 466,
+    "loc": 502,
     "deps": [
       "adapters.index",
+      "components.DevelopersPanel",
       "components.FilterBar",
       "components.LauncherBlock",
       "components.Layout",
@@ -2281,8 +2291,7 @@
       "hooks.useTheme",
       "launchers.index",
       "lib.admin",
-      "lib.log",
-      "lib.platform"
+      "lib.log"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2397,6 +2406,30 @@
     "notes": "v0.41 (R-301/F-314): extracted from the verbatim-duplicated header block in SourceSection and UnifiedResultList."
   },
   {
+    "id": "components.DevelopersPanel",
+    "path": "src/components/DevelopersPanel.jsx",
+    "loc": 211,
+    "deps": [
+      "contexts.BillingContext",
+      "lib.api"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "v0.46 self-serve path to the paid API: balance (BillingContext), API key list/mint/revoke via the existing /api/keys handler, curl + MCP quickstart, buy-credits CTA. Opened by the header, the footer, the 402 upgrade_url (#developers) and the post-checkout return.",
+    "exports": [
+      "DevelopersPanel"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md",
+    "tags": [
+      "component",
+      "billing",
+      "developers"
+    ],
+    "notes": "Server side unchanged — talks only to api/_shared/handlers/keys.js and /api/credits."
+  },
+  {
     "id": "components.EagleTooltip",
     "path": "src/components/EagleTooltip.jsx",
     "loc": 72,
@@ -2465,7 +2498,7 @@
   {
     "id": "components.Layout",
     "path": "src/components/Layout.jsx",
-    "loc": 439,
+    "loc": 452,
     "deps": [
       "constants.app",
       "constants.themes",
@@ -2501,7 +2534,7 @@
   {
     "id": "components.Panels",
     "path": "src/components/Panels.jsx",
-    "loc": 573,
+    "loc": 565,
     "deps": [
       "adapters.shared.base",
       "adapters.shared.normalize",
@@ -2512,8 +2545,7 @@
       "lib.checkout",
       "lib.citations",
       "lib.library",
-      "lib.log",
-      "lib.platform"
+      "lib.log"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2735,7 +2767,10 @@
     "id": "constants.pricing",
     "path": "src/constants/pricing.js",
     "loc": 83,
-    "deps": [],
+    "deps": [
+      "adapters.index",
+      "api.shared.plans"
+    ],
     "kind": "constant",
     "runtime": "client",
     "purpose": "Display-only pricing constants — SUBSCRIPTION_PLANS (Free/Student/Pro), CREDIT_PACKS (10k/60k/300k), SOURCE_COUNT, COVERAGE_NOTE.",
@@ -2825,7 +2860,7 @@
   {
     "id": "contexts.BillingContext",
     "path": "src/contexts/BillingContext.jsx",
-    "loc": 71,
+    "loc": 75,
     "deps": [
       "contexts.AuthContext",
       "lib.api"
@@ -3100,7 +3135,7 @@
   {
     "id": "index",
     "path": "index.html",
-    "loc": 38,
+    "loc": 48,
     "deps": []
   },
   {
@@ -3498,28 +3533,6 @@
     "notes": "Buffer only active when installDebugLog() is called (admin sign-in). Distinct from api/_shared/log.js (server-side)."
   },
   {
-    "id": "lib.platform",
-    "path": "src/lib/platform.js",
-    "loc": 33,
-    "deps": [],
-    "kind": "lib",
-    "runtime": "client",
-    "purpose": "Runtime platform detection (web/ios/android) — routes subscription checkout to Stripe or IAP; reads window.__OPENCITE_PLATFORM__ or Capacitor.",
-    "exports": [
-      "getPlatform",
-      "isNativeMobile",
-      "subscriptionRail",
-      "storeName"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
-    "tags": [
-      "platform",
-      "billing"
-    ]
-  },
-  {
     "id": "lib.rrf",
     "path": "src/lib/rrf.js",
     "loc": 0,
@@ -3749,7 +3762,7 @@
   {
     "id": "mcp.schema",
     "path": "mcp/src/schema.js",
-    "loc": 270,
+    "loc": 271,
     "deps": [
       "mcp.contract"
     ],
@@ -3981,7 +3994,7 @@
   {
     "id": "vercel",
     "path": "vercel.json",
-    "loc": 31,
+    "loc": 35,
     "deps": [],
     "kind": "config",
     "runtime": "infra",

@@ -20,12 +20,9 @@ import {
   RIJKSMUSEUM_ADAPTER,
   INTERNET_ARCHIVE_ADAPTER,
   GALLICA_ADAPTER,
-  THAQALAYN_ADAPTER,
   NCBI_ADAPTER,
-  OPENCONTEXT_ADAPTER,
   NORTHWESTERN_ADAPTER,
   PRINCETON_DPUL_ADAPTER,
-  PANGAEA_ADAPTER,
   // OPENNEURO_ADAPTER, ENA_ADAPTER, SCIELO_ADAPTER — QUARANTINED v0.38: always-dead
   // (0 results every query → false `partial` coverage → billing discount). Source preserved at
   // docs/wiki/99-Archive/_quarantine/. Findings F-107/F-109/F-110/F-208.
@@ -34,14 +31,12 @@ import {
   // Mexicana → expired TLS cert). Source preserved at
   // docs/wiki/99-Archive/_quarantine/v0_44_adapters/ (adapters + their edge routes).
   // v.29 — humanities worldwide-coverage adapters
-  LA_REFERENCIA_ADAPTER,
   OAPEN_ADAPTER,
   OPENEDITION_ADAPTER,
   OPEN_LIBRARY_ADAPTER,
   // v.29 — South Asia & subcontinent humanities adapters
   CORE_ADAPTER,
   NDLI_ADAPTER,
-  BASE_ADAPTER,
   // v.18 — SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,
   ONB_ADAPTER,
@@ -56,6 +51,7 @@ export const ADAPTERS = [
   OPENALEX_ADAPTER,
   CROSSREF_ADAPTER,
   CURATED_JOURNALS_ADAPTER,
+  // THAQALAYN / OPENCONTEXT / PANGAEA / LA_REFERENCIA / BASE — QUARANTINED v0.46 (see extensions/index.js note)
   // Extensions — cultural & primary sources
   EUROPEANA_ADAPTER,
   MET_ADAPTER,
@@ -65,24 +61,19 @@ export const ADAPTERS = [
   INTERNET_ARCHIVE_ADAPTER,
   // Extensions — sciences
   NCBI_ADAPTER,
-  OPENCONTEXT_ADAPTER,
   // SCIELO_ADAPTER — QUARANTINED v0.38 (see import note above)
   // Extensions — v.29 humanities worldwide-coverage
-  LA_REFERENCIA_ADAPTER,
   OAPEN_ADAPTER,
   OPENEDITION_ADAPTER,
   OPEN_LIBRARY_ADAPTER,
   // Extensions — v.29 South Asia & subcontinent humanities
   CORE_ADAPTER,
   NDLI_ADAPTER,
-  BASE_ADAPTER,
   // Extensions — Islamicate / heritage
   GALLICA_ADAPTER,
-  THAQALAYN_ADAPTER,
   // Extensions — v.11
   NORTHWESTERN_ADAPTER,
   PRINCETON_DPUL_ADAPTER,
-  PANGAEA_ADAPTER,
   // OPENNEURO_ADAPTER, ENA_ADAPTER — QUARANTINED v0.38 (see import note above)
   // Extensions — v.18 SOW heritage adapters
   CHRONICLING_AMERICA_ADAPTER,

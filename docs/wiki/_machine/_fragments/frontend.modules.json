@@ -43,7 +43,6 @@
       "contexts.BillingContext",
       "lib.admin",
       "lib.log",
-      "lib.platform",
       "components.SearchInput",
       "components.SearchControls",
       "components.FilterBar",
@@ -263,7 +262,6 @@
       "lib.citations",
       "lib.library",
       "lib.log",
-      "lib.platform",
       "lib.checkout",
       "adapters.shared.normalize",
       "adapters.shared.base",
@@ -848,28 +846,6 @@
     ]
   },
   {
-    "id": "lib.platform",
-    "path": "src/lib/platform.js",
-    "kind": "lib",
-    "runtime": "client",
-    "loc": 32,
-    "purpose": "Runtime platform detection (web/ios/android) — routes subscription checkout to Stripe or IAP; reads window.__OPENCITE_PLATFORM__ or Capacitor.",
-    "exports": [
-      "getPlatform",
-      "isNativeMobile",
-      "subscriptionRail",
-      "storeName"
-    ],
-    "deps": [],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "01-Frontend/UI-Map.md#panels--pricingpanel",
-    "tags": [
-      "platform",
-      "billing"
-    ]
-  },
-  {
     "id": "lib.log",
     "path": "src/lib/log.js",
     "kind": "lib",
@@ -1005,5 +981,24 @@
       "pricing"
     ],
     "notes": "Presentation only — authoritative billing numbers are in api/_shared/plans.js."
+  },
+  {
+    "id": "components.DevelopersPanel",
+    "path": "src/components/DevelopersPanel.jsx",
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "v0.46 self-serve path to the paid API: balance (BillingContext), API key list/mint/revoke via the existing /api/keys handler, curl + MCP quickstart, buy-credits CTA. Opened by the header, the footer, the 402 upgrade_url (#developers) and the post-checkout return.",
+    "exports": [
+      "DevelopersPanel"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Components/_index.md",
+    "tags": [
+      "component",
+      "billing",
+      "developers"
+    ],
+    "notes": "Server side unchanged — talks only to api/_shared/handlers/keys.js and /api/credits."
   }
 ]

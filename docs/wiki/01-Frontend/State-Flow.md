@@ -188,4 +188,4 @@ No API call is made for filtering — it's pure client-side derivation from the 
 
 ## See also
 
-[[01-Frontend/App-Shell]] · [[01-Frontend/Hooks]] · [[01-Frontend/Contexts]] · [[03-Search-Pipeline/Semantic-Rerank]] · [[04-Backend-API/Search-Endpoint]] · [[05-Billing/Billing-Credits]]
+[[01-Frontend/App-Shell]] · [[01-Frontend/Hooks]] · [[01-Frontend/Contexts]] · [[03-Search-Pipeline/Pipeline|Semantic-Rerank (removed v0.44)]] · [[04-Backend-API/Search-Endpoint]] · [[05-Billing/Billing-Credits]]

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenCITE Privacy Policy</title>
+<meta name="description" content="What OpenCITE stores, why, who processes it, and how to delete it." />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root { --bg:#fdf8ee; --fg:#1c1917; --muted:#57534e; --rule:#a8a29e; --accent:#7f1d1d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1c1917; --fg:#f5f0e6; --muted:#c7bfb2; --rule:#57534e; --accent:#fca5a5; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "Mulish", system-ui, sans-serif; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; text-wrap: balance; }
+  h2 { font-size:1.05rem; margin:2rem 0 .5rem; text-transform: uppercase; letter-spacing:.08em; }
+  .meta { color:var(--muted); font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; }
+  a { color:var(--accent); }
+  table { border-collapse: collapse; width:100%; font-size:.95rem; }
+  td, th { text-align:left; vertical-align:top; padding:.4rem .5rem .4rem 0; border-bottom:1px solid var(--rule); }
+  nav { border-top:1px solid var(--rule); margin-top:3rem; padding-top:1rem; font: 12px/1.6 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; display:flex; gap:1rem; flex-wrap:wrap; }
+  ul { padding-left:1.2rem; }
+</style>
+</head>
+<body>
+<main>
+  <p class="meta">OpenCITE · Legal</p>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Effective 28 September 2026 · Controller: Shahbaz Yusuf · <a href="/legal/contact.html">contact</a></p>
+
+  <h2>Searching without an account</h2>
+  <p>You can search without signing in. Your query is sent from your browser directly to the upstream databases you have enabled (and, for a few sources, through our proxy so the upstream sees our server, not you). We do not store anonymous queries. Settings, library and history for anonymous use stay in your browser's local storage.</p>
+
+  <h2>What we store when you sign in</h2>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Where</th></tr>
+    <tr><td>Google account id, email, name, avatar URL, and the OAuth tokens Google issues</td><td>Sign-in (Auth.js)</td><td>Supabase (Postgres, US East)</td></tr>
+    <tr><td>Search history and saved library items</td><td>Sync across your devices</td><td>Supabase</td></tr>
+    <tr><td>Settings, including any third-party API keys you enter</td><td>Sync; keys are encrypted at rest (AES-256-GCM)</td><td>Supabase</td></tr>
+    <tr><td>Credit balance, plan, API key hashes (never the key itself), key creation and last-used times</td><td>Metering the API</td><td>Supabase</td></tr>
+    <tr><td>Stripe customer and subscription ids</td><td>Linking purchases to your account. Card details never reach us.</td><td>Supabase + Stripe</td></tr>
+  </table>
+
+  <h2>Processors</h2>
+  <ul>
+    <li><strong>Vercel</strong> hosts the site and API; request logs (IP, path, status) are retained briefly. Vercel Web Analytics and Speed Insights collect aggregate, cookieless page metrics.</li>
+    <li><strong>Supabase</strong> hosts the database.</li>
+    <li><strong>Stripe</strong> processes payments and holds your billing details under its own privacy policy.</li>
+    <li><strong>Google</strong> provides sign-in.</li>
+    <li><strong>Upstream databases</strong> (for example OpenAlex, Crossref, DOAJ, PubMed, Europeana, DPLA, Smithsonian, Gallica, Internet Archive) receive the query text and, for API calls, our server's identity — never your account.</li>
+    <li><strong>Ko-fi</strong> powers the optional donation widget under its own terms.</li>
+  </ul>
+
+  <h2>Cookies</h2>
+  <p>One strictly necessary session cookie when you sign in. No advertising or cross-site tracking cookies.</p>
+
+  <h2>Retention and deletion</h2>
+  <p>Account data is kept while your account exists. To delete your account and everything linked to it, email the address on the <a href="/legal/contact.html">contact page</a> from the Google address you signed in with; deletion completes within 30 days. You can delete history and library items, and revoke API keys, from the app at any time.</p>
+
+  <h2>Your rights</h2>
+  <p>If you are in the EU/EEA, UK or California you may request access to, correction of, export of, or deletion of your data, and you may object to processing, by contacting us. We do not sell personal data.</p>
+
+  <h2>Changes</h2>
+  <p>We will update the effective date above when this policy changes.</p>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/legal/terms.html">Terms</a>
+    <a href="/legal/refunds.html">Refunds</a>
+    <a href="/legal/contact.html">Contact</a>
+  </nav>
+</main>
+</body>
+</html>

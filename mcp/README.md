@@ -4,10 +4,12 @@ Expose [OpenCITE](https://citation.today) to any MCP-compatible AI client as
 three tools: **`search_scholarly_sources`**, **`search_citations`**, and
 **`resolve_ids`**.
 
-Results are **origin-blind** — every card carries real provenance (DOI, URL,
-journal, authors, formatted citations) but never discloses which upstream served
-it. All tools accept the same `OPENCITE_API_KEY` and cost 1 credit per call
-(admin accounts are unmetered).
+Every card names its **source database** and carries provenance (DOI, URL, journal,
+authors) plus formatted citations. All tools require the same `OPENCITE_API_KEY`
+and cost 1 credit per call, prorated by the coverage actually delivered.
+
+Get a key: sign in at https://citation.today → **Developers** → Create key. Free accounts
+receive 20 credits a month; packs start at $10 for 2,000 calls.
 
 ## Tools
 
@@ -19,9 +21,9 @@ it. All tools accept the same `OPENCITE_API_KEY` and cost 1 credit per call
 | `limit` | integer | no | Max merged results, 1–100 (default 25). |
 | `format` | string | no | `json` (default, structured cards) · `mla` · `apa` · `bibtex` · `ris` · `csl-json`. |
 
-Returns the JSON response envelope: `query`, `terms`, `coverage` band, `lowConfidence`,
-`count`, `totalCandidates`, `tookMs`, and `results[]` (origin-blind cards with
-`citations`). Non-`json` formats return a flat bibliography string.
+Returns the JSON response envelope: `query`, `terms`, `coverage` band, `count`,
+`totalCandidates`, `tookMs`, `meta` (`creditsCharged`, `balance`) and `results[]`
+(cards with `source` and `citations`). Non-`json` formats return a flat bibliography string.
 
 The input schema is generated from the API contract SSOT
 (`api/_shared/apiContract.js`), so the tool never drifts from the REST endpoint.
@@ -54,8 +56,9 @@ Returns `{ count, requested, tookMs, results: { [inputId]: { doi, pmid, pmcid } 
 ## Install
 
 ```bash
-cd mcp
-npm install
+npx -y opencite-mcp        # no install needed
+# or, from a checkout:
+cd mcp && npm install
 ```
 
 ## Configure (Claude Desktop)
@@ -66,10 +69,10 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "opencite": {
-      "command": "node",
-      "args": ["/absolute/path/to/OpenCite/mcp/bin/opencite-mcp.js"],
+      "command": "npx",
+      "args": ["-y", "opencite-mcp"],
       "env": {
-        "OPENCITE_API_KEY": "your-key-if-you-have-one"
+        "OPENCITE_API_KEY": "oc_live_..."
       }
     }
   }
@@ -82,7 +85,7 @@ Other stdio MCP clients use the same `command`/`args`.
 
 | Var | Default | Notes |
 |-----|---------|-------|
-| `OPENCITE_API_KEY` | _(unset)_ | Forwarded as `x-api-key`. Optional today (free tier is open); required once billing ships. The key is **never logged**. |
+| `OPENCITE_API_KEY` | _(unset)_ | Forwarded as `x-api-key`. **Required** — every call is metered (1 credit). The key is **never logged**. |
 | `OPENCITE_API_BASE_URL` | `https://citation.today` | Endpoint override. **TLS required** (https), except `localhost` for dev. |
 
 ## Schemas for other agent runtimes
@@ -101,5 +104,4 @@ the relevant block into an OpenAI/Anthropic tool list or serve the OpenAPI doc.
 
 This package calls `/api/search` over HTTP only — it does **not** import the
 search pipeline. It is just an MCP-shaped client of the same public contract any
-customer uses, so it automatically inherits the origin-blind response and
-(forthcoming) credit billing.
+customer uses, so it automatically inherits the response contract and credit billing.

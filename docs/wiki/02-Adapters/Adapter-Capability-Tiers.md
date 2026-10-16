@@ -394,4 +394,4 @@ The name is descriptive and undefensible — do not contest either party.
 
 ## See also
 
-[[02-Adapters/Adapter-Architecture]] · [[02-Adapters/Adapter-Health-Matrix]] · [[02-Adapters/Core-Adapters]] · [[02-Adapters/Extension-Adapters]] · [[03-Search-Pipeline/Ranking-Scoring]]
+[[02-Adapters/Adapter-Architecture]] · [[02-Adapters/Adapter-Health-Matrix]] · [[02-Adapters/Core-Adapters]] · [[02-Adapters/Extension-Adapters]] · [[03-Search-Pipeline/Pipeline|Ranking-Scoring (removed v0.44)]]

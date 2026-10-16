@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       ? getReferences(id, { limit, sort })
       : getCitations(id, { limit, minCitations, sort })
   );
-  if (!outcome.ok) return sendJson(res, outcome.status, { error: outcome.error });
+  if (!outcome.ok) return sendJson(res, outcome.status, outcome.body);
 
   const results = outcome.result.map((r) => toPublicResult(r));
   return sendJson(res, 200, {

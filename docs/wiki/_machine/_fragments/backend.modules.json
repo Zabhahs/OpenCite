@@ -1039,16 +1039,16 @@
     "deps": [
       "api.shared.log"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "04-Backend-API/Per-Source-Routes.md",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "per-source",
       "edge",
       "json-ld",
       "cors"
     ],
-    "notes": null
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "api.route.openedition",
@@ -1141,5 +1141,24 @@
       "csrf"
     ],
     "notes": "signIn uses postForm (hidden form submit) not fetch() — required for Auth.js v5 CSRF + cross-origin OAuth redirect. getCsrfToken exported for Phase 4 SIWE."
+  },
+  {
+    "id": "api.shared.handlers.health",
+    "path": "api/_shared/handlers/health.js",
+    "kind": "handler",
+    "runtime": "server",
+    "purpose": "v0.46 GET /api/health — the one unauthenticated endpoint that exercises the database (SELECT 1 → 200/503). Uptime-monitor target and the daily Vercel cron keepalive that stops the free-tier database from auto-pausing.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "handler",
+      "ops",
+      "health"
+    ],
+    "notes": "Mounted through api/user/[resource].js; vercel.json rewrites /api/health and schedules the cron."
   }
 ]

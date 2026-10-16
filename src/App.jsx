@@ -25,7 +25,7 @@ import { SearchStatusBar } from "./components/SearchStatusBar.jsx";
 import { LauncherBlock } from "./components/LauncherBlock.jsx";
 import { Header, Footer, ConnectCard, ThemeStrip, KofiOverlay, AuthModal } from "./components/Layout.jsx";
 import { SettingsPanel, HistoryPanel, LibraryPanel, PricingPanel } from "./components/Panels.jsx";
-import { getPlatform } from "./lib/platform.js";
+import { DevelopersPanel } from "./components/DevelopersPanel.jsx";
 
 // v0.44 — admin console is code-split: non-admin visitors never download it.
 const AdminConsole = React.lazy(() =>
@@ -52,13 +52,16 @@ const getHashSnapshot = () => window.location.hash;
 
 function OpenCITE() {
   const [query, setQuery] = useState("");
+  // v0.46: deep links — `#developers` opens the Developers panel (the API 402 body links here) and
+  // Stripe returns buyers to `/?checkout=success|cancel`; both are read once on mount below.
   const [activePanel, setActivePanel] = useState(null);
   const [copied, setCopied] = useState({ id: null, style: null });
   const inputRef = useRef(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchCount, setSearchCount] = useState(0);
   const { status, user } = useAuth();
-  const { tier } = useBilling(); // F-315 — drives PricingPanel's "Current" badge
+  const { tier, refresh: refreshBilling } = useBilling(); // F-315 — drives PricingPanel's "Current" badge
+  const [justPaid, setJustPaid] = useState(false); // v0.46 — set from ?checkout=success
 
   // v.19 — admin status drives debug logger install + UI exposure
   const admin = isAdmin(user);
@@ -86,7 +89,29 @@ function OpenCITE() {
     hist.load();
     lib.load();
     inputRef.current?.focus();
+    // v0.46: post-checkout return (Stripe → /?checkout=success|cancel) + `#developers` deep link
+    // (the API's 402 body points here). Read once, then strip the param from the URL.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const checkout = params.get("checkout");
+      if (checkout === "success") { setJustPaid(true); setActivePanel("developers"); }
+      else if (checkout === "cancel") { setActivePanel("plans"); }
+      if (checkout) {
+        params.delete("checkout");
+        const qs = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
+      }
+      if (window.location.hash === "#developers") setActivePanel("developers");
+    } catch {}
   }, []);
+
+  // v0.46: after a purchase, poll the balance a few times — the webhook lands seconds after redirect.
+  useEffect(() => {
+    if (!justPaid || status !== "authenticated") return;
+    let n = 0;
+    const t = setInterval(() => { refreshBilling(); if (++n >= 5) clearInterval(t); }, 2000);
+    return () => clearInterval(t);
+  }, [justPaid, status, refreshBilling]);
 
   const handleSearch = useCallback(() => {
     if (!query.trim()) return;
@@ -238,6 +263,7 @@ function OpenCITE() {
             onHistory={() => {}}
             onSettings={() => {}}
             onPlans={() => {}}
+            onDevelopers={() => {}}
             onLogoClick={() => { window.location.hash = ""; }}
             libraryCount={0}
             historyCount={0}
@@ -260,6 +286,7 @@ function OpenCITE() {
           onHistory={() => togglePanel("history")}
           onSettings={() => togglePanel("settings")}
           onPlans={() => togglePanel("plans")}
+          onDevelopers={() => togglePanel("developers")}
           onLogoClick={handleLogoClick}
           libraryCount={lib.items.length}
           historyCount={hist.entries.length}
@@ -300,10 +327,19 @@ function OpenCITE() {
 
         {activePanel === "plans" && (
           <PricingPanel
-            platform={getPlatform()}
             currentPlan={tier}
             isAuthenticated={status === "authenticated"}
             onRequireAuth={() => setShowAuthModal(true)}
+            onDevelopers={() => setActivePanel("developers")}
+          />
+        )}
+
+        {activePanel === "developers" && (
+          <DevelopersPanel
+            isAuthenticated={status === "authenticated"}
+            onRequireAuth={() => setShowAuthModal(true)}
+            onBuyCredits={() => setActivePanel("plans")}
+            justPaid={justPaid}
           />
         )}
 
@@ -442,7 +478,7 @@ function OpenCITE() {
         )}
 
         <ConnectCard />
-        <Footer />
+        <Footer onDevelopers={() => { setActivePanel("developers"); window.scrollTo({ top: 0 }); }} />
       </div>
       )}
 

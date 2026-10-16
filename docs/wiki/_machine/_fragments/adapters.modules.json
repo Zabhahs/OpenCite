@@ -469,16 +469,17 @@
       "constants.vocabulary",
       "lib.helpers"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-108"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#thaqalayn",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "islamicate"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.ncbi",
@@ -517,16 +518,16 @@
       "constants.defaults",
       "constants.vocabulary"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#opencontext",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "archaeological",
       "thin-shim"
     ],
-    "notes": "Missing serverSafe and corpusSize."
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). Missing serverSafe and corpusSize."
   },
   {
     "id": "adapters.extensions.northwestern",
@@ -597,17 +598,18 @@
       "constants.vocabulary",
       "adapters.shared.proxy"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [
       "F-116"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#pangaea",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "science",
       "data"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.openNeuro",
@@ -710,14 +712,15 @@
       "constants.vocabulary",
       "adapters.shared.proxy"
     ],
-    "status": "healthy",
+    "status": "quarantined",
     "findings": [],
-    "wiki": "02-Adapters/Extension-Adapters.md#lareferencia",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "latin-america"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.oapen",
@@ -866,17 +869,18 @@
       "lib.helpers",
       "adapters.shared.proxy"
     ],
-    "status": "degraded",
+    "status": "quarantined",
     "findings": [
       "F-112"
     ],
-    "wiki": "02-Adapters/Extension-Adapters.md#base",
+    "wiki": "99-Archive/_quarantine/_index.md",
     "tags": [
       "adapter",
       "extension",
       "aggregator",
       "south-asia"
-    ]
+    ],
+    "notes": "Quarantined v0.46 (silently dead upstream, live-probed 2026-09-04; see quarantine register). "
   },
   {
     "id": "adapters.extensions.chroniclingAmerica",

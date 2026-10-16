@@ -39,7 +39,7 @@ export default async function handler(req) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'User-Agent': 'OpenCITE/0.46 (+https://citation.today; mailto:ops@citation.today)',
         'Referer': 'https://search.openedition.org/',
       },
       body: JSON.stringify({

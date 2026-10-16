@@ -18,8 +18,9 @@
 
 import { getSession } from "../auth.js";
 import { prisma } from "../prisma.js";
-import { resolveSessionAdmin } from "../apiAuth.js";
-import { getPlan } from "../plans.js";
+import { resolveSessionAdmin, periodOf } from "../apiAuth.js";
+import { getPlan, monthlyGrantFor } from "../plans.js";
+import { applyMonthlyGrant } from "../billing.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -36,12 +37,18 @@ export default async function handler(req, res) {
   if (!user?.id) return res.status(401).json({ error: "Unauthenticated" });
 
   try {
-    const row = await prisma.user.findUnique({
+    let row = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { total_credits: true, plan: true },
+      select: { total_credits: true, plan: true, credits_period: true },
     });
     if (!row) return res.status(404).json({ error: "User not found" });
     const tier = row.plan || "free";
+    // v0.46: lazy monthly allowance for free users (idempotent per calendar month) — the browser
+    // is the first place a returning free user looks for their balance, so grant here too.
+    if (tier === "free" && row.credits_period !== periodOf()) {
+      const r = await applyMonthlyGrant(user.id, monthlyGrantFor({ plan: tier }), periodOf());
+      if (r.granted) row = await prisma.user.findUnique({ where: { id: user.id }, select: { total_credits: true, plan: true, credits_period: true } });
+    }
     // Out-of-band unmetered rows (plan='admin' provisioned directly, plans.js
     // creditCost 0) get the same explicit unlimited shape as allowlist admins —
     // their numeric balance is meaningless because the meter never spends it.

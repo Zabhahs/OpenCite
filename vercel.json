@@ -9,10 +9,14 @@
     { "source": "/api/keys", "destination": "/api/user/keys" },
     { "source": "/api/library", "destination": "/api/user/library" },
     { "source": "/api/settings", "destination": "/api/user/settings" },
+    { "source": "/api/health", "destination": "/api/user/health" },
     {
-      "source": "/((?!api).*)",
+      "source": "/((?!api|legal/|docs/|openapi\\.json|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    { "path": "/api/health", "schedule": "0 6 * * *" }
   ],
   "headers": [
     {

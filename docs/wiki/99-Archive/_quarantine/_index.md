@@ -36,6 +36,12 @@ the revival checklist, re-verify, and flip the machine record back to `healthy`/
 | `v0_44_adapters/adapter-britishLibrary.js` + `route-bl.js` | v0.44 (T5) | Dead upstream — BNB SPARQL endpoint hangs to timeout (live-probed 2026-06-09) | — | Yes — re-probe upstream, restore files + registry entries |
 | `v0_44_adapters/adapter-mexicana.js` + `route-mexicana.js` | v0.44 (T5) | Dead upstream — expired TLS certificate (live-probed 2026-06-09) | — | Yes — re-probe upstream, restore files + registry entries |
 
+| `v0_46_adapters/adapter-base.js` | v0.46 | api.base-search.net requires IP registration; answered HTTP 200 `{error: Access denied}` which the adapter read as "no match" (live-probed 2026-09-04) — 30% of the paid coverage denominator, never actually searched | — | Yes — register a static egress IP, throw on `data.error` |
+| `v0_46_adapters/adapter-thaqalayn.js` | v0.46 | `/api/v2/query?q=` returns `{error: No matches found}` for every term (live-probed 2026-09-04) | — | Yes — find the current search route (API appears book-scoped) |
+| `v0_46_adapters/adapter-laReferencia.js` | v0.46 | VuFind fronted by an Anubis bot-wall; HTML challenge to every UA (live-probed 2026-09-04) | — | Yes — negotiate an API path/allowlist with the operator |
+| `v0_46_adapters/adapter-pangaea.js` | v0.46 | ES `_source` no longer carries `agg-datasetname`/`title`, so the F-116 pre-filter dropped every hit (live-probed 2026-09-04) | F-116 | Yes — request `sf-authortitle` and pre-filter on it |
+| `v0_46_adapters/adapter-openContext.js` + `route-opencontext.js` | v0.46 | API response shape changed (no `oc-api:has-results`) + Anubis bot-wall on browser UAs (live-probed 2026-09-04) | — | Yes — re-derive the JSON contract, honest UA |
+
 > **v0.44 format note:** the v0.44 arrivals are preserved as **raw `.js` files** under
 > `v0_44_adapters/` (git `mv`, history intact) rather than embedded-source `.md` dossiers; each
 > file carries its quarantine banner + revival checklist in a header comment.

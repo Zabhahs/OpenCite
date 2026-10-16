@@ -117,14 +117,15 @@ function AuthButton() {
 // plan) → "∞" chip; balance unknown (anonymous, fetch failure, 503) → render
 // nothing — never a fake 0. Finite balance → "N left".
 function CreditsChip() {
-  const { credits, unlimited } = useBilling();
+  const { credits, unlimited, tier } = useBilling();
+  // v0.46: these are API credits, not web searches (the web app is unmetered). Label them so.
   if (unlimited) {
     return (
       <span
         className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"
-        title="Unlimited searches"
+        title="Unlimited API credits (admin)"
       >
-        ∞ unlimited
+        ∞ api credits
       </span>
     );
   }
@@ -132,16 +133,16 @@ function CreditsChip() {
   return (
     <span
       className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"
-      title="Remaining searches this month"
+      title={tier === "free" ? "Free API credits this month (web search is unlimited)" : "API credits"}
     >
-      {credits} left
+      {Number(credits).toLocaleString()} api credits
     </span>
   );
 }
 
 // ---------- Header ----------
 
-export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onLogoClick, libraryCount, historyCount, admin }) {
+export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, onDevelopers, onLogoClick, libraryCount, historyCount, admin }) {
   const [shaking, setShaking] = useState(false);
 
   const handleEagleClick = () => {
@@ -163,6 +164,9 @@ export function Header({ adapters, onLibrary, onHistory, onSettings, onPlans, on
           </button>
           <button onClick={onPlans} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
             ◇ plans
+          </button>
+          <button onClick={onDevelopers} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
+            ⌥ developers
           </button>
           <CreditsChip />
           <button onClick={onSettings} className="mono-font text-xs uppercase tracking-widest text-stone-600 hover:text-red-900 transition">
@@ -245,11 +249,20 @@ export function ThemeStrip({ themeKey, onChange }) {
 
 // ---------- Footer ----------
 
-export function Footer() {
+export function Footer({ onDevelopers }) {
   return (
     <footer className="mt-12 pt-6 border-t border-stone-400">
       <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 leading-relaxed">
         Always verify citations against the original source · Italics may need reapplying after paste · Built to be hostable + extensible
+      </p>
+      {/* v0.46: legal + developer surface behind the live Stripe checkout */}
+      <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 leading-relaxed mt-3 flex flex-wrap gap-x-3 gap-y-1">
+        {onDevelopers ? <button type="button" onClick={onDevelopers} className="underline hover:text-red-900">Developers &amp; API</button> : <a href="/#developers" className="underline hover:text-red-900">Developers &amp; API</a>}
+        <a href="/docs/" className="underline hover:text-red-900">API docs</a>
+        <a href="/legal/terms.html" className="underline hover:text-red-900">Terms</a>
+        <a href="/legal/privacy.html" className="underline hover:text-red-900">Privacy</a>
+        <a href="/legal/refunds.html" className="underline hover:text-red-900">Refunds</a>
+        <a href="/legal/contact.html" className="underline hover:text-red-900">Contact</a>
       </p>
     </footer>
   );

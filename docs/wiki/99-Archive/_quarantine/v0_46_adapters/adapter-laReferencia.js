@@ -24,7 +24,7 @@ export const LA_REFERENCIA_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     const page = Math.floor(offset / pageSize) + 1;
     const url = `https://www.lareferencia.info/vufind/api/v1/search?lookfor=${encodeURIComponent(query)}&type=AllFields&page=${page}&limit=${pageSize}&${FIELDS}`;
     const r = await proxiedFetch(url, { headers: { Accept: "application/json" } }, { adapterId: "LA_REFERENCIA" });

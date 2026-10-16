@@ -24,24 +24,39 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_shared/prisma.js";
-import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS } from "../_shared/plans.js";
-import { applyMonthlyGrant } from "../_shared/billing.js";
+import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS, PACK_BUYER_PLAN_ID } from "../_shared/plans.js";
+import { applyMonthlyGrant, clawbackCredits } from "../_shared/billing.js";
+import { periodOf } from "../_shared/apiAuth.js";
 import { log } from "../_shared/log.js";
 
 const dec = (n) => new Prisma.Decimal(n);
 
 // Event groups (kept here so the handler reads declaratively).
 const RENEWAL_EVENTS = new Set(["invoice.paid", "invoice.payment_succeeded"]);
+// v0.46: a pack is fulfilled on completion only when paid; delayed methods complete later.
+const FULFILL_EVENTS = new Set(["checkout.session.completed", "checkout.session.async_payment_succeeded"]);
+// v0.46: money going back out reverses the pack's credits (clamped at 0 — see clawbackCredits).
+const REVERSAL_EVENTS = new Set(["charge.refunded", "charge.dispute.created"]);
 
-// Calendar-month key (UTC) for monthly-grant idempotency.
-const periodOf = (d = new Date()) =>
-  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-
-// Pull the subscription Price id off an invoice line (shape varies by API version).
+// Pull the subscription Price id off an invoice line. v0.46: Stripe API 2025-03-31.basil moved
+// the price off `line.price` onto `line.pricing.price_details.price` (a bare id); older webhook
+// versions still send `line.price.id` / `line.plan.id`. Read all three.
 function priceIdFromInvoice(inv) {
-  const line = inv?.lines?.data?.find((l) => l?.price?.id || l?.plan?.id) || inv?.lines?.data?.[0];
-  return line?.price?.id || line?.plan?.id || null;
+  for (const l of inv?.lines?.data || []) {
+    const id = l?.pricing?.price_details?.price || l?.price?.id || l?.plan?.id;
+    if (id) return id;
+  }
+  return null;
 }
+
+// v0.46: only the processed_events PK collision means "already handled". The same transaction
+// also writes the unique stripe_customer_id / stripe_subscription_id columns; a P2002 on THOSE
+// must surface as a 500 so Stripe retries and the collision reaches the logs.
+const isDuplicateClaim = (err) =>
+  err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" &&
+  (Array.isArray(err.meta?.target)
+    ? err.meta.target.includes("event_id")
+    : String(err.meta?.target ?? "").includes("event_id"));
 
 // Pull the Price id off a subscription's first item.
 function priceIdFromSubscription(sub) {
@@ -121,9 +136,20 @@ export default async function handler(req, res) {
     const result = await prisma.$transaction(async (tx) => {
       await tx.processedEvent.create({ data: { event_id: event.id, type: event.type } });
 
-      if (event.type === "checkout.session.completed" && userId) {
+      if (FULFILL_EVENTS.has(event.type) && userId) {
+        // v0.46: fulfil only PAID sessions. A `completed` session with payment_status "unpaid"
+        // (delayed payment method) is fulfilled later by async_payment_succeeded; "no_payment_required"
+        // covers 100%-off promo codes.
+        if (obj.payment_status && !["paid", "no_payment_required"].includes(obj.payment_status)) {
+          return { kind: "checkout-unpaid", payment_status: obj.payment_status };
+        }
         if (obj.customer) {
-          await tx.user.update({ where: { id: userId }, data: { stripe_customer_id: String(obj.customer) } });
+          // Only claim the customer id if the row has none yet (a second concurrent checkout could
+          // otherwise collide on the unique column and, pre-v0.46, be swallowed as a duplicate).
+          await tx.user.updateMany({
+            where: { id: userId, stripe_customer_id: null },
+            data: { stripe_customer_id: String(obj.customer) },
+          });
         }
         // F-417: defence-in-depth — getPack/getPlan already fall back safely on unknown
         // inputs, but validate metadata explicitly and log anomalies. A compromised Stripe
@@ -137,6 +163,9 @@ export default async function handler(req, res) {
         const pack = rawPack && CREDIT_PACKS[rawPack] ? getPack(rawPack) : null;
         if (pack) {
           await tx.user.update({ where: { id: userId }, data: { total_credits: { increment: dec(pack.credits) } } });
+          // v0.46: a pack buyer on the free tier moves to the machine plan (full server-safe set,
+          // machine burst cap). Never downgrades a subscriber or admin — free rows only.
+          await tx.user.updateMany({ where: { id: userId, plan: "free" }, data: { plan: PACK_BUYER_PLAN_ID } });
         }
         const planId = rawPlan && PLANS[rawPlan] ? rawPlan : null;
         if (planId && getPlan(planId).subscription) {
@@ -194,17 +223,42 @@ export default async function handler(req, res) {
         return { kind: "payment-failed" };
       }
 
+      // v0.46: refund / dispute on a pack → take the pack's credits back (clamped at 0). The pack
+      // id travels on the PaymentIntent metadata (checkout.js sets payment_intent_data.metadata);
+      // a dispute object carries it via `payment_intent` → we look it up with the SDK. Subscription
+      // charges (no pack) are left to Stripe's own subscription lifecycle events.
+      if (REVERSAL_EVENTS.has(event.type)) {
+        let meta = obj.metadata || {};
+        if (!meta.pack && obj.payment_intent) {
+          try {
+            const pi = await stripe.paymentIntents.retrieve(String(obj.payment_intent));
+            meta = pi.metadata || {};
+          } catch (e) {
+            log.warn("stripe", "reversal-pi-lookup-failed", { eventId: event.id, msg: e.message });
+          }
+        }
+        const pack = meta.pack && CREDIT_PACKS[meta.pack] ? getPack(meta.pack) : null;
+        const target = userId || (meta.userId ? String(meta.userId) : null);
+        if (pack && target) {
+          await clawbackCredits(target, pack.credits, { client: tx });
+          log.warn("stripe", "credits-clawed-back", { eventId: event.id, type: event.type, userId: target, pack: pack.id, credits: pack.credits });
+          return { kind: "reversal", pack: pack.id, credits: pack.credits };
+        }
+        log.warn("stripe", "reversal-unmatched", { eventId: event.id, type: event.type, userId: target, meta });
+        return { kind: "reversal-unmatched" };
+      }
+
       return { kind: "ack" };
     });
 
     log("stripe", result.kind, { userId, ...result });
     return res.status(200).json({ received: true });
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      // Event already processed (claim collided) — acknowledge, don't re-apply.
+    if (isDuplicateClaim(err)) {
+      // Event already processed (processed_events PK collided) — acknowledge, don't re-apply.
       return res.status(200).json({ received: true, duplicate: true });
     }
-    log.err("stripe", "handler-error", { type: event?.type, msg: err.message });
+    log.err("stripe", "handler-error", { type: event?.type, msg: err.message, target: err?.meta?.target });
     // 500 → Stripe retries; the rolled-back claim makes retries safe.
     return res.status(500).json({ error: "Webhook handler error" });
   }

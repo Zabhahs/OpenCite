@@ -2,6 +2,40 @@ import { log } from "../_shared/log.js";
 
 export const config = { runtime: 'edge' };
 
+// v0.46: this route parsed SRU XML with DOMParser, which does not exist in Vercel Edge — every
+// request since 2026-05-21 returned the error envelope and the browser showed "no matches". It now
+// uses the same targeted-regex Dublin Core extraction the ONB/BnF adapters use
+// (src/adapters/_shared/xmlUtils.js), inlined because Edge routes cannot import from src/.
+// Handles namespace prefixes (<dc:title>, <srw:record>, …) and basic entity decoding.
+const dcOne = (xml, tag) => {
+  const m = xml.match(new RegExp(`<(?:[^:>\\s]+:)?${tag}[^>]*>([^<]*)<`, "i"));
+  return m ? m[1].trim() : "";
+};
+const dcAll = (xml, tag) => {
+  const re = new RegExp(`<(?:[^:>\\s]+:)?${tag}[^>]*>([^<]*)<`, "gi");
+  const out = [];
+  let m;
+  while ((m = re.exec(xml)) !== null) { const v = m[1].trim(); if (v) out.push(v); }
+  return out;
+};
+const decode = (t) => t
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+  .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+const sruTotal = (xml) => { const m = xml.match(/<(?:[^:>\s]+:)?numberOfRecords[^>]*>(\d+)</i); return m ? parseInt(m[1], 10) : 0; };
+const sruRecords = (xml) => {
+  const re = /<(?:[^:>\s]+:)?recordData[^>]*>([\s\S]*?)<\/(?:[^:>\s]+:)?recordData>/gi;
+  const out = [];
+  let m;
+  while ((m = re.exec(xml)) !== null) out.push(m[1]);
+  return out;
+};
+
+const json = (body) => new Response(JSON.stringify(body), {
+  status: 200,
+  headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+});
+
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q');
@@ -24,7 +58,8 @@ export default async function handler(req) {
     const response = await fetch(targetUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        // v0.46: honest identity (no browser spoof) — see src/adapters/_shared/proxy.js SERVER_USER_AGENT.
+        'User-Agent': 'OpenCITE/0.46 (+https://citation.today; mailto:ops@citation.today)',
         'Referer': 'https://gallica.bnf.fr/',
         'Accept': 'application/xml, text/xml, */*'
       }
@@ -33,63 +68,31 @@ export default async function handler(req) {
 
     if (!response.ok) {
       log.err("GALLICA", "upstream-fail", { status: response.status });
-      return new Response(JSON.stringify({ results: [], total: 0, error: `Gallica status ${response.status}` }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return json({ results: [], total: 0, error: `Gallica status ${response.status}` });
     }
 
     const xmlText = await response.text();
     log("GALLICA", "upstream-ok", { status: response.status, bytes: xmlText.length });
 
-    // DOMParser may not exist in Vercel Edge V8 — this catch will surface that
-    let parser, doc;
-    try {
-      parser = new DOMParser();
-      doc = parser.parseFromString(xmlText, 'application/xml');
-    } catch (domErr) {
-      log.err("GALLICA", "domparser-unavailable", { err: domErr.name, msg: domErr.message });
-      return new Response(JSON.stringify({ results: [], total: 0, error: 'DOMParser unavailable in Edge runtime' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+    const records = sruRecords(xmlText);
+    if (!records.length && /<(?:[^:>\s]+:)?diagnostic[\s>]/i.test(xmlText)) {
+      log.err("GALLICA", "sru-diagnostic", { sample: xmlText.slice(0, 200) });
+      return json({ results: [], total: 0, error: 'Gallica SRU diagnostic' });
     }
+    const total = sruTotal(xmlText);
 
-    const parseError = doc.querySelector('parsererror');
-    if (parseError) {
-      log.err("GALLICA", "xml-parse-fail", { sample: xmlText.slice(0, 200) });
-      return new Response(JSON.stringify({ results: [], total: 0, error: 'Gallica XML parse failed' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
-
-    const numberOfRecordsEl = doc.getElementsByTagNameNS('http://www.loc.gov/zing/srw/', 'numberOfRecords')[0];
-    const total = parseInt(numberOfRecordsEl?.textContent || "0", 10);
-    const records = doc.getElementsByTagNameNS('http://www.loc.gov/zing/srw/', 'record');
-
-    const getText = (el, ns, localName) => {
-      const els = el.getElementsByTagNameNS(ns, localName);
-      return els[0]?.textContent?.trim() || "";
-    };
-    const getAll = (el, ns, localName) => {
-      const els = el.getElementsByTagNameNS(ns, localName);
-      return Array.from(els).map(e => e.textContent?.trim()).filter(Boolean);
-    };
-
-    const DC_NS = 'http://purl.org/dc/elements/1.1/';
-    const normalizedResults = Array.from(records).map((rec) => {
-      const title = getText(rec, DC_NS, 'title') || "Untitled";
-      const creators = getAll(rec, DC_NS, 'creator');
-      const date = getText(rec, DC_NS, 'date');
-      const description = getText(rec, DC_NS, 'description');
-      const identifiers = getAll(rec, DC_NS, 'identifier');
+    const normalizedResults = records.map((rec) => {
+      const title = decode(dcOne(rec, 'title')) || "Untitled";
+      const creators = dcAll(rec, 'creator').map(decode);
+      const date = dcOne(rec, 'date');
+      const description = decode(dcOne(rec, 'description'));
+      const identifiers = dcAll(rec, 'identifier');
       const ark = identifiers.find(id => id.includes('ark:') || id.includes('gallica.bnf.fr')) || identifiers[0] || "";
       const year = date.match(/\d{4}/)?.[0] || "";
-      // E5 — dc:type, dc:subject, dc:language from existing DC namespace
-      const dcType    = getText(rec, DC_NS, 'type');
-      const subjects  = getAll(rec, DC_NS, 'subject');
-      const language  = getText(rec, DC_NS, 'language');
+      // E5 — dc:type, dc:subject, dc:language from the DC namespace
+      const dcType    = dcOne(rec, 'type');
+      const subjects  = dcAll(rec, 'subject').map(decode);
+      const language  = dcOne(rec, 'language');
       return {
         id: `gallica-${ark.split('/').pop() || Math.random().toString(36).substr(2, 9)}`,
         source: "GALLICA",
@@ -107,23 +110,12 @@ export default async function handler(req) {
     });
 
     log("GALLICA", "parse-ok", { items: normalizedResults.length, total });
-
-    return new Response(JSON.stringify({ results: normalizedResults, total }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+    return json({ results: normalizedResults, total });
 
   } catch (error) {
     clearTimeout(timeout);
     const isTimeout = error.name === "AbortError";
     log.err("GALLICA", isTimeout ? "upstream-timeout" : "edge-error", { err: error.name, msg: error.message });
-    return new Response(JSON.stringify({
-      results: [],
-      total: 0,
-      error: isTimeout ? "Gallica timed out (8s)" : error.message
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+    return json({ results: [], total: 0, error: isTimeout ? "Gallica timed out (8s)" : error.message });
   }
 }

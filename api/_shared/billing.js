@@ -98,20 +98,30 @@ export async function grantCredits(userId, credits) {
 // client it opens its own transaction so the read-then-write stays atomic.
 export async function applyMonthlyGrant(userId, grant, period, { client } = {}) {
   if (!userId || !(grant > 0)) return { granted: false };
-  // Guarded update: only when this period hasn't been granted yet.
-  const run = async (tx) => {
-    const u = await tx.user.findUnique({
-      where: { id: userId },
-      select: { total_credits: true, credits_period: true },
-    });
-    if (!u || u.credits_period === period) return { granted: false };
-    const floor = dec(grant);
-    const data = { credits_period: period };
-    if (u.total_credits.lessThan(floor)) data.total_credits = floor; // top up to allowance
-    await tx.user.update({ where: { id: userId }, data });
-    return { granted: true };
-  };
-  return client ? run(client) : prisma.$transaction(run);
+  // v0.46 (sprint v0.45 T4): ONE atomic statement — claim the period AND top the balance up to
+  // the allowance under the row lock. The old read-then-absolute-SET lost a concurrent pack
+  // increment that landed between the read and the write. GREATEST evaluates in Postgres, so a
+  // concurrent increment either precedes it (balance may already exceed the grant → no top-up)
+  // or follows it (stacks on top) — never erased. Table/column names per @@map.
+  const db = client || prisma;
+  const rows = await db.$executeRaw`
+    UPDATE "users"
+       SET total_credits  = GREATEST(total_credits, ${grant}::decimal),
+           credits_period = ${period}
+     WHERE internal_id = ${userId}
+       AND credits_period IS DISTINCT FROM ${period}`;
+  return { granted: rows === 1 };
+}
+
+// v0.46: reverse a pack grant after a Stripe refund or dispute. Clamps at zero (the customer may
+// already have spent part of it); the caller logs the shortfall. Atomic single statement.
+export async function clawbackCredits(userId, credits, { client } = {}) {
+  if (!userId || !(credits > 0)) return;
+  const db = client || prisma;
+  await db.$executeRaw`
+    UPDATE "users"
+       SET total_credits = GREATEST(total_credits - ${credits}::decimal, 0)
+     WHERE internal_id = ${userId}`;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────

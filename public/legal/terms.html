@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenCITE Terms of Service</title>
+<meta name="description" content="Terms governing use of the OpenCITE hosted search service, API and MCP server." />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root { --bg:#fdf8ee; --fg:#1c1917; --muted:#57534e; --rule:#a8a29e; --accent:#7f1d1d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1c1917; --fg:#f5f0e6; --muted:#c7bfb2; --rule:#57534e; --accent:#fca5a5; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "Mulish", system-ui, sans-serif; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; text-wrap: balance; }
+  h2 { font-size:1.05rem; margin:2rem 0 .5rem; text-transform: uppercase; letter-spacing:.08em; }
+  .meta { color:var(--muted); font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; }
+  a { color:var(--accent); }
+  nav { border-top:1px solid var(--rule); margin-top:3rem; padding-top:1rem; font: 12px/1.6 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; display:flex; gap:1rem; flex-wrap:wrap; }
+  ul { padding-left:1.2rem; }
+</style>
+</head>
+<body>
+<main>
+  <p class="meta">OpenCITE · Legal</p>
+  <h1>Terms of Service</h1>
+  <p class="meta">Effective 28 September 2026 · Operator: Shahbaz Yusuf ("OpenCITE", "we")</p>
+
+  <h2>1. The service</h2>
+  <p>OpenCITE is a meta-search over third-party open-access scholarly, library, museum and archive databases, available at <a href="https://citation.today">citation.today</a> as a free website and as a paid API and MCP server. We retrieve, deduplicate and relay records and format citations. We do not own the underlying records and do not guarantee their completeness or accuracy. Sources may be added, changed or removed at any time.</p>
+
+  <h2>2. Web search is free</h2>
+  <p>Searching on the website is free and unmetered. Signing in with Google adds a saved library and search history synced to your account and gives you a monthly allowance of free API credits.</p>
+
+  <h2>3. API credits</h2>
+  <ul>
+    <li>API and MCP calls are metered in credits: one credit per call to <code>/api/search</code>, <code>/api/citations</code> or <code>/api/ids</code>, charged in proportion to the share of the eligible sources that actually answered. Calls where fewer than about half of the eligible sources answered are free.</li>
+    <li>Credit packs are one-time purchases processed by Stripe, priced in US dollars. Credits do not expire.</li>
+    <li>Free accounts receive 20 credits per calendar month. Allowances top the balance up to 20; they do not accumulate.</li>
+    <li>API keys are shown once and stored only as a hash. You are responsible for keeping keys secret; usage on a key is billed to the owning account. You can revoke keys at any time.</li>
+    <li>A purchase moves a free account to the machine tier (all sources, higher rate limit). Rate limits protect the service and the upstream sources and may change.</li>
+  </ul>
+
+  <h2>4. Refunds</h2>
+  <p>See the <a href="/legal/refunds.html">Refund Policy</a>. In short: unused credits from a pack can be refunded within 14 days of purchase; a refund removes the pack's credits.</p>
+
+  <h2>5. Acceptable use</h2>
+  <ul>
+    <li>Do not circumvent rate limits, credit metering or plan gating, share one key across unrelated users to avoid buying credits, or create multiple accounts to multiply free allowances.</li>
+    <li>Do not use the service to rebuild or redistribute an upstream database wholesale, or in violation of an upstream source's terms.</li>
+    <li>Do not use the service for unlawful purposes or to harass, defraud or harm others.</li>
+  </ul>
+  <p>We may suspend or terminate accounts that violate these terms.</p>
+
+  <h2>6. Content and attribution</h2>
+  <p>Records are third-party metadata. Each API result names the source database that served it. Verify citations against the original before relying on them. If you believe content relayed through OpenCITE infringes your rights, see the <a href="/legal/contact.html">contact page</a> for takedown requests.</p>
+
+  <h2>7. No warranty; limitation of liability</h2>
+  <p>The service is provided "as is" and "as available", without warranties of any kind, including completeness, accuracy, availability or fitness for a particular purpose. To the maximum extent permitted by law, our total liability for any claim relating to the service is limited to the amount you paid us in the twelve months before the claim.</p>
+
+  <h2>8. Source code</h2>
+  <p>These terms govern use of the hosted service. The OpenCITE source code is published separately under a source-available license that does not permit operating a hosted or commercial deployment; the MCP client package is MIT-licensed.</p>
+
+  <h2>9. Changes and law</h2>
+  <p>We may update these terms; the effective date above changes when we do, and continued use after a change is acceptance. These terms are governed by the laws of the State of Delaware, USA. Nothing here limits consumer rights that cannot be waived under your local law.</p>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/legal/privacy.html">Privacy</a>
+    <a href="/legal/refunds.html">Refunds</a>
+    <a href="/legal/contact.html">Contact</a>
+    <a href="/docs/">API docs</a>
+  </nav>
+</main>
+</body>
+</html>

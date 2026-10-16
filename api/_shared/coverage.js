@@ -50,8 +50,12 @@ export function bandFor(coverage, failedCount) {
 // numbers; only `band` is safe to emit.
 export function computeCoverage(eligibleAdapters = [], failedAdapters = []) {
   const total = sumWeight(eligibleAdapters);
+  // v0.46: an EMPTY eligible set is not "full coverage" — nothing was searched. Report `limited`
+  // (→ multiplier 0, free) instead of the 1.0 the arithmetic would otherwise yield, so a request
+  // whose every source was dropped (circuit-open, keyed env unset) is never billed as a full answer.
+  if (total === 0) return { attrition: 1, coverage: 0, band: "limited" };
   const failed = sumWeight(failedAdapters);
-  const attrition = total > 0 ? Math.min(failed / total, 1) : 0;
+  const attrition = Math.min(failed / total, 1);
   const coverage = 1 - attrition;
   return { attrition, coverage, band: bandFor(coverage, failedAdapters.length) };
 }

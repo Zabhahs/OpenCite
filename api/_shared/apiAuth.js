@@ -18,7 +18,8 @@
 import { timingSafeEqual, createHash } from "crypto";
 import { prisma } from "./prisma.js";
 import { hashApiKey } from "./crypto.js";
-import { getPlan } from "./plans.js";
+import { getPlan, monthlyGrantFor } from "./plans.js";
+import { applyMonthlyGrant } from "./billing.js";
 import { getSession } from "./auth.js";
 
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -39,10 +40,17 @@ function timingSafeCompare(a, b) {
 const ADMIN_EMAILS = (process.env.VITE_ADMIN_EMAILS || process.env.ADMIN_EMAILS || "")
   .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-// Extract the presented key from header or ?key= (header preferred).
+// Extract the presented key. v0.46: HEADER ONLY — the old `?key=` query form put a bearer
+// credential into request logs, proxies, browser history and Referer headers. The MCP client
+// and the documented curl quickstart both use the header.
 export function presentedKey(req) {
-  return req.headers?.["x-api-key"] || firstParam(req.query?.key) || "";
+  const k = req.headers?.["x-api-key"];
+  return (Array.isArray(k) ? k[0] : k) || "";
 }
+
+// Customer keys are `oc_live_` + 32 url-safe chars (crypto.js generateApiKey). Anything else is
+// rejected before the hash + DB lookup so a key-spray never reaches Postgres.
+const CUSTOMER_KEY_RE = /^oc_live_[A-Za-z0-9_-]{32}$/;
 
 // Resolve a request to a billing identity, or null if unauthenticated.
 // Returns { userId, keyId, plan } — plan is a PLANS entry (see plans.js).
@@ -58,31 +66,52 @@ export async function resolveApiKey(req) {
     return { userId: null, keyId: "master", plan: getPlan("admin"), master: true, admin: true };
   }
 
+  // Malformed key → no DB work at all (see CUSTOMER_KEY_RE).
+  if (!CUSTOMER_KEY_RE.test(key)) return null;
+
   // Customer key — constant-format hash lookup. The effective plan comes from the
   // USER (their subscription), not the key, so a tier change applies to all keys.
   let row;
   try {
     row = await prisma.apiKey.findUnique({
       where: { key_hash: hashApiKey(key) },
-      select: { id: true, user_id: true, revoked: true, user: { select: { plan: true } } },
+      select: {
+        id: true, user_id: true, revoked: true, last_used_at: true,
+        user: { select: { plan: true, credits_period: true } },
+      },
     });
   } catch {
     return null; // DB hiccup → treat as unauthenticated (caller fails closed on auth)
   }
   if (!row || row.revoked) return null;
 
-  // Best-effort last-used stamp; never block auth on it.
-  prisma.apiKey
-    .update({ where: { id: row.id }, data: { last_used_at: new Date() } })
-    .catch(() => {});
+  // Best-effort last-used stamp, debounced to once a minute; never block auth on it.
+  if (!row.last_used_at || Date.now() - new Date(row.last_used_at).getTime() > 60_000) {
+    prisma.apiKey
+      .update({ where: { id: row.id }, data: { last_used_at: new Date() } })
+      .catch(() => {});
+  }
+
+  // v0.46: lazy monthly allowance for FREE users. Before this, applyMonthlyGrant was called only
+  // from Stripe renewal webhooks, so a free user got the 10-credit schema seed once and never the
+  // advertised monthly allowance. Fire-and-forget: the current request sees the topped-up balance
+  // only on the next call, which is fine (the grant is idempotent per calendar month).
+  const planId = row.user?.plan || "free";
+  if (planId === "free" && row.user?.credits_period !== periodOf()) {
+    applyMonthlyGrant(row.user_id, monthlyGrantFor({ plan: planId }), periodOf()).catch(() => {});
+  }
 
   return {
     userId: row.user_id,
     keyId: row.id,
-    plan: getPlan(row.user?.plan),
-    admin: row.user?.plan === "admin",
+    plan: getPlan(planId),
+    admin: planId === "admin",
   };
 }
+
+// Calendar-month key (UTC) — same shape the Stripe webhook stamps into credits_period.
+export const periodOf = (d = new Date()) =>
+  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
 // Session-based admin break-glass for the browser admin console (Score Explainer / Gold-Set
 // Harness). /api/search is API-key-only for normal, billed traffic — but those tools run from

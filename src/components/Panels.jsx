@@ -14,8 +14,7 @@ import {
 import { normalizeRecord, createDedupMap } from "../adapters/_shared/normalize.js";
 import { AbstractAdapter } from "../adapters/_shared/base.js";
 import { getDebugLog, downloadDebugLog, clearDebugLog } from "../lib/log.js";
-import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE } from "../constants/pricing.js";
-import { subscriptionRail, storeName } from "../lib/platform.js";
+import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE, SUBSCRIPTIONS_ENABLED } from "../constants/pricing.js";
 import { createCheckoutSession } from "../lib/checkout.js";
 
 function toNCR(item) {
@@ -180,18 +179,15 @@ export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
 
 // ---------- PricingPanel ----------
 // Clearly lists the payment options (human subscriptions + machine/API credit packs).
-// Platform-aware CTA: subscriptions route to Stripe Checkout on web/desktop and to
-// Apple/Google IAP on native mobile (lib/platform.subscriptionRail); packs are always
-// Stripe. Web checkout opens a Stripe-hosted session via /api/checkout; the IAP rail
-// shows a store notice until the native purchase bridge is wired.
+// v0.46: packs are the one paid SKU (plans.js SUBSCRIPTIONS_ENABLED hides the subscription cards);
+// the IAP/App Store rail was removed — no native shell exists. Checkout opens a Stripe-hosted
+// session via /api/checkout.
 //   isAuthenticated → gate: Stripe checkout requires a signed-in user.
 //   onRequireAuth() → called when an unauthenticated user clicks a paid CTA.
 
-export function PricingPanel({ platform = "web", currentPlan = "free", isAuthenticated = false, onRequireAuth }) {
+export function PricingPanel({ currentPlan = "free", isAuthenticated = false, onRequireAuth, onDevelopers }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(null); // id of the item currently starting checkout
-  const rail = subscriptionRail(platform);
-  const store = storeName(platform);
 
   const goStripe = async (item, payload) => {
     if (!isAuthenticated) { onRequireAuth?.(); return; }
@@ -203,13 +199,7 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
     setNotice(res?.error || "Couldn't start checkout — please try again.");
   };
 
-  const handleSubscribe = (plan) => {
-    if (rail === "iap") {
-      setNotice(`${plan.label} subscriptions will be available via ${store} at launch.`);
-      return;
-    }
-    goStripe(plan, { plan: plan.id });
-  };
+  const handleSubscribe = (plan) => goStripe(plan, { plan: plan.id });
 
   const handlePack = (pack) => goStripe(pack, { pack: pack.id });
 
@@ -217,11 +207,13 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
     <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
       <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700 mb-1">Plans &amp; pricing</h2>
       <p className="text-xs text-stone-600 mb-5">
-        Search across every open-access database. Upgrade for more monthly searches and the full source library.
+        Searching on this site is free and unlimited. Credits are for the API and MCP server — the same search,
+        citations and ID resolution, called from your code or your AI assistant.
+        {onDevelopers && <> <button type="button" onClick={onDevelopers} className="underline hover:text-red-900">Get an API key →</button></>}
       </p>
 
-      {/* Human subscriptions */}
-      <div className="grid gap-3 md:grid-cols-3">
+      {/* Human subscriptions — hidden while SUBSCRIPTIONS_ENABLED is false (plans.js) */}
+      {SUBSCRIPTIONS_ENABLED && <div className="grid gap-3 md:grid-cols-3">
         {SUBSCRIPTION_PLANS.map(plan => {
           const isCurrent = plan.id === currentPlan;
           return (
@@ -248,7 +240,7 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
               {plan.cta ? (
                 <button onClick={() => handleSubscribe(plan)} disabled={busy === plan.id}
                   className={`mono-font text-[10px] uppercase tracking-widest px-4 py-2.5 transition disabled:opacity-50 disabled:cursor-wait ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border border-stone-700 text-stone-700 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900"}`}>
-                  {busy === plan.id ? "Starting…" : rail === "iap" ? `${plan.cta} · ${store}` : plan.cta}
+                  {busy === plan.id ? "Starting…" : plan.cta}
                 </button>
               ) : (
                 <div className="mono-font text-[10px] uppercase tracking-widest text-stone-400 px-4 py-2.5 text-center border border-dashed border-stone-300">
@@ -258,13 +250,13 @@ export function PricingPanel({ platform = "web", currentPlan = "free", isAuthent
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Machine / API credit packs */}
-      <div className="mt-6 pt-5 border-t border-stone-300">
-        <p className="mono-font text-xs uppercase tracking-wider text-stone-700 mb-1">For developers &amp; AI agents</p>
+      <div className={SUBSCRIPTIONS_ENABLED ? "mt-6 pt-5 border-t border-stone-300" : ""}>
+        <p className="mono-font text-xs uppercase tracking-wider text-stone-700 mb-1">API credit packs</p>
         <p className="text-xs text-stone-600 mb-4">
-          Pay-as-you-go credit packs for the grounding API — per-query, no subscription. Bought on the web dashboard.
+          Prepaid, one-time, never expire. A pack unlocks the full source library and the machine rate limit for your keys.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {CREDIT_PACKS.map(pack => (

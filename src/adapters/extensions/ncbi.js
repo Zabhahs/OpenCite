@@ -44,13 +44,16 @@ export const NCBI_ADAPTER = {
   },
   search: async (query, settings, opts = {}) => {
     const offset = opts.offset || 0;
-    const pageSize = offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE;
+    const pageSize = opts.pageSize || (offset === 0 ? INITIAL_PAGE_SIZE : LOAD_MORE_PAGE_SIZE); // v0.46: API threads pageSize
     // Phase D — field-scoped retrieval. PubMed's bare term spans all fields incl. [Author].
     // Tagging each word with [Title/Abstract] keeps author-name matches out of the candidate set;
     // the authorSearch toggle flips the tag to [Author].
     const tag = settings.authorSearch ? "Author" : "Title/Abstract";
+    // v0.46: NCBI usage policy requires tool+email on every E-utilities call; the key (server env via
+    // serverKeys.js → settings.ncbiApiKey) lifts the shared per-IP budget from 3 to 10 req/s.
+    const ident = `&tool=opencite&email=${encodeURIComponent(settings.crossrefEmail || "ops@citation.today")}` + (settings.ncbiApiKey ? `&api_key=${encodeURIComponent(settings.ncbiApiKey)}` : "");
     const term = query.trim().split(/\s+/).map(w => `${w}[${tag}]`).join(" AND ");
-    const r1 = await fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retstart=${offset}&retmax=${pageSize}`);
+    const r1 = await fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(term)}&retmode=json&retstart=${offset}&retmax=${pageSize}${ident}`);
     if (!r1.ok) throw new Error(`NCBI esearch ${r1.status}`);
     const searchData = await r1.json();
     const ids = searchData.esearchresult?.idlist || [];
@@ -58,8 +61,8 @@ export const NCBI_ADAPTER = {
     if (ids.length === 0) return { results: [], hasMore: false };
     // esummary (metadata) and efetch (abstract XML) run in parallel. esummary is required;
     // efetch is enrichment — if it fails, degrade to empty abstracts rather than erroring.
-    const summaryReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json`);
-    const abstractReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(",")}&rettype=abstract&retmode=xml`)
+    const summaryReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(",")}&retmode=json${ident}`);
+    const abstractReq = fetchWithTimeout(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(",")}&rettype=abstract&retmode=xml${ident}`)
       .then(r => (r.ok ? r.text() : "")).then(parsePubmedAbstracts).catch(() => ({}));
     const [r2, abstractMap] = await Promise.all([summaryReq, abstractReq]);
     if (!r2.ok) throw new Error(`NCBI esummary ${r2.status}`);

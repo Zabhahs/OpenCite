@@ -20,13 +20,17 @@ import { apiCall } from "../lib/api.js";
 
 const UNKNOWN = { credits: null, unlimited: false, tier: "free" };
 
-const BillingContext = createContext({ ...UNKNOWN, deduct: () => Promise.resolve(true) });
+const BillingContext = createContext({ ...UNKNOWN, deduct: () => Promise.resolve(true), refresh: () => {} });
 
 export function BillingProvider({ children }) {
   const { user, status } = useAuth();
   const [credits, setCredits] = useState(UNKNOWN.credits);
   const [unlimited, setUnlimited] = useState(UNKNOWN.unlimited);
   const [tier, setTier] = useState(UNKNOWN.tier);
+
+  // v0.46: `tick` lets consumers force a re-fetch (post-checkout polling in App.jsx).
+  const [tick, setTick] = useState(0);
+  const refresh = useCallback(() => setTick(t => t + 1), []);
 
   useEffect(() => {
     // Anonymous → no balance to show; reset to unknown.
@@ -53,13 +57,13 @@ export function BillingProvider({ children }) {
       })
       .catch(() => {}); // network error → stay unknown
     return () => { cancelled = true; };
-  }, [status, user?.id]);
+  }, [status, user?.id, tick]);
 
   // No-op for now — spend goes through the server.
   const deduct = useCallback(() => Promise.resolve(true), []);
 
   return (
-    <BillingContext.Provider value={{ credits, unlimited, tier, deduct }}>
+    <BillingContext.Provider value={{ credits, unlimited, tier, deduct, refresh }}>
       {children}
     </BillingContext.Provider>
   );

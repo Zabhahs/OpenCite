@@ -27,6 +27,11 @@ function localIncr(key, windowSeconds) {
   return entry.count;
 }
 
+// v0.46: pre-auth per-IP window. Runs BEFORE any database touch on the metered endpoints so an
+// invalid-key spray cannot drive unbounded Prisma lookups (the 401 path used to be unthrottled).
+// Generous enough for a shared NAT; the per-key plan limit still applies after auth.
+export const ANON_PLAN = { id: "anon", rateLimit: { windowSeconds: 60, max: 60 } };
+
 // checkRateLimit(identity, plan) → { ok, remaining, retryAfter }
 //   identity — stable per-caller id (keyId for customers, ip fallback).
 //   plan     — a PLANS entry; uses plan.rateLimit { windowSeconds, max }.
