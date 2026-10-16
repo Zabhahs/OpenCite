@@ -42,13 +42,13 @@ Both rails write to the same `User.total_credits` column; `api/search.js` bills 
 
 **Student tier note:** `requiresStudentVerification: true` — `api/checkout.js` checks `User.is_student_verified` before creating a student subscription session.
 
-## Credit packs (`api/_shared/plans.js:94–98`)
+## Credit packs (`api/_shared/plans.js`, repriced v0.46 — ids keep their historical names)
 
 | Pack | Credits | USD | Stripe Price env |
 |---|---|---|---|
-| `pack_10k` | 10,000 | $10 | `STRIPE_PRICE_PACK_10K` |
-| `pack_60k` | 60,000 | $50 | `STRIPE_PRICE_PACK_60K` |
-| `pack_300k` | 300,000 | $200 | `STRIPE_PRICE_PACK_300K` |
+| `pack_10k` | 2,000 | $10 | `STRIPE_PRICE_PACK_10K` |
+| `pack_60k` | 12,000 | $50 | `STRIPE_PRICE_PACK_60K` |
+| `pack_300k` | 45,000 | $150 | `STRIPE_PRICE_PACK_300K` |
 
 ## Credit lifecycle
 

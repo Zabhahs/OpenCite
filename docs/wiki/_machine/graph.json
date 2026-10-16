@@ -1210,7 +1210,7 @@
     ],
     [
       "mcp.contract",
-      "api.shared.apiContract"
+      "mcp.apiContract"
     ],
     [
       "mcp.schema",
@@ -1533,8 +1533,7 @@
       "api.stripe.webhook"
     ],
     "api.shared.apiContract": [
-      "api.search",
-      "mcp.contract"
+      "api.search"
     ],
     "api.shared.billing": [
       "api.search",
@@ -1748,6 +1747,9 @@
       "mcp.client",
       "mcp.schema",
       "mcp.server"
+    ],
+    "mcp.apiContract": [
+      "mcp.contract"
     ],
     "mcp.client": [
       "mcp.server"

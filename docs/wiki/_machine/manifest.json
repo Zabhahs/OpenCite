@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T20:41:55.994Z",
+  "generatedAt": "2026-10-16T21:44:29.990Z",
   "counts": {
-    "modules": 169,
-    "curated": 158,
+    "modules": 170,
+    "curated": 159,
     "edges": 307,
     "findings": 72,
     "reuse": 26
@@ -13,13 +13,13 @@
     "client": 58,
     "server": 46,
     "unspecified": 11,
-    "shared": 7,
+    "shared": 8,
     "isomorphic": 1,
     "build": 4,
     "infra": 6
   },
   "byStatus": {
-    "healthy": 122,
+    "healthy": 123,
     "quarantined": 25,
     "buggy": 3,
     "keyed": 6,

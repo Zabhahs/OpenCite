@@ -103,12 +103,12 @@ export const SUBSCRIPTIONS_ENABLED = false;
 // v0.46 repricing (cost-plus): OpenAlex bills $0.001 per search call (since Feb 2026), so the old
 // $0.00067–$0.001/query packs lost money on the flagship source alone. The Stripe Prices (env var
 // names) are unchanged — only the credits granted per price changed: $10 → 2,000 · $50 → 12,000 ·
-// $200 → 60,000 ($5.00 / $4.17 / $3.33 per 1k queries). Pack ids keep their historical names so
+// $150 → 45,000 ($5.00 / $4.17 / $3.33 per 1k; the live Stripe price is $150, verified 2026-10-16). Pack ids keep their historical names so
 // existing checkout metadata keeps resolving.
 export const CREDIT_PACKS = {
   pack_10k:  { id: "pack_10k",  credits: 2000,  usd: 10,  priceEnv: "STRIPE_PRICE_PACK_10K" },
   pack_60k:  { id: "pack_60k",  credits: 12000, usd: 50,  priceEnv: "STRIPE_PRICE_PACK_60K" },
-  pack_300k: { id: "pack_300k", credits: 60000, usd: 200, priceEnv: "STRIPE_PRICE_PACK_300K" },
+  pack_300k: { id: "pack_300k", credits: 45000, usd: 150, priceEnv: "STRIPE_PRICE_PACK_300K" },
 };
 
 // Plan a pack buyer lands on when they are still on the free tier: the full server-safe set at the
