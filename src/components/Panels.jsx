@@ -14,8 +14,9 @@ import {
 import { normalizeRecord, createDedupMap } from "../adapters/_shared/normalize.js";
 import { AbstractAdapter } from "../adapters/_shared/base.js";
 import { getDebugLog, downloadDebugLog, clearDebugLog } from "../lib/log.js";
-import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE, SUBSCRIPTIONS_ENABLED } from "../constants/pricing.js";
-import { createCheckoutSession } from "../lib/checkout.js";
+import { SUBSCRIPTION_PLANS, CREDIT_PACKS, COVERAGE_NOTE, SUBSCRIPTIONS_ENABLED, FREE_TIER_NOTE, isPaidPlan } from "../constants/pricing.js";
+import { FREE_WEB_DAILY_SEARCHES } from "../lib/searchQuota.js";
+import { createCheckoutSession, openBillingPortal } from "../lib/checkout.js";
 
 function toNCR(item) {
   if (item._normalized) return item;
@@ -178,42 +179,66 @@ export function SourcesPanel({ adapters, settings, isEnabled, onToggle }) {
 }
 
 // ---------- PricingPanel ----------
-// Clearly lists the payment options (human subscriptions + machine/API credit packs).
-// v0.46: packs are the one paid SKU (plans.js SUBSCRIPTIONS_ENABLED hides the subscription cards);
-// the IAP/App Store rail was removed — no native shell exists. Checkout opens a Stripe-hosted
-// session via /api/checkout.
+// v0.47: the two personal subscriptions (Student/Pro) are the headline cards; API credit packs
+// sit under a collapsed "volume users & organizations" disclosure. Every CTA opens a
+// Stripe-hosted session via /api/checkout. (The IAP/App Store rail was removed in v0.46.)
 //   isAuthenticated → gate: Stripe checkout requires a signed-in user.
 //   onRequireAuth() → called when an unauthenticated user clicks a paid CTA.
+//   limitReached    → true when opened because the free daily web-search cap was hit.
 
-export function PricingPanel({ currentPlan = "free", isAuthenticated = false, onRequireAuth, onDevelopers }) {
+export function PricingPanel({ currentPlan = "free", isAuthenticated = false, onRequireAuth, onDevelopers, limitReached = false }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(null); // id of the item currently starting checkout
 
-  const goStripe = async (item, payload) => {
+  // `open` is the Stripe call to make: a Checkout session or the Customer Portal (v0.47).
+  const goStripe = async (id, open) => {
     if (!isAuthenticated) { onRequireAuth?.(); return; }
     setNotice("");
-    setBusy(item.id);
-    const res = await createCheckoutSession(payload);
+    setBusy(id);
+    const res = await open();
     if (res?.url) { window.location.assign(res.url); return; } // leaving the page
     setBusy(null);
-    setNotice(res?.error || "Couldn't start checkout — please try again.");
+    setNotice(res?.error || "Couldn't reach Stripe — please try again.");
   };
 
-  const handleSubscribe = (plan) => goStripe(plan, { plan: plan.id });
+  const handleSubscribe = (plan) => goStripe(plan.id, () => createCheckoutSession({ plan: plan.id }));
 
-  const handlePack = (pack) => goStripe(pack, { pack: pack.id });
+  const handlePack = (pack) => goStripe(pack.id, () => createCheckoutSession({ pack: pack.id }));
+
+  // v0.47: subscribers and pack buyers manage billing in the Stripe Customer Portal.
+  const canManageBilling = isAuthenticated && isPaidPlan(currentPlan);
+  const handleManage = () => goStripe("portal", openBillingPortal);
+  // An existing subscriber switches plans in the portal — a second Checkout is refused (409).
+  const subscribed = SUBSCRIPTION_PLANS.some(p => p.id === currentPlan);
 
   return (
     <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
       <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700 mb-1">Plans &amp; pricing</h2>
+      {limitReached && (
+        <div className="mb-4 border-2 border-red-900 bg-white px-4 py-3">
+          <p className="text-sm text-stone-900">
+            You've used today's {FREE_WEB_DAILY_SEARCHES} free searches. Subscribe for unlimited search, or come back tomorrow.
+          </p>
+        </div>
+      )}
       <p className="text-xs text-stone-600 mb-5">
-        Searching on this site is free and unlimited. Credits are for the API and MCP server — the same search,
-        citations and ID resolution, called from your code or your AI assistant.
+        {FREE_TIER_NOTE} API credits work in the API and MCP server — the same search, citations and ID
+        resolution, called from your code or your AI assistant.
         {onDevelopers && <> <button type="button" onClick={onDevelopers} className="underline hover:text-red-900">Get an API key →</button></>}
       </p>
 
-      {/* Human subscriptions — hidden while SUBSCRIPTIONS_ENABLED is false (plans.js) */}
-      {SUBSCRIPTIONS_ENABLED && <div className="grid gap-3 md:grid-cols-3">
+      {canManageBilling && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border border-stone-300 bg-white px-4 py-3">
+          <p className="text-xs text-stone-700">Cancel your subscription, update your card, or download invoices and receipts.</p>
+          <button type="button" onClick={handleManage} disabled={busy === "portal"}
+            className="mono-font text-[10px] uppercase tracking-widest border border-stone-700 text-stone-700 px-4 py-2 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900 transition disabled:opacity-50 disabled:cursor-wait">
+            {busy === "portal" ? "Opening…" : "Manage billing"}
+          </button>
+        </div>
+      )}
+
+      {/* Personal subscriptions — hidden while SUBSCRIPTIONS_ENABLED is false (plans.js) */}
+      {SUBSCRIPTIONS_ENABLED && <div className="grid gap-3 md:grid-cols-2">
         {SUBSCRIPTION_PLANS.map(plan => {
           const isCurrent = plan.id === currentPlan;
           return (
@@ -237,26 +262,31 @@ export function PricingPanel({ currentPlan = "free", isAuthenticated = false, on
                   </li>
                 ))}
               </ul>
-              {plan.cta ? (
-                <button onClick={() => handleSubscribe(plan)} disabled={busy === plan.id}
-                  className={`mono-font text-[10px] uppercase tracking-widest px-4 py-2.5 transition disabled:opacity-50 disabled:cursor-wait ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border border-stone-700 text-stone-700 hover:bg-stone-900 hover:text-amber-50 hover:border-stone-900"}`}>
-                  {busy === plan.id ? "Starting…" : plan.cta}
+              {isCurrent ? (
+                <button onClick={handleManage} disabled={busy === "portal"}
+                  className="mono-font text-[11px] uppercase tracking-widest px-4 py-3 border border-dashed border-stone-400 text-stone-600 hover:border-stone-900 hover:text-stone-900 transition disabled:opacity-50 disabled:cursor-wait">
+                  {busy === "portal" ? "Opening…" : "Your plan · Manage"}
                 </button>
               ) : (
-                <div className="mono-font text-[10px] uppercase tracking-widest text-stone-400 px-4 py-2.5 text-center border border-dashed border-stone-300">
-                  {isCurrent ? "Your plan" : "Included free"}
-                </div>
+                <button onClick={() => (subscribed ? handleManage() : handleSubscribe(plan))} disabled={busy === plan.id || busy === "portal"}
+                  className={`mono-font text-[11px] uppercase tracking-widest px-4 py-3 transition disabled:opacity-50 disabled:cursor-wait ${plan.highlight ? "bg-stone-900 text-amber-50 hover:bg-red-900" : "border-2 border-stone-900 text-stone-900 hover:bg-stone-900 hover:text-amber-50"}`}>
+                  {busy === plan.id ? "Starting…" : subscribed ? `Switch to ${plan.label}` : plan.cta}
+                </button>
               )}
             </div>
           );
         })}
       </div>}
 
-      {/* Machine / API credit packs */}
-      <div className={SUBSCRIPTIONS_ENABLED ? "mt-6 pt-5 border-t border-stone-300" : ""}>
-        <p className="mono-font text-xs uppercase tracking-wider text-stone-700 mb-1">API credit packs</p>
-        <p className="text-xs text-stone-600 mb-4">
-          Prepaid, one-time, never expire. A pack unlocks the full source library and the machine rate limit for your keys.
+      {/* API credit packs — the volume / organization offer, collapsed by default (v0.47) */}
+      <details className={`group ${SUBSCRIPTIONS_ENABLED ? "mt-6 pt-5 border-t border-stone-300" : ""}`} open={!SUBSCRIPTIONS_ENABLED}>
+        <summary className="cursor-pointer list-none flex items-center justify-between gap-3 mono-font text-xs uppercase tracking-wider text-stone-700 hover:text-red-900">
+          <span>Volume users &amp; organizations — API credit packs</span>
+          <span aria-hidden="true" className="transition group-open:rotate-180">▾</span>
+        </summary>
+        <p className="text-xs text-stone-600 mt-2 mb-4">
+          Prepaid, one-time, never expire. For teams, labs and high-volume API/MCP use — a pack unlocks the full
+          source library, unlimited web search and the machine rate limit for your keys.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {CREDIT_PACKS.map(pack => (
@@ -274,7 +304,7 @@ export function PricingPanel({ currentPlan = "free", isAuthenticated = false, on
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
       {notice && (
         <div className="mt-5 border border-amber-300 bg-amber-100/60 px-4 py-3">

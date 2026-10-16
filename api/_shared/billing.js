@@ -113,6 +113,23 @@ export async function applyMonthlyGrant(userId, grant, period, { client } = {}) 
   return { granted: rows === 1 };
 }
 
+// v0.47: plan UPGRADE top-up (free → Student/Pro at checkout, Student → Pro in the Customer
+// Portal). applyMonthlyGrant is once-per-month, and a signed-in free user's period is already
+// stamped by handlers/credits.js, so without this a new or upgraded subscriber got nothing until
+// next month. Tops the balance up to the new allowance now (GREATEST — never reduces a purchased
+// balance) and stamps the period so this month's renewal grant is a no-op. NOT period-gated:
+// callers invoke it only when the grant strictly increases, which Stripe has already charged for.
+export async function applyUpgradeGrant(userId, grant, period, { client } = {}) {
+  if (!userId || !(grant > 0)) return { granted: false };
+  const db = client || prisma;
+  const rows = await db.$executeRaw`
+    UPDATE "users"
+       SET total_credits  = GREATEST(total_credits, ${grant}::decimal),
+           credits_period = ${period}
+     WHERE internal_id = ${userId}`;
+  return { granted: rows === 1 };
+}
+
 // v0.46: reverse a pack grant after a Stripe refund or dispute. Clamps at zero (the customer may
 // already have spent part of it); the caller logs the shortfall. Atomic single statement.
 export async function clawbackCredits(userId, credits, { client } = {}) {

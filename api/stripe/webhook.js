@@ -9,7 +9,9 @@
 //   - invoice.paid / invoice.payment_succeeded → subscription renewal: top the monthly
 //                                              credit allowance up for the period.
 //   - customer.subscription.updated          → re-sync User.plan from the price id
-//                                              (tier change); downgrade when inactive.
+//                                              (tier change, incl. Customer Portal switches —
+//                                              an upgrade tops credits up now, v0.47);
+//                                              downgrade when inactive.
 //   - customer.subscription.deleted          → downgrade to free (cancel).
 //   - invoice.payment_failed                 → no credit change; Stripe runs dunning,
 //                                              and updated/deleted handle any downgrade.
@@ -25,7 +27,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_shared/prisma.js";
 import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS, PACK_BUYER_PLAN_ID } from "../_shared/plans.js";
-import { applyMonthlyGrant, clawbackCredits } from "../_shared/billing.js";
+import { applyMonthlyGrant, applyUpgradeGrant, clawbackCredits } from "../_shared/billing.js";
 import { periodOf } from "../_shared/apiAuth.js";
 import { log } from "../_shared/log.js";
 
@@ -57,6 +59,18 @@ const isDuplicateClaim = (err) =>
   (Array.isArray(err.meta?.target)
     ? err.meta.target.includes("event_id")
     : String(err.meta?.target ?? "").includes("event_id"));
+
+// v0.47: when a user moves to a plan with a LARGER monthly allowance (new subscription, or a
+// Customer Portal upgrade), top the balance up to it now instead of next month. Reads the stored
+// plan BEFORE the caller writes the new one; a same-or-smaller allowance (renewal re-sync,
+// downgrade) is a no-op, so replays and duplicate events can't re-grant.
+async function grantOnUpgrade(tx, userId, newPlanId) {
+  const u = await tx.user.findUnique({ where: { id: userId }, select: { plan: true } });
+  const grant = monthlyGrantFor({ plan: newPlanId });
+  if (grant > monthlyGrantFor({ plan: u?.plan })) {
+    await applyUpgradeGrant(userId, grant, periodOf(), { client: tx });
+  }
+}
 
 // Pull the Price id off a subscription's first item.
 function priceIdFromSubscription(sub) {
@@ -169,6 +183,7 @@ export default async function handler(req, res) {
         }
         const planId = rawPlan && PLANS[rawPlan] ? rawPlan : null;
         if (planId && getPlan(planId).subscription) {
+          await grantOnUpgrade(tx, userId, planId);
           await tx.user.update({
             where: { id: userId },
             data: {
@@ -203,7 +218,10 @@ export default async function handler(req, res) {
         const active = ["active", "trialing", "past_due"].includes(obj.status);
         const mapped = planIdForPriceId(priceIdFromSubscription(obj));
         const data = {};
-        if (active && mapped) data.plan = mapped;
+        if (active && mapped) {
+          data.plan = mapped;
+          await grantOnUpgrade(tx, userId, mapped); // v0.47: portal Student → Pro switch
+        }
         if (!active) {
           data.plan = "free";
           data.stripe_subscription_id = null;

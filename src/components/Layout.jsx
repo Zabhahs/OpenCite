@@ -118,7 +118,8 @@ function AuthButton() {
 // nothing — never a fake 0. Finite balance → "N left".
 function CreditsChip() {
   const { credits, unlimited, tier } = useBilling();
-  // v0.46: these are API credits, not web searches (the web app is unmetered). Label them so.
+  // v0.46: these are API credits, not web searches (web searches use the daily cap in
+  // src/lib/searchQuota.js, v0.47). Label them so.
   if (unlimited) {
     return (
       <span
@@ -252,11 +253,8 @@ export function ThemeStrip({ themeKey, onChange }) {
 export function Footer({ onDevelopers }) {
   return (
     <footer className="mt-12 pt-6 border-t border-stone-400">
-      <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 leading-relaxed">
-        Always verify citations against the original source · Italics may need reapplying after paste · Built to be hostable + extensible
-      </p>
       {/* v0.46: legal + developer surface behind the live Stripe checkout */}
-      <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 leading-relaxed mt-3 flex flex-wrap gap-x-3 gap-y-1">
+      <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 leading-relaxed flex flex-wrap gap-x-3 gap-y-1">
         {onDevelopers ? <button type="button" onClick={onDevelopers} className="underline hover:text-red-900">Developers &amp; API</button> : <a href="/#developers" className="underline hover:text-red-900">Developers &amp; API</a>}
         <a href="/docs/" className="underline hover:text-red-900">API docs</a>
         <a href="/legal/terms.html" className="underline hover:text-red-900">Terms</a>

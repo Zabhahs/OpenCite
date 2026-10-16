@@ -40,6 +40,7 @@ import { BillingProvider, useBilling } from "./contexts/BillingContext.jsx";
 // v.19 — admin gate + debug log
 import { isAdmin } from "./lib/admin.js";
 import { installDebugLog, getDebugLog } from "./lib/log.js";
+import { consumeWebSearch } from "./lib/searchQuota.js";
 
 // v0.44 — reactive hash routing: subscribe to hashchange so route changes re-render
 // without a full page reload (the previous render-time read of window.location.hash
@@ -96,8 +97,12 @@ function OpenCITE() {
       const checkout = params.get("checkout");
       if (checkout === "success") { setJustPaid(true); setActivePanel("developers"); }
       else if (checkout === "cancel") { setActivePanel("plans"); }
-      if (checkout) {
+      // v0.47: back from the Stripe Customer Portal → reopen Plans (fresh page load re-reads the tier).
+      const portal = params.get("portal");
+      if (portal) setActivePanel("plans");
+      if (checkout || portal) {
         params.delete("checkout");
+        params.delete("portal");
         const qs = params.toString();
         window.history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : "") + window.location.hash);
       }
@@ -113,8 +118,18 @@ function OpenCITE() {
     return () => clearInterval(t);
   }, [justPaid, status, refreshBilling]);
 
+  // v0.47: free daily web-search cap (searchQuota.js). Over the cap → open Plans instead of searching.
+  const [limitReached, setLimitReached] = useState(false);
+  const allowSearch = useCallback(() => {
+    if (consumeWebSearch(tier)) { setLimitReached(false); return true; }
+    setLimitReached(true);
+    setActivePanel("plans");
+    return false;
+  }, [tier]);
+
   const handleSearch = useCallback(() => {
     if (!query.trim()) return;
+    if (!allowSearch()) return;
     hist.add(query);
     setFilterState({});
     search(query);
@@ -125,15 +140,16 @@ function OpenCITE() {
       }
       return next;
     });
-  }, [query, search, hist, status]);
+  }, [query, search, hist, status, allowSearch]);
 
   const handleRerun = useCallback((q) => {
     setQuery(q);
+    if (!allowSearch()) return;
     setActivePanel(null);
     hist.add(q);
     setFilterState({}); // parity with handleSearch — stale facets don't apply to a new query
     search(q);
-  }, [search, hist]);
+  }, [search, hist, allowSearch]);
 
   // Unified view: trigger loadMore only for adapters that are actually contributing
   // visible results. Firing for adapters whose results are all hidden by the active
@@ -331,6 +347,7 @@ function OpenCITE() {
             isAuthenticated={status === "authenticated"}
             onRequireAuth={() => setShowAuthModal(true)}
             onDevelopers={() => setActivePanel("developers")}
+            limitReached={limitReached}
           />
         )}
 

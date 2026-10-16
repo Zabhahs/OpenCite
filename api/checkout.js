@@ -5,7 +5,14 @@
 //
 // POST /api/checkout  body { plan: "student"|"pro" }   → subscription Checkout
 //                     body { pack: "pack_10k"|... }     → one-time pack Checkout
-// Returns { url } — the frontend redirects the browser to Stripe-hosted Checkout.
+//                     body { portal: true }             → Stripe Customer Portal (v0.47)
+// Returns { url } — the frontend redirects the browser to the Stripe-hosted page.
+//
+// v0.47 Customer Portal: self-serve cancel, payment-method update, invoice/receipt history and
+// billing-details update. Lives on this route (not its own file) because of Vercel Hobby's
+// 12-function cap. Which features the portal offers is Stripe-side config: the account's default
+// portal configuration, or STRIPE_PORTAL_CONFIGURATION (a bpc_… id) when set. Cancellation and
+// plan changes made there reach us as customer.subscription.updated/deleted (stripe/webhook.js).
 //
 // Web/desktop only. Native iOS/Android use Apple/Google IAP for subscriptions (store
 // policy), so the client never calls this for the IAP rail. The webhook
@@ -21,7 +28,7 @@
 // STRIPE_MANAGED_PAYMENTS=1. Turn it on ONLY after (a) Dashboard → Settings → Managed Payments is
 // enabled and its terms accepted, and (b) every pack Product carries an eligible tax_code
 // (txcd_10701400, Website Information Services – business use). Otherwise Stripe rejects the
-// session and nobody can buy. Packs (mode=payment) only — subscriptions stay off (plans.js).
+// session and nobody can buy. Packs (mode=payment) only — subscriptions are standard Checkout.
 // The webhook is unchanged: checkout.session.completed still grants credits, and Stripe-issued
 // refunds / disputes still arrive as charge.refunded / charge.dispute.created → claw-back.
 // Server-only flag on purpose: plans.js is bundled into the browser (src/constants/pricing.js).
@@ -35,7 +42,7 @@ const MANAGED_PAYMENTS_API_VERSION = "2026-02-25.preview";
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession, TRUSTED_ORIGINS, isTrustedOrigin } from "./_shared/auth.js";
 import { parseBody } from "./_shared/parseBody.js";
-import { getPlan, getPack, stripePriceId, PLANS, CREDIT_PACKS, SUBSCRIPTIONS_ENABLED } from "./_shared/plans.js";
+import { stripePriceId, PLANS, CREDIT_PACKS, SUBSCRIPTIONS_ENABLED } from "./_shared/plans.js";
 import { log } from "./_shared/log.js";
 
 // Resolve a safe absolute base URL for success/cancel redirects.
@@ -45,6 +52,39 @@ import { log } from "./_shared/log.js";
 function baseUrl(req) {
   const origin = req.headers.origin;
   return isTrustedOrigin(origin) ? origin : TRUSTED_ORIGINS[0];
+}
+
+async function loadStripe() {
+  try {
+    const { default: Stripe } = await import("stripe");
+    return new Stripe(process.env.STRIPE_SECRET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+// v0.47: open a Customer Portal session for the signed-in user's own Stripe Customer. Only a
+// customer id already persisted on the user row is used — never one from the request — so a
+// user can only ever manage their own billing. No customer yet ⇒ nothing to manage (404).
+async function openPortal(req, res, user) {
+  const row = await prisma.user.findUnique({ where: { id: user.id }, select: { stripe_customer_id: true } });
+  if (!row?.stripe_customer_id) {
+    return res.status(404).json({ error: "No billing account yet — subscribe or buy a pack first.", code: "no_customer" });
+  }
+  const stripe = await loadStripe();
+  if (!stripe) return res.status(503).json({ error: "Billing dependency unavailable" });
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: row.stripe_customer_id,
+      return_url: `${baseUrl(req)}/?portal=return`,
+      ...(process.env.STRIPE_PORTAL_CONFIGURATION ? { configuration: process.env.STRIPE_PORTAL_CONFIGURATION } : {}),
+    });
+    log("stripe", "portal-created", { userId: user.id });
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    log.err("stripe", "portal-error", { userId: user.id, msg: err.message });
+    return res.status(500).json({ error: "Couldn't open billing management — please try again" });
+  }
 }
 
 export default async function handler(req, res) {
@@ -61,6 +101,7 @@ export default async function handler(req, res) {
 
   const body = await parseBody(req, res);
   if (!body) return; // 413 already sent (F-400)
+  if (body.portal === true) return openPortal(req, res, user);
   const wantPlan = typeof body.plan === "string" ? body.plan : null;
   const wantPack = typeof body.pack === "string" ? body.pack : null;
   if (!wantPlan && !wantPack) return res.status(400).json({ error: "Specify a plan or pack" });
@@ -68,18 +109,18 @@ export default async function handler(req, res) {
   // Validate the requested item and resolve its Stripe Price id (server-authoritative).
   let mode, priceId, metadata;
   if (wantPlan) {
-    // v0.46: subscription rail hidden (plans.js SUBSCRIPTIONS_ENABLED) — packs are the only SKU.
+    // Kill switch for the subscription rail (plans.js SUBSCRIPTIONS_ENABLED).
     if (!SUBSCRIPTIONS_ENABLED) {
       return res.status(400).json({ error: "Subscriptions are not available; buy an API credit pack instead.", code: "subscriptions_disabled" });
     }
     const plan = PLANS[wantPlan];
     if (!plan || !plan.subscription) return res.status(400).json({ error: "Unknown plan" });
-    // Student tier is gated on verification (decision: ID upload + approval).
-    if (plan.requiresStudentVerification) {
-      const u = await prisma.user.findUnique({ where: { id: user.id }, select: { is_student_verified: true } });
-      if (!u?.is_student_verified) {
-        return res.status(403).json({ error: "Student verification required before subscribing", code: "needs_student_verification" });
-      }
+    // v0.47: Student is honor-system (see plans.js) — no is_student_verified gate.
+    // One subscription per user: a second Checkout would bill both in parallel. Plan changes and
+    // cancellation go through the Customer Portal ({ portal: true }).
+    const existing = await prisma.user.findUnique({ where: { id: user.id }, select: { stripe_subscription_id: true } });
+    if (existing?.stripe_subscription_id) {
+      return res.status(409).json({ error: "You already have a subscription — use Manage billing to change or cancel it.", code: "already_subscribed" });
     }
     priceId = stripePriceId(plan);
     mode = "subscription";
@@ -93,13 +134,8 @@ export default async function handler(req, res) {
   }
   if (!priceId) return res.status(503).json({ error: "This option isn't available yet" });
 
-  let Stripe;
-  try {
-    ({ default: Stripe } = await import("stripe"));
-  } catch {
-    return res.status(503).json({ error: "Billing dependency unavailable" });
-  }
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const stripe = await loadStripe();
+  if (!stripe) return res.status(503).json({ error: "Billing dependency unavailable" });
 
   try {
     // Reuse or create the user's Stripe Customer so renewals map back to them.

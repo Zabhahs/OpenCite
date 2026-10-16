@@ -12,10 +12,10 @@ OpenCITE queries open scholarly indexes (OpenAlex, Crossref, DOAJ, PubMed) and h
 
 | | Web app | API / MCP |
 |---|---|---|
-| Searching | Free, unlimited, no account needed | 1 credit per call, prorated by the coverage actually delivered |
+| Searching | Free: 10 searches/day, no account needed · Student/Pro: unlimited | 1 credit per call, prorated by the coverage actually delivered |
 | Sources | Every registered adapter (toggle extensions in Settings) | The server-safe set; each result names its `source` |
 | Account | Optional: syncs library, history and settings | Required: sign in → Developers → Create key |
-| Price | $0 | 20 free credits/month; packs $10 → 2,000 · $50 → 12,000 · $150 → 45,000 (never expire) |
+| Price | $0 · Student $5/mo · Pro $10/mo | 20 free credits/month (Student 500, Pro 1,000); volume packs $10 → 2,000 · $50 → 12,000 · $150 → 45,000 (never expire) |
 
 Endpoints: `/api/search`, `/api/citations` (citation graph), `/api/ids` (DOI ↔ PMID ↔ PMCID). Every response carries `X-OpenCITE-API-Version: 2`. Legal: [terms](https://citation.today/legal/terms.html) · [privacy](https://citation.today/legal/privacy.html) · [refunds](https://citation.today/legal/refunds.html).
 

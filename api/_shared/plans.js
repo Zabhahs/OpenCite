@@ -17,11 +17,15 @@
 export const CORE_SOURCE_IDS = ["OPENALEX", "CROSSREF", "DOAJ", "CURATED"];
 
 // Free tier monthly allowance. Verification on the free tier does NOT bump the
-// allowance — it only unlocks the $5 Student subscription (500/mo). Kept as a
-// named constant (equal to free) so a free-student bump can be re-introduced
-// later by changing one number.
+// allowance. Kept as a named constant (equal to free) so a free-student bump can be
+// re-introduced later by changing one number.
 export const FREE_MONTHLY_GRANT = 20;
 export const FREE_STUDENT_MONTHLY_GRANT = 20;
+
+// v0.47: web searches per UTC day for anyone NOT on a paid plan (signed-out visitors and the
+// free plan). Web search runs in the browser, so this is a soft client-side cap
+// (src/lib/searchQuota.js), not server-enforced — it is the visible reason to subscribe.
+export const FREE_WEB_DAILY_SEARCHES = 10;
 
 // freeBelowBand: a query whose coverage band is at/below this is charged 0 — a
 // half-blind answer isn't a sellable result (ties to coverage.coverageMultiplier,
@@ -46,7 +50,8 @@ export const PLANS = {
     freeBelowBand: "limited",
     subscription: true,
     priceEnv: "STRIPE_PRICE_STUDENT",   // Stripe Price id ($5/mo) — set in Vercel env
-    requiresStudentVerification: true,
+    // v0.47: honor system — no verification flow ever existed to set users.is_student_verified,
+    // so the old gate made Student unpurchasable. Misuse is handled by downgrading the account.
   },
   pro: {
     id: "pro",
@@ -89,12 +94,25 @@ export const PLANS = {
 
 export const DEFAULT_PLAN_ID = "free";
 
-// v0.46 product decision of record: ONE paid SKU — prepaid API/MCP credit packs. The human
-// subscription rail (Student/Pro) is hidden behind this flag: the web app is free and unmetered
-// by design (it is the demo), so a subscription bought nothing a browser user could see. Flip to
-// true only when the web app has a paid-only feature to sell. checkout.js refuses plan checkouts
-// while false; PricingPanel hides the cards.
-export const SUBSCRIPTIONS_ENABLED = false;
+// v0.47: personal subscriptions (Student/Pro) are the headline offer on the Plans panel; credit
+// packs move under a "volume users & organizations" disclosure. What a subscription now buys a
+// browser user: unlimited web search (free = FREE_WEB_DAILY_SEARCHES/day) + the monthly API
+// allowance. (v0.46 had hidden this rail because the web app was unmetered.) checkout.js refuses
+// plan checkouts and PricingPanel hides the cards while this is false.
+export const SUBSCRIPTIONS_ENABLED = true;
+
+// True when a plan id (BillingContext `tier`) searches the web without the daily cap: any paid or
+// internal plan. Unknown/missing ids resolve to free via getPlan → capped.
+export function hasUnlimitedWebSearch(planId) {
+  return getPlan(planId).id !== DEFAULT_PLAN_ID;
+}
+
+// True when a plan id implies the user has paid through Stripe (subscriber or pack buyer), i.e.
+// there is a Stripe Customer whose billing the Customer Portal can manage (v0.47).
+export function isPaidPlan(planId) {
+  const p = getPlan(planId);
+  return !!(p.subscription || p.payg);
+}
 
 // One-time credit packs for PAYG / machine callers. `priceEnv` names the Stripe Price id env
 // var; `credits` are granted on checkout.session.completed (webhook), which ALSO moves a free

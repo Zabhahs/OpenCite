@@ -5,16 +5,15 @@
 // middleware read). This module is presentation ONLY — it never gates access. Credit counts
 // and the subscription flag are IMPORTED from plans.js so the two can never drift.
 //
-// v0.46 product decision of record: the web app is free and unmetered (it is the demo); the one
-// paid SKU is prepaid API/MCP credit packs for developers and AI-native researchers. The human
-// subscription rail is hidden behind SUBSCRIPTIONS_ENABLED (plans.js) until the web app has a
-// paid-only feature to sell — the old cards advertised quotas and sources the browser already
-// gave away for free.
+// v0.47: the two personal subscriptions (Student/Pro) are the headline offer — they lift the free
+// web cap (FREE_WEB_DAILY_SEARCHES/day) and carry a monthly API allowance. Prepaid credit packs
+// are the volume/organization offer, shown under a disclosure. SUBSCRIPTIONS_ENABLED (plans.js)
+// remains the kill switch for the subscription cards.
 
-import { CREDIT_PACKS as PACKS, SUBSCRIPTIONS_ENABLED } from "../../api/_shared/plans.js";
+import { CREDIT_PACKS as PACKS, PLANS, SUBSCRIPTIONS_ENABLED, FREE_WEB_DAILY_SEARCHES, isPaidPlan } from "../../api/_shared/plans.js";
 import { ADAPTERS } from "../adapters/index.js";
 
-export { SUBSCRIPTIONS_ENABLED };
+export { SUBSCRIPTIONS_ENABLED, isPaidPlan };
 
 // Derived from the registry — never a hand-typed number (the old literals drifted to 20/22/29).
 export const SOURCE_COUNT = {
@@ -23,48 +22,44 @@ export const SOURCE_COUNT = {
   web: ADAPTERS.length,                                          // what the free web app can reach
 };
 
-// Human subscriptions — rendered only when SUBSCRIPTIONS_ENABLED (plans.js) is true.
+// The two personal subscriptions — rendered only when SUBSCRIPTIONS_ENABLED (plans.js) is true.
+// Free is not a card: the panel intro states the free daily allowance. Credit counts come from
+// plans.js; prices must match the Stripe Prices behind STRIPE_PRICE_STUDENT / STRIPE_PRICE_PRO.
+const monthly = (planId) => `${PLANS[planId].monthlyGrant.toLocaleString()} API credits every month`;
 export const SUBSCRIPTION_PLANS = [
-  {
-    id: "free",
-    label: "Free",
-    price: "$0",
-    cadence: "forever",
-    tagline: "Casual research",
-    credits: "20 API credits / month",
-    sources: `${SOURCE_COUNT.web} databases on the web`,
-    features: [
-      "Unlimited web search across every source",
-      "Saved library + search history sync",
-      "20 free API credits every month to try the API",
-    ],
-    cta: null, // current/default plan — no checkout
-  },
   {
     id: "student",
     label: "Student",
     price: "$5",
     cadence: "/ month",
     tagline: "Students & early researchers",
-    credits: "500 API credits / month",
-    sources: `All ${SOURCE_COUNT.all} API sources`,
-    requiresVerification: true,
-    features: ["500 API credits every month", "Requires valid student verification", "Everything in Free"],
-    cta: "Verify & subscribe",
+    features: [
+      "Unlimited web search",
+      monthly("student"),
+      `All ${SOURCE_COUNT.all} API sources`,
+      "For enrolled students (honor system)",
+    ],
+    cta: "Subscribe — $5/mo",
   },
   {
     id: "pro",
     label: "Pro",
     price: "$10",
     cadence: "/ month",
-    tagline: "Power users & professionals",
-    credits: "1,000 API credits / month",
-    sources: `All ${SOURCE_COUNT.all} API sources`,
+    tagline: "Researchers & professionals",
     highlight: true,
-    features: ["1,000 API credits every month", "Priority rate limits", "Everything in Free, no verification"],
-    cta: "Subscribe",
+    features: [
+      "Unlimited web search",
+      monthly("pro"),
+      `All ${SOURCE_COUNT.all} API sources`,
+      "Higher API rate limits",
+    ],
+    cta: "Subscribe — $10/mo",
   },
 ];
+
+export const FREE_TIER_NOTE =
+  `Free: ${FREE_WEB_DAILY_SEARCHES} web searches a day plus ${PLANS.free.monthlyGrant} API credits a month — no card needed.`;
 
 // Machine / API credit packs (pay-as-you-go, one-time). For developers wiring the grounding API
 // and AI agents making per-query calls. Credits come from plans.js (SSOT); only the copy is here.
