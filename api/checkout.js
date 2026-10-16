@@ -15,6 +15,22 @@
 //   - a persisted Stripe Customer    (so renewals resolve back to the user)
 //
 // Requires STRIPE_SECRET_KEY + the relevant STRIPE_PRICE_* envs; returns 503 if unset.
+//
+// Managed Payments (Stripe as merchant of record — Stripe/Link collects + remits sales
+// tax/VAT/GST, handles fraud, disputes and transaction support). OFF unless
+// STRIPE_MANAGED_PAYMENTS=1. Turn it on ONLY after (a) Dashboard → Settings → Managed Payments is
+// enabled and its terms accepted, and (b) every pack Product carries an eligible tax_code
+// (txcd_10701400, Website Information Services – business use). Otherwise Stripe rejects the
+// session and nobody can buy. Packs (mode=payment) only — subscriptions stay off (plans.js).
+// The webhook is unchanged: checkout.session.completed still grants credits, and Stripe-issued
+// refunds / disputes still arrive as charge.refunded / charge.dispute.created → claw-back.
+// Server-only flag on purpose: plans.js is bundled into the browser (src/constants/pricing.js).
+const MANAGED_PAYMENTS_ENABLED = process.env.STRIPE_MANAGED_PAYMENTS === "1";
+// The pinned SDK (stripe@17 → 2025-02-24.acacia) predates Managed Payments (needs ≥ 2025-03-31.basil),
+// so a Managed Payments session overrides the version for that one request only — the account
+// default, the other calls here, and webhook payloads (rendered at the endpoint's version) are
+// untouched. Version per Stripe's Managed Payments blueprint.
+const MANAGED_PAYMENTS_API_VERSION = "2026-02-25.preview";
 
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession, TRUSTED_ORIGINS, isTrustedOrigin } from "./_shared/auth.js";
@@ -104,6 +120,8 @@ export default async function handler(req, res) {
     }
 
     const base = baseUrl(req);
+    // Packs only; the subscription rail never uses Managed Payments (see header).
+    const managed = MANAGED_PAYMENTS_ENABLED && mode === "payment";
     const session = await stripe.checkout.sessions.create({
       mode,
       customer: customerId,
@@ -124,9 +142,13 @@ export default async function handler(req, res) {
       },
       success_url: `${base}/?checkout=success`,
       cancel_url: `${base}/?checkout=cancel`,
-    });
+      // Every other param above is Managed-Payments-compatible (checked against Stripe's
+      // "remove unsupported parameters" list: no automatic_tax, payment_method_types,
+      // invoice_creation, statement_descriptor, receipt_email, shipping or Connect fields).
+      ...(managed ? { managed_payments: { enabled: true } } : {}),
+    }, managed ? { apiVersion: MANAGED_PAYMENTS_API_VERSION } : undefined);
 
-    log("stripe", "checkout-created", { userId: user.id, mode, ...metadata });
+    log("stripe", "checkout-created", { userId: user.id, mode, managed, ...metadata });
     return res.status(200).json({ url: session.url });
   } catch (err) {
     log.err("stripe", "checkout-error", { userId: user.id, msg: err.message });

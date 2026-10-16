@@ -13,7 +13,7 @@ import {
   RESULT_FIELDS,
   RESPONSE_SHAPE,
   COVERAGE_BANDS,
-} from "../../api/_shared/apiContract.js";
+} from "./apiContract.js"; // vendored copy of api/_shared/apiContract.js (npm run sync-contract)
 
 export { API_CONTRACT, PARAMS, RESULT_FIELDS, RESPONSE_SHAPE, COVERAGE_BANDS };
 

@@ -14,7 +14,9 @@
   },
   "scripts": {
     "start": "node bin/opencite-mcp.js",
-    "print-schemas": "node src/schema.js"
+    "print-schemas": "node src/schema.js",
+    "sync-contract": "node scripts/sync-contract.mjs",
+    "prepublishOnly": "npm run sync-contract"
   },
   "engines": {
     "node": ">=18"
@@ -37,13 +39,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Zabhahs/OpenCite.git",
+    "url": "git+https://github.com/Zabhahs/OpenCite.git",
     "directory": "mcp"
   },
   "homepage": "https://citation.today/docs/",
   "files": [
     "bin",
     "src",
+    "scripts",
     "README.md",
     "LICENSE"
   ]
