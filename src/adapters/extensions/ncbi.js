@@ -71,7 +71,14 @@ export const NCBI_ADAPTER = {
     const results = ids.map(id => {
       const it = summaries[id];
       if (!it) return null;
-      const doi = (it.elocationid || "").replace(/^doi:\s*/i, "") || (it.articleids || []).find(a => a.idtype === "doi")?.value || "";
+      // articleids[idtype=doi] is the clean canonical DOI; prefer it. elocationid is a compound
+      // free-text field that can read "pii: 3002. doi: 10.3390/plants15193002" — stripping only
+      // a leading "doi:" kept the whole string (prod-probed 2026-10-16: 34/104 NCBI DOIs, each
+      // with a broken doi.org URL and an un-mergeable dedup key). Fall back to extracting the
+      // DOI token from it.
+      const doi = (it.articleids || []).find(a => a.idtype === "doi")?.value
+        || (it.elocationid || "").match(/\bdoi:\s*(10\.\d{4,9}\/\S+)/i)?.[1]
+        || "";
       return {
         id: `ncbi-${id}`, source: "NCBI",
         title: it.title || "Untitled",

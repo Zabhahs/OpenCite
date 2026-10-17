@@ -1,7 +1,7 @@
 import React from "react";
 import { ResultCard } from "./ResultCard.jsx";
 import { BookGroupHeader } from "./BookGroupHeader.jsx";
-import { groupByParentWork } from "../lib/groupResults.js";
+import { groupForDisplay } from "../lib/groupResults.js";
 
 // ---------------------------------------------------------------------------
 // SourceSection
@@ -10,7 +10,7 @@ import { groupByParentWork } from "../lib/groupResults.js";
 export function SourceSection({ adapter, state, onCopy, copied, isInLibrary, onToggleLibrary, onLoadMore }) {
   const { loading, results, error, hasMore, loadingMore } = state;
 
-  const groups = !loading && results?.length > 0 ? groupByParentWork(results) : [];
+  const groups = !loading && results?.length > 0 ? groupForDisplay(results) : [];
 
   // Global index counter for №01, №02… across all groups
   let globalIndex = 0;
@@ -62,6 +62,7 @@ export function SourceSection({ adapter, state, onCopy, copied, isInLibrary, onT
                   copied={copied}
                   isInLibrary={isInLibrary ? isInLibrary(r) : false}
                   onToggleLibrary={onToggleLibrary}
+                  libraryCheck={r._editions ? isInLibrary : undefined}
                 />
               );
             }

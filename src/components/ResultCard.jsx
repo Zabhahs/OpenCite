@@ -13,12 +13,20 @@ import { useEagleTooltip } from "../hooks/useEagleTooltip.js";
 const EAGLE_LIBRARY_MSG =
   "Saved! ★ Open your Library to select favourites and export them as BibTeX, RIS, or CSL-JSON.";
 
-export const ResultCard = React.memo(function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup }) {
+// libraryCheck — optional (record) → bool, passed only for cards carrying `_editions`
+// (groupResults.collapseEditions) so each nested edition card resolves its own saved state;
+// `isInLibrary` stays a precomputed boolean for this card.
+export const ResultCard = React.memo(function ResultCard({ result, index, onCopy, copied, isInLibrary, onToggleLibrary, isChapterInGroup, libraryCheck }) {
   const mlaSegs = useMemo(() => buildMLA(result), [result]);
   const apaSegs = useMemo(() => buildAPA(result), [result]);
   const cardId = result.id;
   const [imgFailed, setImgFailed] = useState(false);
   const [citationsOpen, setCitationsOpen] = useState(false);
+  const [editionsOpen, setEditionsOpen] = useState(false);
+  const editions = result._editions || [];
+  // "older" only when every folded edition predates this one; otherwise (missing/equal year) "other".
+  const editionsLabel = editions.every((e) => (parseInt(e.year, 10) || 0) < (parseInt(result.year, 10) || 0))
+    ? "older" : "other";
   const hasImage = result.previewImage && !imgFailed;
   const chapter = isBookChapter(result);
 
@@ -29,7 +37,9 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
     if (!isInLibrary) {
       eagle.show();
     }
-    onToggleLibrary(result);
+    // Save the record itself, not the editions folded onto it for display.
+    const { _editions, ...record } = result;
+    onToggleLibrary(record);
   };
 
   return (
@@ -235,6 +245,47 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
           </div>
         )}
       </div>
+
+      {/* Editions — older editions of this work folded into one card (collapseEditions).
+          Each opens as a full nested card so it keeps its own link, citation and save. */}
+      {editions.length > 0 && (
+        <div className="border border-t-0 border-stone-300 bg-white">
+          <button
+            onClick={() => setEditionsOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-stone-50 transition"
+            aria-expanded={editionsOpen}
+          >
+            <span className="mono-font text-[10px] uppercase tracking-widest text-stone-600">
+              {editions.length} {editionsLabel} edition{editions.length !== 1 ? "s" : ""}
+              {editions.some((e) => e.year) && (
+                <span className="text-stone-400">
+                  {" · "}{editions.map((e) => e.year).filter(Boolean).join(", ")}
+                </span>
+              )}
+            </span>
+            <span className="mono-font text-[10px] text-stone-400 ml-2">
+              {editionsOpen ? "↑ hide" : "↓ expand"}
+            </span>
+          </button>
+
+          {editionsOpen && (
+            <div className="border-t border-stone-200 p-3 space-y-4">
+              {editions.map((ed) => (
+                <ResultCard
+                  key={ed.id}
+                  result={ed}
+                  index={index}
+                  onCopy={onCopy}
+                  copied={copied}
+                  isInLibrary={libraryCheck ? libraryCheck(ed) : false}
+                  onToggleLibrary={onToggleLibrary}
+                  isChapterInGroup={isChapterInGroup}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 });

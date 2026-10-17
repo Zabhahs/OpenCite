@@ -11,7 +11,7 @@
  */
 
 import { pathToFileURL } from "node:url";
-import { dedupHighestScore, dedupFirstWins, mergeRecords, doiKey, titleFingerprint } from "./dedup.js";
+import { dedupHighestScore, dedupFirstWins, mergeRecords, doiKey, titleFingerprint, surnameOf } from "./dedup.js";
 
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
@@ -142,6 +142,25 @@ function test_doiKey_variants_collapse_in_dedup() {
   assert(out.length === 1, `all three DOI spellings should collapse to one record, got ${out.length}`);
 }
 
+// ─── titleFingerprint surname across author-name orders (prod-probed 2026-10-16) ───
+
+function test_surnameOf_name_orders() {
+  assert(surnameOf("R. Mirek") === "mirek", "First Last → last token");
+  assert(surnameOf("Mirek R") === "mirek", "PubMed 'Surname II' → token before initials");
+  assert(surnameOf("Van der Berg JA") === "berg", "PubMed multi-word surname → token before initials");
+  assert(surnameOf("Shakespeare, William, 1564-1616") === "shakespeare", "catalogue 'Last, First, dates'");
+  assert(surnameOf("Bo Li") === "li", "short mixed-case surname is not mistaken for initials");
+  assert(surnameOf("JOHN DOE") === "doe", "all-caps name: short surname is not mistaken for initials");
+  assert(surnameOf("") === "" && surnameOf(undefined) === "", "missing author → empty");
+}
+
+function test_titleFingerprint_collapses_pubmed_vs_wikidata() {
+  const wikidata = { title: "Psychiatric problems in Shakespeare's sonnets", year: "1968", authors: ["R. Mirek"] };
+  const ncbi     = { title: "Psychiatric problems in Shakespeare's sonnets.", year: "1968", authors: ["Mirek R"] };
+  const out = dedupHighestScore([wikidata, ncbi], titleFingerprint);
+  assert(out.length === 1, `same paper across name orders should collapse, got ${out.length}`);
+}
+
 // ─── Runner ───
 
 const tests = [
@@ -156,6 +175,8 @@ const tests = [
   test_dedupFirstWins_unchanged,
   test_doiKey_normalization,
   test_doiKey_variants_collapse_in_dedup,
+  test_surnameOf_name_orders,
+  test_titleFingerprint_collapses_pubmed_vs_wikidata,
 ];
 
 // Run when invoked directly (cross-platform: pathToFileURL handles Windows drive paths).

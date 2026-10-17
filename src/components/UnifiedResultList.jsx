@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { ResultCard } from "./ResultCard.jsx";
 import { BookGroupHeader } from "./BookGroupHeader.jsx";
 import { ADAPTERS } from "../adapters/index.js";
-import { groupByParentWork } from "../lib/groupResults.js";
+import { groupForDisplay, groupRecordCount } from "../lib/groupResults.js";
 
 const INITIAL_DISPLAY = 20;
 const LOAD_STEP = 10;
@@ -67,12 +67,13 @@ export function UnifiedResultList({
     return out;
   }, [filteredSections, sortBy]);
 
-  // Cluster book chapters under their parent work; non-chapters are solo groups
-  const allGroups = useMemo(() => groupByParentWork(allResults), [allResults]);
+  // Fold editions into one card each, then cluster book chapters under their parent work
+  const allGroups = useMemo(() => groupForDisplay(allResults), [allResults]);
 
-  // Paginate by group count so a cluster is never split across pages
+  // Paginate by group count so a cluster is never split across pages. The loaded count
+  // includes editions folded into dropdowns so "N of M loaded" can reach M.
   const visibleGroups = allGroups.slice(0, displayCount);
-  const visibleItemCount = visibleGroups.reduce((sum, g) => sum + g.items.length, 0);
+  const visibleItemCount = visibleGroups.reduce((sum, g) => sum + groupRecordCount(g), 0);
 
   const hasMoreLocal  = displayCount < allGroups.length;
   // Can we fetch more results from any remote adapter that is actually
@@ -127,6 +128,7 @@ export function UnifiedResultList({
                   copied={copied}
                   isInLibrary={isInLibrary ? isInLibrary(r) : false}
                   onToggleLibrary={onToggleLibrary}
+                  libraryCheck={r._editions ? isInLibrary : undefined}
                 />
               </div>
             );

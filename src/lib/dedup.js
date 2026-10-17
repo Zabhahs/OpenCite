@@ -20,13 +20,29 @@ export const doiKey = (r) => {
   return d || null;
 };
 
+// First-author surname across the name orders adapters emit. A plain last-token rule read
+// PubMed's "Mirek R" as "r" and catalogue "Shakespeare, William, 1564-1616" as "1564-1616",
+// so the same paper never fingerprinted alike across sources (prod-probed 2026-10-16:
+// Wikidata "R. Mirek" vs NCBI "Mirek R" survived dedup as two cards).
+//   "Last, First[, dates]"  (DPLA/ONB/MARC) → last word before the first comma
+//   "Surname II"            (PubMed)        → the token before the trailing initials
+//   "First Last"            (most APIs)     → last token
+// The initials rule needs a mixed-case name, so all-caps "JOHN DOE" keeps "doe".
+export const surnameOf = (name) => {
+  const n = String(name || "").trim();
+  if (n.includes(",")) return n.split(",")[0].trim().split(/\s+/).pop().toLowerCase();
+  const toks = n.split(/\s+/);
+  const last = toks[toks.length - 1] || "";
+  if (toks.length > 1 && /^[A-Z]{1,3}$/.test(last) && n !== n.toUpperCase()) return toks[toks.length - 2].toLowerCase();
+  return last.toLowerCase();
+};
+
 // Same-paper fingerprint for records registered under multiple DOIs — e.g. a JSTOR DOI
 // and a publisher DOI for the same Crossref article. Null when there's no title to key on.
 export const titleFingerprint = (r) => {
   const t = (r.title || "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
   if (!t) return null;
-  const surname = (r.authors?.[0] || "").split(" ").pop().toLowerCase();
-  return `${t}|${r.year || ""}|${surname}`;
+  return `${t}|${r.year || ""}|${surnameOf(r.authors?.[0])}`;
 };
 
 // Streaming first-wins dedup. Drops records whose key was already seen; mutates `seen`
