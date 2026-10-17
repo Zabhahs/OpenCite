@@ -52,7 +52,11 @@ export const SMITHSONIAN_ADAPTER = {
       return {
         id: `si-${row.id || `${offset}-${i}`}`, source: "SMITHSONIAN",
         title: desc.title?.content || row.title || "Untitled",
-        authors: (Array.isArray(idx.name) ? idx.name : []).filter(Boolean),
+        // EDAN schema (Smithsonian/edan-schemas edanmdm.json): indexedStructured.name items are
+        // string | { type, content } — unwrap objects so sanitize() doesn't emit "[object Object]".
+        authors: (Array.isArray(idx.name) ? idx.name : [])
+          .map((n) => (typeof n === "string" ? n : n?.content))
+          .filter(Boolean),
         year: String((Array.isArray(idx.date) ? idx.date[0] : "") || "").slice(0, 4),
         journal: "", publisher: desc.unit_code || "Smithsonian",
         volume: "", issue: "", pages: "", doi: "",
