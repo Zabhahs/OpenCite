@@ -94,6 +94,27 @@ export const PLANS = {
 
 export const DEFAULT_PLAN_ID = "free";
 
+// v0.48: per-endpoint billing weight, in units of ONE search call (plan.creditCost). Cheap
+// lookups (NCBI id crosswalk, a single-reference verification) cost a tenth of a search so
+// the anti-hallucination path is the low-cost entry point. `qty` scales the weight (verify
+// bills per reference). This is the ONLY place the per-endpoint price lives — meter.js and
+// search.js read it; docs/pricing copy quote it.
+export const ENDPOINT_UNITS = {
+  search: 1,
+  citations: 1,
+  works: 1,       // one work + its citation graph
+  works_meta: 0.1, // one work's record + ids only (no graph)
+  ids: 0.1,
+  verify: 0.1,    // per reference
+};
+
+export function unitCost(plan, endpoint, qty = 1) {
+  const units = ENDPOINT_UNITS[endpoint] ?? 1;
+  const n = Number.isFinite(qty) && qty > 0 ? qty : 1;
+  // round4 mirrors billing.js settlement precision (Decimal(12,4) ledger).
+  return Math.round((plan?.creditCost ?? 1) * units * n * 1e4) / 1e4;
+}
+
 // v0.47: personal subscriptions (Student/Pro) are the headline offer on the Plans panel; credit
 // packs move under a "volume users & organizations" disclosure. What a subscription now buys a
 // browser user: unlimited web search (free = FREE_WEB_DAILY_SEARCHES/day) + the monthly API

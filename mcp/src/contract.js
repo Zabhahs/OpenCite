@@ -2,58 +2,60 @@
 //
 // The MCP surface does NOT redefine the API. It imports the single contract
 // SSOT (api/_shared/apiContract.js) and derives everything from it:
-//   - the agent-facing tool input set (a curated, friendlier-named subset)
-//   - the request mapping back to the REST query params
+//   - the agent-facing tool input sets (curated, friendlier-named subsets)
+//   - the request mapping back to the REST query params / JSON body
 // Descriptions, enums, defaults, and limits all come from the contract — change
 // them once there and every MCP/OpenAPI/function surface follows.
+//
+// v0.48: THREE tools (sprint_log_v0_48 D-10). Fewer, clearly-described tools are what a
+// model picks reliably; `get_paper` folds the old resolve_ids + search_citations use-cases.
 
 import {
   API_CONTRACT,
+  ENDPOINTS,
   PARAMS,
   RESULT_FIELDS,
+  COMPACT_FIELDS,
+  EVIDENCE_FIELDS,
   RESPONSE_SHAPE,
   COVERAGE_BANDS,
+  MAX_VERIFY_REFS,
+  API_VERSION,
 } from "./apiContract.js"; // vendored copy of api/_shared/apiContract.js (npm run sync-contract)
 
-export { API_CONTRACT, PARAMS, RESULT_FIELDS, RESPONSE_SHAPE, COVERAGE_BANDS };
+export { API_CONTRACT, ENDPOINTS, PARAMS, RESULT_FIELDS, COMPACT_FIELDS, EVIDENCE_FIELDS, RESPONSE_SHAPE, COVERAGE_BANDS, MAX_VERIFY_REFS, API_VERSION };
 
-export const TOOL_NAME = "search_scholarly_sources";
+export const VERIFY_TOOL_NAME = "verify_citations";
+export const SEARCH_TOOL_NAME = "search_papers";
+export const GET_TOOL_NAME = "get_paper";
 
-// Tool names for the two additional endpoints. These endpoints (/api/citations,
-// /api/ids) are NOT in the apiContract SSOT — their schemas are hand-written
-// inline in schema.js rather than derived from it.
-export const CITATIONS_TOOL_NAME = "search_citations";
-export const IDS_TOOL_NAME = "resolve_ids";
-
-// Agent-facing params, in display order. Each maps to a REST param in PARAMS.
-// `q` is exposed under the friendlier name `query`; the rest keep their names.
-// We surface the high-value subset an agent needs (query, limit, format) and
-// leave operational/advanced params (sources, mailto) to direct REST callers —
-// `sources` in particular is de-emphasized by the origin-blind positioning.
-export const TOOL_PARAM_MAP = {
+// Agent-facing search params, in display order. Each maps to a REST param in PARAMS.
+// `q` is exposed under the friendlier name `query`; the rest keep their names. Operational
+// params (sources, authors, cite, format) stay REST-only — the compact card already carries
+// one formatted citation, so an agent never needs the flat-bibliography formats.
+export const SEARCH_PARAM_MAP = {
   query: "q",
   limit: "limit",
-  format: "format",
+  style: "style",
+  detail: "detail",
+  evidence: "evidence",
 };
 
-// The contract definition for each agent-facing param, pulled from the SSOT.
-// Returns objects shaped like PARAMS entries, keyed by the agent-facing name.
-export function toolParamDefs() {
+// The contract definition for each agent-facing search param, keyed by the agent-facing name.
+export function searchParamDefs() {
   const defs = {};
-  for (const [toolName, restName] of Object.entries(TOOL_PARAM_MAP)) {
+  for (const [toolName, restName] of Object.entries(SEARCH_PARAM_MAP)) {
     const src = PARAMS[restName];
     if (!src) continue;
     defs[toolName] = { ...src };
   }
-  // The tool's `query` description should read naturally as a tool arg.
-  if (defs.query) defs.query.description = PARAMS.q.description;
   return defs;
 }
 
-// Translate validated tool arguments into REST query params (agent name -> REST name).
-export function toRestQuery(args = {}) {
+// Translate validated search tool arguments into REST query params (agent name → REST name).
+export function toSearchQuery(args = {}) {
   const out = {};
-  for (const [toolName, restName] of Object.entries(TOOL_PARAM_MAP)) {
+  for (const [toolName, restName] of Object.entries(SEARCH_PARAM_MAP)) {
     const v = args[toolName];
     if (v === undefined || v === null || v === "") continue;
     out[restName] = v;
@@ -61,23 +63,20 @@ export function toRestQuery(args = {}) {
   return out;
 }
 
-// Map search_citations agent args → /api/citations REST params.
-// `direction` (agent) → `dir` (REST); all other names are already aligned.
-export function toCitationsQuery(args = {}) {
+// get_paper args → /api/works query. Names are already aligned with the contract.
+export function toWorksQuery(args = {}) {
   const out = {};
-  if (args.id) out.id = args.id;
-  // Agent exposes `direction`; REST uses the shorter `dir`.
-  if (args.direction) out.dir = args.direction;
-  if (args.limit !== undefined && args.limit !== null) out.limit = String(args.limit);
-  if (args.minCitations !== undefined && args.minCitations !== null) out.minCitations = String(args.minCitations);
-  if (args.sort) out.sort = args.sort;
+  for (const k of ["id", "include", "limit", "minCitations", "sort", "style", "detail", "evidence"]) {
+    const v = args[k];
+    if (v === undefined || v === null || v === "") continue;
+    out[k] = v;
+  }
   return out;
 }
 
-// Map resolve_ids agent args → /api/ids REST params.
-// `ids` is an agent-side array; REST expects a comma-joined string.
-export function toIdsQuery(args = {}) {
-  const out = {};
-  if (Array.isArray(args.ids) && args.ids.length) out.ids = args.ids.join(",");
-  return out;
+// verify_citations args → /api/verify JSON body.
+export function toVerifyBody(args = {}) {
+  const body = { refs: Array.isArray(args.refs) ? args.refs : [] };
+  for (const k of ["style", "detail", "evidence"]) if (args[k] !== undefined && args[k] !== null && args[k] !== "") body[k] = args[k];
+  return body;
 }

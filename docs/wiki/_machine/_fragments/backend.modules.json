@@ -688,11 +688,11 @@
     "notes": "Single-source endpoints (citations, ids) always pass band='full' to charge() → 1 credit. Admin plan.creditCost=0 → ledger untouched. charge() refunds on any thrown error — never bills a failed call."
   },
   {
-    "id": "api.citations",
-    "path": "api/citations.js",
-    "kind": "api-route",
+    "id": "api.shared.handlers.works.citations",
+    "path": "api/_shared/handlers/works/citations.js",
+    "kind": "api-handler",
     "runtime": "server",
-    "purpose": "GET /api/citations — origin-blind citation-graph endpoint (dir=cited-by|refs), metered like /api/search, returns toPublicResult cards.",
+    "purpose": "Citation-graph operation (cited-by / refs) mounted via api/works/[op].js; v0.48: evidence-flagged compact cards, leg-health billing (free when every upstream leg failed), sources[] row.",
     "exports": [
       "default"
     ],
@@ -710,14 +710,14 @@
       "origin-blind",
       "billing"
     ],
-    "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year)."
+    "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year). v0.48: moved from api/citations.js (public URL kept by vercel.json rewrite)."
   },
   {
-    "id": "api.ids",
-    "path": "api/ids.js",
-    "kind": "api-route",
+    "id": "api.shared.handlers.works.ids",
+    "path": "api/_shared/handlers/works/ids.js",
+    "kind": "api-handler",
     "runtime": "server",
-    "purpose": "GET /api/ids — batched DOI↔PMID↔PMCID resolution via NCBI ID Converter; metered like /api/search.",
+    "purpose": "DOI/PMID/PMCID crosswalk operation mounted via api/works/[op].js; v0.48: billed at the ids unit weight (0.1), free when the NCBI resolver was unreachable (leg health).",
     "exports": [
       "default"
     ],
@@ -734,7 +734,7 @@
       "ncbi",
       "billing"
     ],
-    "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak)."
+    "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak). v0.48: moved from api/ids.js (public URL kept by vercel.json rewrite)."
   },
   {
     "id": "api.shared.handlers.credits",
@@ -1160,5 +1160,195 @@
       "health"
     ],
     "notes": "Mounted through api/user/[resource].js; vercel.json rewrites /api/health and schedules the cron."
+  },
+  {
+    "id": "api.works.[op]",
+    "path": "api/works/[op].js",
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Works dispatcher (v0.48): one Serverless Function fronting citations, ids, verify and get, keeping the deploy at 9/12 functions. Public URLs preserved by vercel.json rewrites.",
+    "exports": [
+      "default"
+    ],
+    "deps": [
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.ids",
+      "api.shared.handlers.works.verify",
+      "api.shared.handlers.works.get",
+      "api.shared.meter"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "dispatcher",
+      "hobby-cap"
+    ],
+    "notes": "Same pattern as api/user/[resource].js."
+  },
+  {
+    "id": "api.shared.handlers.works.verify",
+    "path": "api/_shared/handlers/works/verify.js",
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "POST/GET /api/verify (v0.48): reference verification. Verdict per reference (verified | mismatch | not_found | ambiguous), canonical record, evidence, corrected citation. Billed verify-weight x refs; free when every upstream leg failed.",
+    "exports": [
+      "default"
+    ],
+    "deps": [
+      "api.shared.verify",
+      "api.shared.compact",
+      "api.shared.meter",
+      "api.shared.serverKeys",
+      "api.shared.parseBody",
+      "api.shared.apiContract"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "verify",
+      "evidence",
+      "billing"
+    ],
+    "notes": "The headline anti-hallucination endpoint (sprint_log_v0_48 E2)."
+  },
+  {
+    "id": "api.shared.handlers.works.get",
+    "path": "api/_shared/handlers/works/get.js",
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "GET /api/works?id= (v0.48): one work by any id (DOI/PMID/PMCID/W-id), every identifier, evidence, optional citation graph. works_meta (0.1) or works (1) unit weight.",
+    "exports": [
+      "default"
+    ],
+    "deps": [
+      "api.shared.citationGraph",
+      "api.shared.compact",
+      "api.shared.evidence",
+      "api.shared.meter",
+      "api.shared.serverKeys",
+      "api.shared.apiContract",
+      "lib.idResolve"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "works",
+      "evidence",
+      "billing"
+    ],
+    "notes": "Backs the MCP get_paper tool."
+  },
+  {
+    "id": "api.shared.evidence",
+    "path": "api/_shared/evidence.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Evidence SSOT (v0.48, G4): batched Crossref updated-by (Retraction Watch) + OpenAlex lookups by DOI to a per-card evidence block (retraction/correction/EoC notices, work type, OA status, DOAJ, index lists, licence). Failure-isolated, cached 24h per DOI.",
+    "exports": [
+      "emptyEvidence",
+      "lookupEvidence",
+      "enrichEvidence",
+      "EVIDENCE_SOURCE_OPENALEX",
+      "EVIDENCE_SOURCE_CROSSREF",
+      "EVIDENCE_UNKNOWN"
+    ],
+    "deps": [
+      "api.shared.cache",
+      "api.shared.adapterHealth",
+      "api.shared.apiContract"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "evidence",
+      "retraction",
+      "crossref",
+      "openalex",
+      "cache"
+    ],
+    "notes": "Crossref is authoritative for retractions (D-3); OpenAlex is_retracted is the fallback. Never throws; never moves the coverage band."
+  },
+  {
+    "id": "api.shared.compact",
+    "path": "api/_shared/compact.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Card projection SSOT (v0.48, contract v3): renderCard is the single entry point (compact by default, or full = v2 card + evidence, admin debug variant); cardOptsFrom parses detail/style/evidence/cite once for every endpoint.",
+    "exports": [
+      "renderCard",
+      "toCompactResult",
+      "citationIn",
+      "cardOptsFrom"
+    ],
+    "deps": [
+      "api.shared.publicResult",
+      "api.shared.debugResult",
+      "lib.citations",
+      "api.shared.apiContract"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md#publicresultjs--debugresultjs",
+    "tags": [
+      "card",
+      "compact",
+      "contract-v3"
+    ],
+    "notes": "Composes publicResult/debugResult; never re-implements them."
+  },
+  {
+    "id": "api.shared.verify",
+    "path": "api/_shared/verify.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Citation verification SSOT (v0.48, G1): id refs resolve to the canonical record (OpenAlex getWork, Crossref /works fallback); free-text refs go to Crossref query.bibliographic top-3 (OpenAlex search fallback); weighted containment scoring (title/author/year/venue) yields the verdict. Thresholds in THRESHOLDS.",
+    "exports": [
+      "verifyReferences",
+      "THRESHOLDS"
+    ],
+    "deps": [
+      "lib.idResolve",
+      "lib.dedup",
+      "adapters.shared.parseCrossref",
+      "adapters.shared.parseOpenAlex",
+      "api.shared.citationGraph",
+      "api.shared.evidence",
+      "api.shared.adapterHealth"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "verify",
+      "scoring",
+      "crossref",
+      "openalex"
+    ],
+    "notes": "Prefers ambiguous over a wrong verified. Leg health tallied into opts.health for billing."
+  },
+  {
+    "id": "scripts.gen-openapi",
+    "path": "scripts/gen-openapi.mjs",
+    "kind": "script",
+    "runtime": "server",
+    "purpose": "Regenerates public/openapi.json from the contract SSOT (re-syncs the vendored copy, then mcp/src/schema.js openApiSpec). public/openapi.json is generated, never hand-edited.",
+    "exports": [],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "openapi",
+      "generated",
+      "script"
+    ],
+    "notes": "v0.48."
   }
 ]

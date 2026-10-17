@@ -10,6 +10,10 @@
     { "source": "/api/library", "destination": "/api/user/library" },
     { "source": "/api/settings", "destination": "/api/user/settings" },
     { "source": "/api/health", "destination": "/api/user/health" },
+    { "source": "/api/citations", "destination": "/api/works/citations" },
+    { "source": "/api/ids", "destination": "/api/works/ids" },
+    { "source": "/api/verify", "destination": "/api/works/verify" },
+    { "source": "/api/works", "destination": "/api/works/get" },
     {
       "source": "/((?!api|legal/|docs/|openapi\\.json|sitemap\\.xml).*)",
       "destination": "/index.html"

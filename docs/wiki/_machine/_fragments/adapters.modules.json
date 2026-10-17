@@ -1137,5 +1137,27 @@
       "retrieval"
     ],
     "notes": "Sole consumer: src/adapters/core/crossref.js."
+  },
+  {
+    "id": "adapters.shared.parseCrossref",
+    "path": "src/adapters/_shared/parseCrossref.js",
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "parseCrossrefItem: Crossref message.items[] to UnifiedResult (v0.48: extracted verbatim from core/crossref.js so the search adapter and the server verification path render the same card).",
+    "exports": [
+      "parseCrossrefItem"
+    ],
+    "deps": [
+      "lib.helpers"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "crossref",
+      "parser",
+      "dry"
+    ],
+    "notes": "SSOT for the Crossref card shape."
   }
 ]

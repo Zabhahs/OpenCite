@@ -1,27 +1,26 @@
 // OpenCITE MCP — schema generators (DRY-4)
 //
-// Every schema the world sees is generated here from the one contract SSOT:
-//   - mcpInputSchema()      → MCP tool input JSON Schema (agent-facing params)
-//   - functionSchemas()     → OpenAI + Anthropic function/tool definitions
-//   - openApiSpec()         → OpenAPI 3.1 doc for the raw REST endpoint
-// Nothing re-describes a param. Run `node src/schema.js` to print all three.
+// Pure generators from the one contract SSOT (contract.js → vendored apiContract.js):
+//   - paramsToJsonSchema()  → JSON Schema object nodes for tool inputs (used by tools.js)
+//   - openApiSpec()         → OpenAPI 3.1 doc for EVERY public REST endpoint (ENDPOINTS)
+// Nothing re-describes a param. `public/openapi.json` is generated from openApiSpec() by
+// scripts/gen-openapi.mjs — never hand-edited. SDK-free on purpose so api/ can import it.
 
 import { pathToFileURL } from "node:url";
 import {
-  API_CONTRACT,
-  PARAMS,
+  ENDPOINTS,
   RESULT_FIELDS,
+  COMPACT_FIELDS,
+  EVIDENCE_FIELDS,
   RESPONSE_SHAPE,
   COVERAGE_BANDS,
-  TOOL_NAME,
-  CITATIONS_TOOL_NAME,
-  IDS_TOOL_NAME,
-  toolParamDefs,
+  API_VERSION,
 } from "./contract.js";
 
 // Map a contract param descriptor to a JSON Schema property.
-function paramToJsonSchemaProp(p) {
+export function paramToJsonSchemaProp(p) {
   const prop = { type: p.type, description: p.description };
+  if (p.type === "array") prop.items = { type: "string" };
   if (p.enum) prop.enum = [...p.enum];
   if (p.type === "integer") {
     if (typeof p.min === "number") prop.minimum = p.min;
@@ -32,239 +31,134 @@ function paramToJsonSchemaProp(p) {
 }
 
 // Turn a {name: contractParam} map into a JSON Schema object node.
-function paramsToJsonSchema(defs) {
+export function paramsToJsonSchema(defs) {
   const properties = {};
   const required = [];
   for (const [name, p] of Object.entries(defs)) {
     properties[name] = paramToJsonSchemaProp(p);
     if (p.required) required.push(name);
   }
-  const schema = {
-    type: "object",
-    properties,
-    required,
-    additionalProperties: false,
-  };
-  return schema;
+  return { type: "object", properties, required, additionalProperties: false };
 }
 
-// MCP tool input schema — agent-facing (curated, q→query) param set.
-export function mcpInputSchema() {
-  return paramsToJsonSchema(toolParamDefs());
-}
-
-export const TOOL_DESCRIPTION = API_CONTRACT.description;
-
-// MCP tool descriptor (name + description + inputSchema) — what the server registers.
-export function mcpToolDefinition() {
-  return {
-    name: TOOL_NAME,
-    description: TOOL_DESCRIPTION,
-    inputSchema: mcpInputSchema(),
-  };
-}
-
-// OpenAI function-calling + Anthropic tool-use definitions — same input schema,
-// the two providers just nest it under different keys.
-export function functionSchemas() {
-  const parameters = mcpInputSchema();
-  return {
-    openai: {
-      type: "function",
-      function: {
-        name: TOOL_NAME,
-        description: TOOL_DESCRIPTION,
-        parameters,
-      },
-    },
-    anthropic: {
-      name: TOOL_NAME,
-      description: TOOL_DESCRIPTION,
-      input_schema: parameters,
-    },
-  };
-}
-
-// Describe the result card from RESULT_FIELDS (best-effort JSON types). v2: includes `source`.
-function resultCardSchema() {
+// Describe a card from a field map (best-effort JSON types).
+function cardSchema(fields) {
   const arrayFields = new Set(["authors", "editors", "keywords", "subjects"]);
   const boolFields = new Set(["isOA"]);
   const numFields = new Set(["citedBy"]);
-  const objFields = new Set(["citations"]);
+  const objFields = new Set(["citations", "evidence"]);
   const properties = {};
-  for (const [name, description] of Object.entries(RESULT_FIELDS)) {
+  for (const [name, description] of Object.entries(fields)) {
     let node;
     if (arrayFields.has(name)) node = { type: "array", items: { type: "string" } };
     else if (boolFields.has(name)) node = { type: "boolean" };
     else if (numFields.has(name)) node = { type: ["number", "null"] };
+    else if (name === "evidence") node = evidenceSchema();
     else if (objFields.has(name)) node = { type: "object", additionalProperties: { type: "string" } };
-    else node = { type: "string" };
+    else if (name === "citation") node = { type: ["string", "object"] };
+    else node = { type: ["string", "null"] };
     node.description = description;
     properties[name] = node;
   }
   return { type: "object", properties };
 }
 
-// Top-level JSON response envelope schema, from RESPONSE_SHAPE.
-function responseSchema() {
+function evidenceSchema() {
   const properties = {};
-  for (const [name, description] of Object.entries(RESPONSE_SHAPE)) {
-    if (name === "results") {
-      properties.results = { type: "array", items: resultCardSchema(), description };
-    } else if (name === "coverage") {
-      properties.coverage = { type: "string", enum: [...COVERAGE_BANDS], description };
-    } else if (name === "terms") {
-      properties.terms = { type: "array", items: { type: "string" }, description };
-    } else if (name === "count" || name === "totalCandidates" || name === "tookMs") {
-      properties[name] = { type: "integer", description };
-    } else {
-      properties[name] = { type: "string", description };
-    }
+  for (const [name, description] of Object.entries(EVIDENCE_FIELDS)) {
+    let node;
+    if (name === "corrections" || name === "indexed_in" || name === "checked") node = { type: "array", items: name === "corrections" ? { type: "object" } : { type: "string" } };
+    else if (name === "in_doaj") node = { type: ["boolean", "null"] };
+    else if (name === "retraction" || name === "expression_of_concern") node = { type: ["object", "null"] };
+    else node = { type: ["string", "null"] };
+    node.description = description;
+    properties[name] = node;
   }
   return { type: "object", properties };
 }
 
-// ─── search_citations tool ────────────────────────────────────────────────────
-// Hand-written schema: /api/citations is NOT in the apiContract SSOT.
-export function citationsToolDefinition() {
-  return {
-    name: CITATIONS_TOOL_NAME,
-    description:
-      "Walk a paper's citation network in one call. " +
-      "Given a DOI or OpenAlex work ID, returns origin-blind result cards for " +
-      "works that cite it (cited-by) or for its own bibliography (refs). " +
-      "Ideal for discovering impact, related work, or the full reference list " +
-      "of a specific paper without any extra round-trips. " +
-      "Costs 1 credit per call (admin unmetered).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          description:
-            "A DOI (e.g. 10.1038/s41586-021-03819-2) or an OpenAlex work ID " +
-            "(e.g. W2741809809). Required.",
-        },
-        direction: {
-          type: "string",
-          enum: ["cited-by", "refs"],
-          default: "cited-by",
-          description:
-            '"cited-by" (default) returns works that cite this paper; ' +
-            '"refs" returns this paper\'s own reference list.',
-        },
-        limit: {
-          type: "integer",
-          minimum: 1,
-          maximum: 200,
-          default: 25,
-          description: "Maximum number of edges to return (1–200, default 25).",
-        },
-        minCitations: {
-          type: "integer",
-          description:
-            "Cited-by only: drop citing works whose own cited-by count is below " +
-            "this threshold. Useful to surface high-impact citers only.",
-        },
-        sort: {
-          type: "string",
-          enum: ["impact", "year"],
-          default: "impact",
-          description:
-            '"impact" (default) sorts by cited-by count descending; ' +
-            '"year" sorts by publication year descending.',
-        },
-      },
-      required: ["id"],
-      additionalProperties: false,
-    },
-  };
+// /api/search JSON envelope, from RESPONSE_SHAPE.
+function searchResponseSchema() {
+  const properties = {};
+  for (const [name, description] of Object.entries(RESPONSE_SHAPE)) {
+    if (name === "results") properties.results = { type: "array", items: { oneOf: [cardSchema(COMPACT_FIELDS), cardSchema(RESULT_FIELDS)] }, description };
+    else if (name === "coverage") properties.coverage = { type: "string", enum: [...COVERAGE_BANDS], description };
+    else if (name === "terms") properties.terms = { type: "array", items: { type: "string" }, description };
+    else if (name === "sources") properties.sources = { type: "array", items: { type: "object" }, description };
+    else if (name === "count" || name === "totalCandidates" || name === "tookMs") properties[name] = { type: "integer", description };
+    else if (name === "meta") properties.meta = { type: "object", description };
+    else properties[name] = { type: "string", description };
+  }
+  return { type: "object", properties };
 }
 
-// ─── resolve_ids tool ─────────────────────────────────────────────────────────
-// Hand-written schema: /api/ids is NOT in the apiContract SSOT.
-export function idsToolDefinition() {
-  return {
-    name: IDS_TOOL_NAME,
-    description:
-      "Crosswalk scholarly identifiers (DOI ↔ PMID ↔ PMCID) in one batched call. " +
-      "Accepts any mix of identifier types (up to 200 total) and returns a " +
-      "lookup map of all resolved equivalents per input ID. " +
-      "Essential for stitching together citation records that only carry one " +
-      "identifier type, or for validating/enriching a reference list before display. " +
-      "Costs 1 credit per call (admin unmetered).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ids: {
-          type: "array",
-          items: { type: "string" },
-          description:
-            "DOIs, PMIDs, and/or PMCIDs to cross-resolve; any mix, max 200. " +
-            "Example: [\"10.1038/nbt.3642\", \"27571352\", \"PMC5034905\"].",
-        },
-      },
-      required: ["ids"],
-      additionalProperties: false,
-    },
-  };
+// Generic envelope for the other endpoints: the contract's `response` map as object props.
+function genericResponseSchema(ep) {
+  const properties = {};
+  for (const [name, description] of Object.entries(ep.response || {})) properties[name] = { description };
+  return { type: "object", properties };
 }
 
-// OpenAPI 3.1 spec for the REST endpoint itself (documents the raw `q`-named params).
+const ERRORS = {
+  400: { description: "Invalid request (bad parameter)." },
+  401: { description: "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer." },
+  402: { description: "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }." },
+  429: { description: "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after." },
+};
+
+// OpenAPI 3.1 for every public REST endpoint, derived from ENDPOINTS.
 export function openApiSpec({ servers } = {}) {
-  const parameters = Object.entries(PARAMS).map(([name, p]) => ({
-    name,
-    in: "query",
-    required: !!p.required,
-    description: p.description,
-    schema: paramToJsonSchemaProp(p),
-  }));
+  const paths = {};
+  for (const [key, ep] of Object.entries(ENDPOINTS)) {
+    const method = ep.method.toLowerCase();
+    const op = {
+      operationId: key === "search" ? "searchPapers" : key === "works" ? "getPaper" : key === "verify" ? "verifyCitations" : key,
+      summary: ep.description.split(". ")[0] + ".",
+      description: ep.description,
+      security: key === "credits" ? [{ ApiKeyHeader: [] }, { BearerKey: [] }] : [{ ApiKeyHeader: [] }, { BearerKey: [] }],
+      responses: {
+        200: {
+          description: ep.response?.results || ep.response?.work || ep.response?.credits || "OK",
+          content: { "application/json": { schema: key === "search" ? searchResponseSchema() : genericResponseSchema(ep) } },
+        },
+        ...ERRORS,
+      },
+    };
+    if (method === "post") {
+      op.requestBody = {
+        required: true,
+        content: { "application/json": { schema: paramsToJsonSchema(ep.params) } },
+      };
+    } else {
+      op.parameters = Object.entries(ep.params || {}).map(([name, p]) => ({
+        name, in: "query", required: !!p.required, description: p.description, schema: paramToJsonSchemaProp(p),
+      }));
+    }
+    paths[ep.endpoint] = { [method]: op };
+  }
   return {
     openapi: "3.1.0",
     info: {
-      title: "OpenCITE Scholarly Search API",
-      version: String(API_CONTRACT.version || "2"),
-      description: API_CONTRACT.description,
+      title: "OpenCITE Scholarly Evidence API",
+      version: String(API_VERSION),
+      description:
+        "Verifiable scholarly evidence for agents: search 250M+ open-access papers and heritage archives, " +
+        "fetch any work by id, and verify references before citing them. Every card names its source and " +
+        "carries integrity evidence (retracted / corrected / expression of concern); every response says " +
+        "which sources answered. Docs: https://citation.today/docs/ · llms.txt: https://citation.today/llms.txt",
     },
-    servers: servers || [
-      { url: "https://citation.today", description: "Production" },
-    ],
-    paths: {
-      [API_CONTRACT.endpoint]: {
-        get: {
-          operationId: "searchScholarlySources",
-          summary: "Search open-access scholarly, museum and archive sources in one call.",
-          description: API_CONTRACT.description,
-          parameters,
-          security: [{ ApiKeyHeader: [] }],
-          responses: {
-            200: {
-              description: "Deduped result cards in native upstream order, interleaved scholarly-first; each names its source.",
-              content: { "application/json": { schema: responseSchema() } },
-            },
-            400: { description: "Invalid request (e.g. no valid sources selected)." },
-            401: { description: "Invalid or missing x-api-key header (a key is always required)." },
-            402: { description: "Insufficient credits — body carries { code: \"insufficient_credits\", upgrade_url }." },
-            429: { description: "Rate limited (per key, and per IP before auth). Retry-After header set." },
-            405: { description: "Method not allowed — use GET." },
-          },
-        },
-      },
-    },
+    servers: servers || [{ url: "https://citation.today", description: "Production" }],
+    paths,
     components: {
       securitySchemes: {
         ApiKeyHeader: { type: "apiKey", in: "header", name: "x-api-key" },
+        BearerKey: { type: "http", scheme: "bearer", description: "The same oc_live_ API key as a Bearer token." },
       },
     },
   };
 }
 
-// `node src/schema.js` → print all generated schemas (handy for docs/registries).
+// `node src/schema.js` → print the OpenAPI doc.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const out = {
-    mcpTool: mcpToolDefinition(),
-    functionSchemas: functionSchemas(),
-    openApi: openApiSpec(),
-  };
-  process.stdout.write(JSON.stringify(out, null, 2) + "\n");
+  process.stdout.write(JSON.stringify(openApiSpec(), null, 2) + "\n");
 }

@@ -27,6 +27,16 @@
 //   format     optional — "json" (default) | "mla" | "apa" | "bibtex" | "ris"
 //                         | "csl-json". Non-json returns a text/plain (or JSON
 //                         array for csl-json) bibliography of all results.
+//   detail     optional — "compact" (default, agent-sized cards) | "full" (the v2 card).
+//   style      optional — citation style on the compact card (apa default).
+//   evidence   optional — "0" skips the retraction/integrity lookup.
+//
+// v0.48 (contract v3 — verifiable evidence): every card carries an `evidence` block (retraction /
+// correction / expression-of-concern notices, work type, OA status, DOAJ, licence — see
+// _shared/evidence.js), the envelope names which sources answered (`sources[]`), the default
+// card is compact (_shared/compact.js), and every answer carries a `meta.requestId`. The
+// evidence lookup is failure-isolated: it never fails the search and never moves the coverage
+// band (coverage is about the search sources).
 //
 // Auth + billing (WS3, wired v0.32): every request must present a valid API key
 // (x-api-key header or ?key=) — FAIL-CLOSED, no anonymous access. The key maps to
@@ -40,19 +50,20 @@
 // the server-derived identity.admin — a non-admin ?debug=1 is a silent no-op, so
 // origin-blindness can never be pierced by a normal caller.
 
+import { randomUUID } from "node:crypto";
 import { ADAPTERS, runSearch } from "../src/adapters/index.js";
 import { doiKey, titleFingerprint, dedupFirstWins, dedupHighestScore } from "../src/lib/dedup.js";
 import { resolveIds } from "../src/lib/idResolve.js";
 import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
-import { toPublicResult } from "./_shared/publicResult.js";
-import { toDebugResult } from "./_shared/debugResult.js";
+import { renderCard, cardOptsFrom } from "./_shared/compact.js";
+import { enrichEvidence } from "./_shared/evidence.js";
 import { computeCoverage } from "./_shared/coverage.js";
-import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, CITE_FORMATS, FORMATS, API_VERSION, MAX_TERMS, MAX_QUERY_CHARS } from "./_shared/apiContract.js";
+import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, FORMATS, API_VERSION, MAX_TERMS, MAX_QUERY_CHARS } from "./_shared/apiContract.js";
 import { resolveApiKey, resolveSessionAdmin } from "./_shared/apiAuth.js";
-import { allowedSourceIds } from "./_shared/plans.js";
+import { allowedSourceIds, unitCost } from "./_shared/plans.js";
 import { checkRateLimit, ANON_PLAN } from "./_shared/ratelimit.js";
-import { insufficientCredits } from "./_shared/meter.js";
+import { insufficientCredits, unauthorized, rateLimited, meterMeta } from "./_shared/meter.js";
 import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
 import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
 import { serverInjectedKeys } from "./_shared/serverKeys.js";
@@ -65,7 +76,6 @@ const SERVER_SAFE_IDS = new Set(
 );
 
 const ADAPTER_TIMEOUT_MS = 12000;
-const VALID_CITE = new Set(CITE_FORMATS);
 
 const isTruthy = (v) => v === "1" || v === "true" || v === "yes";
 
@@ -147,7 +157,7 @@ const withTimeout = (promise, ms, label) =>
 // cache-hit path, where there's no fan-out to gate between the two phases.
 // Admin/master (cost 0) → { ok:true, creditsCharged:0 }, ledger untouched.
 async function chargeForBand(identity, band) {
-  const cost = identity.plan.creditCost;
+  const cost = unitCost(identity.plan, "search");
   const pre = await preAuthorize(identity.userId, cost);
   if (!pre.ok) return { ok: false, creditsCharged: 0 };
   const creditsCharged = await settle(identity.userId, cost, band, {
@@ -166,7 +176,7 @@ const sendVersioned = (res, status, body) => {
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization");
 
   if (req.method === "OPTIONS") {
     res.statusCode = 204;
@@ -186,12 +196,12 @@ export default async function handler(req, res) {
   const ipRl = await checkRateLimit(`ip:${clientIp(req)}`, ANON_PLAN);
   if (!ipRl.ok) {
     res.setHeader("Retry-After", String(ipRl.retryAfter));
-    return sendJson(res, 429, { error: "Rate limit exceeded. Please retry later." });
+    return sendJson(res, 429, rateLimited(ipRl.retryAfter));
   }
 
   const identity = (await resolveApiKey(req)) || (await resolveSessionAdmin(req));
   if (!identity) {
-    return sendJson(res, 401, { error: "Invalid or missing API key. Send it as the x-api-key header." });
+    return sendJson(res, 401, unauthorized());
   }
 
   const q = firstParam(req.query?.q).trim();
@@ -209,17 +219,20 @@ export default async function handler(req, res) {
   const debug = !!identity.admin && isTruthy(firstParam(req.query?.debug));
 
   const startMs = Date.now();
+  // v0.48: every answer is identifiable — echoed in meta.requestId and as a header (non-JSON
+  // formats only have headers). Journaled against the ledger in a later sprint.
+  const requestId = randomUUID();
+  res.setHeader("X-OpenCITE-Request-Id", requestId);
+  const searchCost = unitCost(identity.plan, "search");
 
   // Limit
   let limit = parseInt(firstParam(req.query?.limit), 10);
   if (!Number.isFinite(limit) || limit < 1) limit = DEFAULT_LIMIT;
   limit = Math.min(limit, MAX_LIMIT);
 
-  // Extra citation formats
-  const citeFormats = firstParam(req.query?.cite)
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter((s) => VALID_CITE.has(s));
+  // Card shaping (detail / style / evidence / cite) — one validator shared with /api/works.
+  const cardOpts = cardOptsFrom(req.query);
+  const { citeFormats } = cardOpts;
 
   const format = (firstParam(req.query?.format).trim().toLowerCase()) || "json";
   // Validate format up-front (before any fan-out / charge) so a malformed request is
@@ -301,7 +314,7 @@ export default async function handler(req, res) {
   const rl = await checkRateLimit(identity.keyId ?? clientIp(req), identity.plan);
   if (!rl.ok) {
     res.setHeader("Retry-After", String(rl.retryAfter));
-    return sendJson(res, 429, { error: "Rate limit exceeded. Please retry later." });
+    return sendJson(res, 429, rateLimited(rl.retryAfter));
   }
 
   // 4. Cache (json + non-debug only). Charge-on-hit using the band stored in the
@@ -315,28 +328,31 @@ export default async function handler(req, res) {
     sources: adapters.map((a) => a.id),
     limit,
     authors: settings.authorSearch,
-    format: `${format}|${citeFormats.join(",")}|v${API_VERSION}`,
+    // v0.48: card shaping changes the payload, so it is part of the key too.
+    format: `${format}|${citeFormats.join(",")}|${cardOpts.detail}|${cardOpts.style}|e${cardOpts.evidence ? 1 : 0}|v${API_VERSION}`,
   });
   if (format === "json" && !debug) {
     const cached = await readCache(ck);
     if (cached) {
       const charge = await chargeForBand(identity, cached.coverage);
-      if (!charge.ok) return sendVersioned(res, 402, insufficientCredits());
       const balance = await getBalance(identity.userId);
-      const meta = { creditsCharged: charge.creditsCharged };
-      if (balance != null) meta.balance = balance;
-      return sendVersioned(res, 200, { ...cached, tookMs: Date.now() - startMs, meta });
+      if (!charge.ok) return sendVersioned(res, 402, insufficientCredits({ balance }));
+      // The cached body carries the ORIGINAL assembly time; it is lifted into meta so a hit is
+      // honest about when the answer was retrieved.
+      const { retrieved_at, ...body } = cached;
+      const meta = meterMeta({ creditsCharged: charge.creditsCharged, balance, requestId, retrievedAt: retrieved_at });
+      return sendVersioned(res, 200, { ...body, tookMs: Date.now() - startMs, meta });
     }
   }
 
   // 5. Pre-authorize — gates the expensive fan-out (402 if short). Admin cost 0 → ok,
   // ledger untouched.
-  const pre = await preAuthorize(identity.userId, identity.plan.creditCost);
-  if (!pre.ok) return sendVersioned(res, 402, insufficientCredits());
+  const pre = await preAuthorize(identity.userId, searchCost);
+  if (!pre.ok) return sendVersioned(res, 402, insufficientCredits({ balance: await getBalance(identity.userId) }));
 
   // 6. Fan-out + interleave + dedup + coverage — wrapped so ANY throw refunds the
   // pre-auth (R1: never bill a failed search).
-  let limited, coverageBand, deduped, debugMeta;
+  let limited, coverageBand, deduped, debugMeta, sources;
   try {
     // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
     // signal (an empty result set is NOT a failure — it means "no match", full coverage).
@@ -368,9 +384,11 @@ export default async function handler(req, res) {
           adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: results.length, errored: false });
           recordSuccess(adapter.id); // v0.38 T1: reset circuit-breaker streak on a non-throwing run
           return results;
-        } catch {
+        } catch (err) {
           failedAdapters.push(adapter);
-          adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: 0, errored: true });
+          // v0.48: timeout vs error is surfaced in the public `sources[]` row (G3 completeness).
+          const timedOut = /timed out/.test(err?.message || "");
+          adapterStats.push({ id: adapter.id, ms: Date.now() - t0, candidates: 0, errored: true, timedOut });
           recordFailure(adapter.id); // v0.38 T1: advance circuit-breaker streak; opens after FAILURE_STREAK_THRESHOLD
           return [];
         }
@@ -409,6 +427,27 @@ export default async function handler(req, res) {
 
     limited = deduped.slice(0, limit);
 
+    // v0.48 (G4): integrity evidence on the page that will be returned. Failure-isolated —
+    // enrichEvidence never throws; an outage leaves cards at status "unknown" and reports an
+    // EVIDENCE_* row below. It does NOT touch failedAdapters / the coverage band.
+    const evSources = cardOpts.evidence
+      ? await enrichEvidence(limited, { openAlexKey: envKeys.openAlexKey, mailto: settings.crossrefEmail })
+      : [];
+
+    // v0.48 (G3): which sources answered — the public, origin-transparent counterpart of the
+    // admin telemetry above. No latencies, no upstream URLs (publicResult.js rule).
+    sources = [
+      ...adapterStats
+        .sort((a, b) => laneRank(a.id) - laneRank(b.id))
+        .map((s) => ({
+          source: s.id,
+          status: s.errored ? (s.timedOut ? "timeout" : "failed") : (s.candidates > 0 ? "ok" : "empty"),
+          returned: s.candidates,
+        })),
+      ...cbDropped.map((a) => ({ source: a.id, status: "circuit_open", returned: 0 })),
+      ...evSources,
+    ];
+
     if (debug) {
       debugMeta = {
         perAdapter: adapterStats,
@@ -422,7 +461,7 @@ export default async function handler(req, res) {
       };
     }
   } catch {
-    await refund(identity.userId, identity.plan.creditCost).catch(() => {});
+    await refund(identity.userId, searchCost).catch(() => {});
     return sendVersioned(res, 500, { error: "Search failed." });
   }
 
@@ -431,11 +470,11 @@ export default async function handler(req, res) {
   // pre-auth instead of escaping as a 500 with the credit still debited.
   let creditsCharged;
   try {
-    creditsCharged = await settle(identity.userId, identity.plan.creditCost, coverageBand, {
+    creditsCharged = await settle(identity.userId, searchCost, coverageBand, {
       freeBelowBand: identity.plan.freeBelowBand,
     });
   } catch {
-    await refund(identity.userId, identity.plan.creditCost).catch(() => {});
+    await refund(identity.userId, searchCost).catch(() => {});
     return sendVersioned(res, 500, { error: "Billing failed; no credits were charged." });
   }
   const balance = await getBalance(identity.userId);
@@ -458,27 +497,31 @@ export default async function handler(req, res) {
     return res.end(text);
   }
 
-  // 8. Render — admin debug gets origin-REVEALING cards; everyone else origin-blind.
-  const renderCard = debug ? toDebugResult : toPublicResult;
-  const results = limited.map((r) => renderCard(r, citeFormats));
+  // 8. Render — compact cards by default (v0.48); `detail=full` restores the v2 card, and an
+  // admin's full card is the origin-revealing debug variant (compact.renderCard composes both).
+  const results = limited.map((r) => renderCard(r, { ...cardOpts, debug: debug && cardOpts.detail === "full" }));
 
-  const meta = { creditsCharged };
-  if (balance != null) meta.balance = balance;
+  const retrievedAt = new Date().toISOString();
+  const meta = meterMeta({ creditsCharged, balance, requestId, retrievedAt });
   if (debug) meta.debug = debugMeta;
 
   // Public body (no per-caller meta) — this is what gets cached + charge-on-hit reuses.
+  // `retrieved_at` is cached WITH the body and lifted into meta on a hit (see §4).
   const body = {
     query: q,
     terms,
     coverage: coverageBand,
+    sources,
     count: results.length,
     totalCandidates: deduped.length,
     tookMs: Date.now() - startMs,
     results,
+    retrieved_at: retrievedAt,
   };
 
   // 9. Cache the PUBLIC payload (json + non-debug). Best-effort, fail-open.
   if (format === "json" && !debug) await writeCache(ck, body);
 
-  return sendVersioned(res, 200, { ...body, meta });
+  const { retrieved_at: _ra, ...publicBody } = body;
+  return sendVersioned(res, 200, { ...publicBody, meta });
 }

@@ -258,6 +258,20 @@ tags: [api, shared, billing, auth, crypto, kv, cache]
 
 ---
 
+### v0.48 — works dispatcher + evidence layer
+
+Sprint v0.48 (contract v3, "verifiable evidence for agents") added one dispatcher and four shared modules. See `10-Sprints/sprint_log_v0_48.md` for the design and decisions.
+
+| Module | Role |
+|---|---|
+| `api/works/[op].js` | Dispatcher: `/api/works/{citations,ids,verify,get}`. The old `api/citations.js` / `api/ids.js` moved verbatim to `api/_shared/handlers/works/` (public URLs kept by `vercel.json` rewrites). Deploy stays at 9/12 Node functions. |
+| `evidence.js` | G4 integrity flags per card: Crossref `updated-by` (Retraction Watch + publisher notices; authoritative) and OpenAlex (`is_retracted` fallback, OA status, DOAJ, `listed_in`, licence), batched by DOI (25/call), cached 24 h. **Failure-isolated**: never throws, never moves the coverage band; failures appear as `EVIDENCE_*` rows in `sources[]` and leave cards at `status:"unknown"`. |
+| `verify.js` | G1 reference verification (`/api/verify`): identifier refs → `citationGraph.getWork` → Crossref `/works/{doi}`; free-text refs → Crossref `query.bibliographic` top-3 → OpenAlex `search=`. Weighted containment of title / first-author surname / year / venue in the input string → `verified · mismatch · not_found · ambiguous`. Constants in `THRESHOLDS`; prefers `ambiguous` over a wrong `verified`. |
+| `compact.js` | `renderCard` — the single card renderer (compact default; `detail=full` = v2 card + evidence; admin debug variant) and `cardOptsFrom` — the one parser for `detail` / `style` / `evidence` / `cite`. |
+| `meter.js` (extended) | Error-body builders (`unauthorized`, `insufficientCredits({balance})` with packs, `rateLimited`), `legBand(health)` (sprint v0.45 T5: all legs failed → `limited` → free), `sourceRow`, per-endpoint `unitCost` via `plans.js ENDPOINT_UNITS` (`search`/`citations`/`works` 1 · `ids`/`verify`/`works_meta` 0.1), `charge({ endpoint, qty, band: fn })`, `meterMeta` with `requestId` + `retrieved_at`. |
+
+Leg health: `citationGraph.js` and `idResolve.js` accept `opts.health = { attempted, failed }` and tally every upstream call (a 404 "unknown work" is a sold answer, **not** a failed leg).
+
 ## 🩺 Health audit
 
 - **Verdict:** healthy overall; three targeted security concerns.

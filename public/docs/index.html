@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenCITE API</title>
-<meta name="description" content="Quickstart and reference for the OpenCITE search, citation-graph and ID-resolution API and MCP server." />
+<meta name="description" content="Verifiable scholarly evidence for AI agents: verify references before citing them, search 250M+ open-access papers and archives, fetch any work by DOI/PMID/PMCID. REST + MCP." />
 <link rel="icon" href="/favicon.ico" />
 <style>
   :root { --bg:#fdf8ee; --fg:#1c1917; --muted:#57534e; --rule:#a8a29e; --accent:#7f1d1d; --code:#f5efe1; }
@@ -26,38 +26,57 @@
 <body>
 <main>
   <p class="meta">OpenCITE · Developers</p>
-  <h1>One call across papers, museums and archives</h1>
-  <p>The OpenCITE API searches 250M+ open-access papers (OpenAlex, Crossref, DOAJ, PubMed) alongside library, museum, manuscript and Islamicate archives (Europeana, DPLA, Smithsonian, Gallica, Internet Archive, Open Library and more), deduplicates the results, labels each record with its source, and returns citations in MLA, APA, BibTeX, RIS and CSL-JSON. It also walks citation graphs and resolves DOI ↔ PMID ↔ PMCID. The same tools are available to AI assistants through the <a href="https://www.npmjs.com/package/opencite-mcp">opencite-mcp</a> server.</p>
-  <p class="meta">Contract v2 · <a href="/openapi.json">OpenAPI 3.1</a> · base URL https://citation.today</p>
+  <h1>Verifiable scholarly evidence for agents</h1>
+  <p>Verify references before you cite them. Search 250M+ open-access papers (OpenAlex, Crossref, DOAJ, PubMed) alongside library, museum, manuscript and Islamicate archives (Europeana, DPLA, Smithsonian, Internet Archive, Open Library and more). Fetch any work by DOI, PMID, PMCID or OpenAlex id. Every card names its source and carries an integrity check; every response says which sources answered.</p>
+  <p class="meta">Contract v3 · <a href="/openapi.json">OpenAPI 3.1</a> · <a href="/llms.txt">llms.txt</a> · base URL https://citation.today</p>
+
+  <h2>What every answer guarantees</h2>
+  <table>
+    <tr><td><strong>Exists</strong></td><td>Each record resolves to a real work with a canonical id (DOI / PMID / PMCID / OpenAlex).</td></tr>
+    <tr><td><strong>Provenance</strong></td><td>Each card names its upstream database (<code>source</code>); the answer carries <code>meta.retrieved_at</code> and <code>meta.requestId</code>.</td></tr>
+    <tr><td><strong>Completeness</strong></td><td><code>sources[]</code> lists which databases answered, failed or timed out. The coverage band prorates the charge — you never pay for a blind answer.</td></tr>
+    <tr><td><strong>Integrity flags</strong></td><td><code>evidence</code> on each card: retracted / corrected / expression of concern (with the notice DOI and date, from Crossref + Retraction Watch and OpenAlex), work type, open-access status, DOAJ listing, licence. <code>evidence.status</code> is always explicit — <code>unknown</code> when it could not be checked.</td></tr>
+    <tr><td><strong>Not a judgement</strong></td><td>OpenCITE never says whether a paper's findings are true and never labels journals "predatory". Only sourced facts.</td></tr>
+  </table>
 
   <h2>1. Get a key</h2>
-  <p>Sign in at <a href="/#developers">citation.today → Developers</a> and click <em>Create key</em>. The key is shown once. Free accounts get 20 credits a month; packs start at $10 for 2,000 calls and unlock the full source library.</p>
+  <p>Sign in at <a href="/#developers">citation.today → Developers</a> and click <em>Create key</em>. The key is shown once. Send it as <code>x-api-key</code> or <code>Authorization: Bearer</code>.</p>
 
-  <h2>2. Search</h2>
+  <h2>2. Verify citations</h2>
+<pre>curl -X POST https://citation.today/api/verify \
+  -H "x-api-key: oc_live_..." -H "content-type: application/json" \
+  -d '{"refs":["10.1016/S0140-6736(97)11096-0","Smith J. A study that does not exist. Nature. 2019;570:1-5."],"style":"apa"}'</pre>
+  <p>Up to 50 references per call — DOIs, PMIDs, PMCIDs, DOI URLs or free-text citation strings. Each result carries a <code>verdict</code>:</p>
+  <table>
+    <tr><td><code>verified</code></td><td>The identifier resolves (and any supplied text agrees), or the free-text reference matches one real work with high confidence.</td></tr>
+    <tr><td><code>mismatch</code></td><td>The closest <em>real</em> work differs from what was supplied — a real DOI attached to the wrong title/authors/year, or a title that exists under other authors. <code>mismatched_fields</code> says what disagrees; <code>record</code> is the real work.</td></tr>
+    <tr><td><code>not_found</code></td><td>Nothing close enough — most likely fabricated.</td></tr>
+    <tr><td><code>ambiguous</code></td><td>Two or more real works match about equally; <code>candidates</code> lists them.</td></tr>
+  </table>
+  <p>Also returned: the canonical <code>record</code>, its <code>evidence</code> (retracted? corrected?) and a corrected <code>citation</code> in your <code>style</code> (<code>apa</code>, <code>mla</code>, <code>bibtex</code>, <code>ris</code>, <code>csl-json</code>). A <code>GET /api/verify?refs=a|b</code> form exists for simple clients.</p>
+
+  <h2>3. Search</h2>
 <pre>curl -H "x-api-key: oc_live_..." \
-  "https://citation.today/api/search?q=ottoman+manuscripts&amp;limit=25&amp;cite=bibtex"</pre>
+  "https://citation.today/api/search?q=ottoman+manuscripts&amp;limit=25&amp;style=bibtex"</pre>
   <table>
     <tr><th>Param</th><th>Meaning</th></tr>
     <tr><td><code>q</code></td><td>Query (required, ≤ 512 chars). Separate up to 5 terms with <code>;</code> to run them all.</td></tr>
     <tr><td><code>limit</code></td><td>Max results, 1–100 (default 25).</td></tr>
-    <tr><td><code>cite</code></td><td>Extra citation formats per result: <code>bibtex,ris,csl-json</code> (MLA and APA are always included).</td></tr>
+    <tr><td><code>detail</code></td><td><code>compact</code> (default: title, ≤3 authors, year, venue, doi, url, type, citedBy, evidence, one citation) or <code>full</code> (abstract, keywords, all authors, every citation format).</td></tr>
+    <tr><td><code>style</code></td><td>Citation style on compact cards: <code>apa</code> (default), <code>mla</code>, <code>bibtex</code>, <code>ris</code>, <code>csl-json</code>.</td></tr>
+    <tr><td><code>evidence</code></td><td><code>0</code> to skip the integrity lookup.</td></tr>
     <tr><td><code>format</code></td><td><code>json</code> (default) or a flat bibliography: <code>mla</code>, <code>apa</code>, <code>bibtex</code>, <code>ris</code>, <code>csl-json</code>.</td></tr>
-    <tr><td><code>sources</code></td><td>Comma-separated source ids to restrict to (as returned in <code>source</code>). Unknown ids are ignored.</td></tr>
-    <tr><td><code>authors</code></td><td><code>1</code> to include author-name matches.</td></tr>
+    <tr><td><code>sources</code> · <code>authors</code> · <code>cite</code></td><td>Advanced: restrict to source ids; include author-name matches; extra citation formats on full cards.</td></tr>
   </table>
-  <p>Response: <code>{ query, terms, coverage, count, totalCandidates, tookMs, results[], meta }</code>. Each result carries <code>id</code>, <code>source</code>, <code>title</code>, <code>authors</code>, <code>year</code>, <code>journal</code>, <code>doi</code>, <code>url</code>, <code>abstract</code>, <code>isOA</code>, <code>type</code>, <code>citedBy</code> and <code>citations</code>. <code>coverage</code> is one of <code>full · near-full · high · partial · limited</code>; <code>meta.creditsCharged</code> and <code>meta.balance</code> tell you what the call cost.</p>
+  <p>Response: <code>{ query, terms, coverage, sources[], count, totalCandidates, tookMs, results[], meta }</code>. <code>coverage</code> is one of <code>full · near-full · high · partial · limited</code>; <code>meta</code> carries <code>requestId</code>, <code>retrieved_at</code>, <code>creditsCharged</code> and <code>balance</code>.</p>
 
-  <h2>3. Citation graph</h2>
+  <h2>4. One work by any id</h2>
 <pre>curl -H "x-api-key: oc_live_..." \
-  "https://citation.today/api/citations?id=10.1038/nature14539&amp;dir=cited-by&amp;limit=50&amp;sort=impact"</pre>
-  <p><code>dir=cited-by</code> (works citing it) or <code>dir=refs</code> (its bibliography); <code>id</code> is a DOI or OpenAlex work id; <code>minCitations</code> filters citing works; <code>sort</code> is <code>impact</code> or <code>year</code>.</p>
+  "https://citation.today/api/works?id=10.1038/nature14539&amp;include=cited-by&amp;limit=50"</pre>
+  <p><code>id</code> is a DOI, DOI URL, PMID, PMCID or OpenAlex <code>W…</code> id. Returns the canonical <code>work</code>, <code>ids</code> (<code>doi</code>, <code>pmid</code>, <code>pmcid</code>, <code>openalex</code>), its evidence and — with <code>include=cited-by</code> or <code>include=refs</code> — the citation <code>graph</code>. The standalone <code>/api/citations</code> and <code>/api/ids</code> calls still work.</p>
 
-  <h2>4. Resolve identifiers</h2>
-<pre>curl -H "x-api-key: oc_live_..." \
-  "https://citation.today/api/ids?ids=10.1038/nbt.3642,27571352,PMC5034905"</pre>
-  <p>Any mix of DOIs, PMIDs and PMCIDs, up to 200. Returns <code>{ results: { [inputId]: { doi, pmid, pmcid } } }</code>.</p>
-
-  <h2>5. MCP (Claude Desktop, Cursor, any MCP client)</h2>
+  <h2>5. MCP (Claude Code, Claude Desktop, any MCP client)</h2>
+<pre>claude mcp add opencite -e OPENCITE_API_KEY=oc_live_... -- npx -y opencite-mcp</pre>
 <pre>{
   "mcpServers": {
     "opencite": {
@@ -67,28 +86,31 @@
     }
   }
 }</pre>
-  <p>Tools: <code>search_scholarly_sources</code>, <code>search_citations</code>, <code>resolve_ids</code>.</p>
+  <p>Three tools: <code>verify_citations</code> (use before any reference list), <code>search_papers</code>, <code>get_paper</code>. Package: <a href="https://www.npmjs.com/package/opencite-mcp">opencite-mcp</a>.</p>
 
   <h2>Billing</h2>
   <ul>
-    <li>1 credit per call to any of the three endpoints, prorated by coverage: <code>full</code> 1.0 · <code>near-full</code> 0.99 · <code>high</code> 0.95 · <code>partial</code> 0.5 · <code>limited</code> free. Failed calls are never charged.</li>
-    <li><code>402</code> with <code>{ code: "insufficient_credits", upgrade_url }</code> when the balance is empty. <code>429</code> with <code>Retry-After</code> when rate limited (per key; and per IP before authentication).</li>
-    <li>Credits never expire. See the <a href="/legal/refunds.html">refund policy</a>.</li>
+    <li><strong>1 credit</strong> per search or citation-graph call, prorated by coverage: <code>full</code> 1.0 · <code>near-full</code> 0.99 · <code>high</code> 0.95 · <code>partial</code> 0.5 · <code>limited</code> free.</li>
+    <li><strong>0.1 credit</strong> per reference verified, per identifier lookup, or per work fetched without a graph.</li>
+    <li>A call whose upstream sources all failed is never charged. Failed calls are never charged.</li>
+    <li><code>GET /api/credits</code> returns your balance (free).</li>
+    <li>Current plans and packs: <a href="/#developers">citation.today → Developers</a>. Credits never expire. See the <a href="/legal/refunds.html">refund policy</a>.</li>
   </ul>
 
   <h2>Errors</h2>
   <table>
-    <tr><td><code>400</code></td><td>Bad parameter (unknown format, too many terms, query too long).</td></tr>
-    <tr><td><code>401</code></td><td>Missing or invalid <code>x-api-key</code> header. Keys are never accepted in the query string.</td></tr>
-    <tr><td><code>402</code></td><td>Insufficient credits.</td></tr>
-    <tr><td><code>429</code></td><td>Rate limited.</td></tr>
-    <tr><td><code>503</code></td><td>No sources available right now (nothing was charged).</td></tr>
+    <tr><td><code>400</code></td><td><code>bad_request</code> — unknown parameter value, too many terms or refs, query too long.</td></tr>
+    <tr><td><code>401</code></td><td><code>unauthorized</code> — missing or invalid key; body carries <code>signup_url</code>. Keys are never accepted in the query string.</td></tr>
+    <tr><td><code>402</code></td><td><code>insufficient_credits</code> — body carries <code>balance</code>, <code>upgrade_url</code> and <code>packs</code>.</td></tr>
+    <tr><td><code>429</code></td><td><code>rate_limited</code> — <code>Retry-After</code> header and <code>retry_after</code> in the body (per key; and per IP before authentication).</td></tr>
+    <tr><td><code>503</code></td><td><code>no_sources_available</code> — nothing was charged.</td></tr>
   </table>
-  <p>Every response carries <code>X-OpenCITE-API-Version: 2</code>. Breaking changes bump the version.</p>
+  <p>Every response carries <code>X-OpenCITE-API-Version: 3</code> and <code>X-OpenCITE-Request-Id</code>. Breaking changes bump the version. Evidence is refreshed daily; retraction status comes from Crossref (Retraction Watch and publisher notices) and OpenAlex.</p>
 
   <nav>
     <a href="/">Home</a>
     <a href="/openapi.json">OpenAPI</a>
+    <a href="/llms.txt">llms.txt</a>
     <a href="/legal/terms.html">Terms</a>
     <a href="/legal/privacy.html">Privacy</a>
     <a href="/legal/contact.html">Contact</a>

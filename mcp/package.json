@@ -1,22 +1,24 @@
 {
   "name": "opencite-mcp",
-  "version": "0.46.0",
+  "version": "0.48.0",
   "private": false,
   "type": "module",
-  "description": "MCP server for OpenCITE — one call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives; deduped, source-labelled, citation-ready (MLA/APA/BibTeX/RIS/CSL-JSON), plus citation-graph traversal and DOI/PMID/PMCID resolution.",
+  "description": "MCP server for OpenCITE — verifiable scholarly evidence for agents: verify references before citing them (retracted? fabricated? wrong DOI?), search 250M+ open-access papers plus museum, library, manuscript and Islamicate archives, and fetch any work by DOI/PMID/PMCID with its citation graph. Every card names its source and carries integrity evidence.",
   "license": "MIT",
   "bin": {
     "opencite-mcp": "bin/opencite-mcp.js"
   },
   "exports": {
     ".": "./src/server.js",
+    "./tools": "./src/tools.js",
     "./schema": "./src/schema.js"
   },
   "scripts": {
     "start": "node bin/opencite-mcp.js",
-    "print-schemas": "node src/schema.js",
+    "print-schemas": "node src/tools.js",
     "sync-contract": "node scripts/sync-contract.mjs",
-    "prepublishOnly": "npm run sync-contract"
+    "prepublishOnly": "npm run sync-contract",
+    "check-contract": "node scripts/sync-contract.mjs --check"
   },
   "engines": {
     "node": ">=18"
@@ -27,6 +29,8 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "citation-verification",
+    "retraction",
     "scholarly-search",
     "open-access",
     "openalex",
@@ -34,8 +38,7 @@
     "pubmed",
     "citations",
     "bibtex",
-    "europeana",
-    "gallica"
+    "hallucination"
   ],
   "repository": {
     "type": "git",

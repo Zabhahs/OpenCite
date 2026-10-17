@@ -1,0 +1,45 @@
+# OpenCITE
+
+> Verifiable scholarly evidence for AI agents. Verify references before citing them, search 250M+ open-access papers and heritage archives, and fetch any work by DOI/PMID/PMCID — every answer names its sources, flags retracted or corrected works, and says how complete the search was.
+
+Base URL: https://citation.today · Contract: v3 (header `X-OpenCITE-API-Version: 3`) · OpenAPI: https://citation.today/openapi.json · Docs: https://citation.today/docs/
+
+## What OpenCITE guarantees on every answer
+
+1. Existence — each record resolves to a real work with a canonical id (DOI / PMID / PMCID / OpenAlex).
+2. Provenance — each card names the upstream database (`source`) and the answer carries `meta.retrieved_at` + `meta.requestId`.
+3. Completeness — `sources[]` lists which databases answered, failed or timed out; the coverage band prorates the charge, so you never pay for a blind answer.
+4. Integrity flags — `evidence` on each card: retracted / corrected / expression of concern (with the notice DOI and date, from Crossref + Retraction Watch and OpenAlex), work type (preprint vs article), open-access status, DOAJ listing, licence. `evidence.status` is always explicit (`unknown` when it could not be checked).
+5. Identifiable — every answer has a `meta.requestId`.
+
+OpenCITE does NOT judge whether a paper's findings are true, and never labels journals "predatory". Only sourced facts.
+
+## Tools / endpoints (API key required: `x-api-key: oc_live_…` or `Authorization: Bearer oc_live_…`)
+
+- POST /api/verify — `{ "refs": ["10.1016/S0140-6736(97)11096-0", "Smith J. Title. Nature 2019;570:1-5."], "style": "apa" }` → per reference: `verdict` (verified | mismatch | not_found | ambiguous), `record`, `evidence`, corrected `citation`, `candidates`. Up to 50 refs; 0.1 credit each. USE THIS BEFORE OUTPUTTING ANY REFERENCE LIST.
+- GET /api/search?q=…&limit=25&style=apa&detail=compact — deduplicated results across OpenAlex, Crossref, DOAJ, PubMed, Europeana, DPLA, Smithsonian, Internet Archive, Open Library and more. 1 credit per call, prorated by coverage.
+- GET /api/works?id=<doi|pmid|pmcid|W-id>&include=cited-by|refs — one work, every identifier, evidence, optional citation graph. 0.1 credit (record) / 1 credit (with graph).
+- GET /api/citations, GET /api/ids — the same graph and id-crosswalk operations as standalone calls.
+- GET /api/credits — balance (free).
+
+Cards are compact by default (title, ≤3 authors, year, venue, doi, url, type, citedBy, evidence, one formatted citation). `detail=full` adds abstract, keywords, all authors and every citation format. `style` = apa | mla | bibtex | ris | csl-json.
+
+## Errors (JSON body always carries `code`)
+
+- 401 `unauthorized` → `signup_url`
+- 402 `insufficient_credits` → `balance`, `upgrade_url`, `packs` (a human must top up)
+- 429 `rate_limited` → `retry_after` seconds
+
+## MCP
+
+- npm: `npx -y opencite-mcp` (stdio). Tools: `verify_citations`, `search_papers`, `get_paper`. Env: `OPENCITE_API_KEY`.
+- Claude Code: `claude mcp add opencite -e OPENCITE_API_KEY=oc_live_… -- npx -y opencite-mcp`
+- Claude Desktop / any stdio client: `{ "mcpServers": { "opencite": { "command": "npx", "args": ["-y", "opencite-mcp"], "env": { "OPENCITE_API_KEY": "oc_live_…" } } } }`
+
+## Keys and pricing
+
+Sign in at https://citation.today → Developers → Create key. Current plans and credit packs: https://citation.today/#developers. Pricing is quoted in credits: 1 credit = one search call; verification and id lookups are 0.1 credit each.
+
+## Licensing
+
+Metadata comes from open sources (OpenAlex and Crossref are CC0). Per-record content licences, where stated, are in `evidence.license`. Terms: https://citation.today/legal/terms.html · Privacy: https://citation.today/legal/privacy.html

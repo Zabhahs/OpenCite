@@ -1,20 +1,21 @@
-// OpenCITE MCP server
+// OpenCITE MCP server (stdio)
 //
-// Exposes three tools:
-//   search_scholarly_sources — calls /api/search; returns origin-blind result cards.
-//   search_citations         — calls /api/citations; walks a paper's citation network.
-//   resolve_ids              — calls /api/ids; crosswalks DOI ↔ PMID ↔ PMCID.
+// Exposes the three tools in tools.js:
+//   verify_citations — POST /api/verify; check references before citing them (the anti-hallucination path)
+//   search_papers    — GET  /api/search; compact, evidence-flagged cards
+//   get_paper        — GET  /api/works;  one work by any id, every identifier, optional citation graph
 //
-// The search tool's input schema is generated from the API contract SSOT (schema.js),
-// so it never drifts from the REST surface. The two newer tools use hand-written
-// schemas (their endpoints are not in the apiContract SSOT).
+// Every tool's input schema is generated from the API contract SSOT (schema.js ← contract.js ←
+// vendored apiContract.js), so the MCP surface never drifts from the REST surface. Responses are
+// shaped by tools.js `toToolResult`: payload + a billing/trust trailer, or an actionable error.
 //
 // Config (via MCP client `env`):
-//   OPENCITE_API_KEY        customer key, forwarded as x-api-key (optional pre-billing)
+//   OPENCITE_API_KEY        customer key, forwarded as x-api-key. REQUIRED — every call is metered.
 //   OPENCITE_API_BASE_URL   override endpoint (default https://citation.today; TLS only)
 //
 // The API key is read once from the environment and NEVER logged (R15).
 
+import { createRequire } from "node:module";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -22,63 +23,31 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { TOOL_NAME, CITATIONS_TOOL_NAME, IDS_TOOL_NAME } from "./contract.js";
-import { mcpToolDefinition, citationsToolDefinition, idsToolDefinition } from "./schema.js";
-import { searchScholarlySources, getCitations, resolveIds, DEFAULT_BASE_URL } from "./client.js";
+import { toolDefinitions, toolByName, toToolResult } from "./tools.js";
+import { httpExecutor, DEFAULT_BASE_URL } from "./client.js";
+
+// Server version = package version (was a stale "0.1.0" literal before v0.48).
+const { name: PKG_NAME, version: PKG_VERSION } = createRequire(import.meta.url)("../package.json");
 
 export function createServer({ apiKey, baseUrl } = {}) {
+  const execute = httpExecutor({ apiKey, baseUrl });
   const server = new Server(
-    { name: "opencite", version: "0.1.0" },
+    { name: PKG_NAME, version: PKG_VERSION },
     { capabilities: { tools: {} } }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [mcpToolDefinition(), citationsToolDefinition(), idsToolDefinition()],
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolDefinitions() }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const { name, arguments: args = {} } = req.params;
-
-    if (name === TOOL_NAME) {
-      try {
-        const body = await searchScholarlySources(args, { apiKey, baseUrl });
-        // Non-JSON formats (mla/apa/bibtex/ris) come back from client.js as { _text }.
-        // Surface that raw citation text as the MCP text block directly — the idiomatic
-        // plain-text shape an agent expects — instead of a JSON-wrapped envelope. JSON
-        // formats (json/csl-json) keep the pretty-printed structured response. (F-501)
-        const text =
-          body && typeof body._text === "string"
-            ? body._text
-            : JSON.stringify(body, null, 2);
-        return { content: [{ type: "text", text }] };
-      } catch (err) {
-        // err.message is built in client.js without headers, so the key can't leak.
-        return { isError: true, content: [{ type: "text", text: err.message }] };
-      }
+    const tool = toolByName(name);
+    if (!tool) return { isError: true, content: [{ type: "text", text: `Unknown tool: ${name}` }] };
+    try {
+      return toToolResult(await execute(tool.toRequest(args)));
+    } catch (err) {
+      // err.message is built in client.js without headers, so the key can't leak.
+      return { isError: true, content: [{ type: "text", text: err.message }] };
     }
-
-    if (name === CITATIONS_TOOL_NAME) {
-      try {
-        const body = await getCitations(args, { apiKey, baseUrl });
-        return { content: [{ type: "text", text: JSON.stringify(body, null, 2) }] };
-      } catch (err) {
-        return { isError: true, content: [{ type: "text", text: err.message }] };
-      }
-    }
-
-    if (name === IDS_TOOL_NAME) {
-      try {
-        const body = await resolveIds(args, { apiKey, baseUrl });
-        return { content: [{ type: "text", text: JSON.stringify(body, null, 2) }] };
-      } catch (err) {
-        return { isError: true, content: [{ type: "text", text: err.message }] };
-      }
-    }
-
-    return {
-      isError: true,
-      content: [{ type: "text", text: `Unknown tool: ${name}` }],
-    };
   });
 
   return server;
@@ -91,5 +60,5 @@ export async function startStdioServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr only — never stdout (that channel is the MCP protocol stream).
-  process.stderr.write(`opencite-mcp ready (endpoint: ${baseUrl})\n`);
+  process.stderr.write(`${PKG_NAME} ${PKG_VERSION} ready (endpoint: ${baseUrl}${apiKey ? "" : "; WARNING: OPENCITE_API_KEY unset — every call will return 401"})\n`);
 }

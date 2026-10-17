@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenCITE Scholarly Search API",
-    "version": "2",
-    "description": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives. Each result names its source database and carries DOI/URL provenance and formatted citations (MLA, APA, BibTeX, RIS, CSL-JSON). Results keep each source's native relevance order, interleaved scholarly-first. Billed 1 credit per call, prorated by the coverage actually delivered; requires an x-api-key header."
+    "title": "OpenCITE Scholarly Evidence API",
+    "version": "3",
+    "description": "Verifiable scholarly evidence for agents: search 250M+ open-access papers and heritage archives, fetch any work by id, and verify references before citing them. Every card names its source and carries integrity evidence (retracted / corrected / expression of concern); every response says which sources answered. Docs: https://citation.today/docs/ · llms.txt: https://citation.today/llms.txt"
   },
   "servers": [
     {
@@ -14,96 +14,20 @@
   "paths": {
     "/api/search": {
       "get": {
-        "operationId": "searchScholarlySources",
-        "summary": "Search open-access scholarly, museum and archive sources in one call.",
-        "description": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives. Each result names its source database and carries DOI/URL provenance and formatted citations (MLA, APA, BibTeX, RIS, CSL-JSON). Results keep each source's native relevance order, interleaved scholarly-first. Billed 1 credit per call, prorated by the coverage actually delivered; requires an x-api-key header.",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'.",
-            "schema": {
-              "type": "string",
-              "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'."
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "description": "Max merged results, 1..100.",
-            "schema": {
-              "type": "integer",
-              "description": "Max merged results, 1..100.",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 25
-            }
-          },
-          {
-            "name": "sources",
-            "in": "query",
-            "required": false,
-            "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended).",
-            "schema": {
-              "type": "string",
-              "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended)."
-            }
-          },
-          {
-            "name": "authors",
-            "in": "query",
-            "required": false,
-            "description": "1/true to include author-name matches in retrieval.",
-            "schema": {
-              "type": "boolean",
-              "description": "1/true to include author-name matches in retrieval."
-            }
-          },
-          {
-            "name": "cite",
-            "in": "query",
-            "required": false,
-            "description": "Extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
-            "schema": {
-              "type": "string",
-              "description": "Extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
-              "enum": [
-                "bibtex",
-                "ris",
-                "csl-json"
-              ]
-            }
-          },
-          {
-            "name": "format",
-            "in": "query",
-            "required": false,
-            "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
-            "schema": {
-              "type": "string",
-              "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
-              "enum": [
-                "json",
-                "mla",
-                "apa",
-                "bibtex",
-                "ris",
-                "csl-json"
-              ],
-              "default": "json"
-            }
-          }
-        ],
+        "operationId": "searchPapers",
+        "summary": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives.",
+        "description": "One deduped, citation-ready call across 250M+ open-access papers plus museum, library, manuscript and Islamicate archives. Each result names its source database, carries DOI/URL provenance, an integrity check (retracted / corrected / expression of concern, work type, OA status) and a formatted citation. The response says which sources answered. Billed 1 credit per call, prorated by the coverage actually delivered; requires an API key.",
         "security": [
           {
             "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Deduped result cards in native upstream order, interleaved scholarly-first; each names its source.",
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -131,6 +55,13 @@
                       ],
                       "description": "Corpus-weighted coverage band for this request: one of full, near-full, high, partial, limited."
                     },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out."
+                    },
                     "count": {
                       "type": "integer",
                       "description": "Number of results returned."
@@ -146,117 +77,397 @@
                     "results": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Opaque, deterministic result identifier (prefix oc_). Not an upstream id."
-                          },
-                          "source": {
-                            "type": "string",
-                            "description": "Upstream database that served this record (e.g. OPENALEX, CROSSREF, DOAJ, NCBI, EUROPEANA)."
-                          },
-                          "title": {
-                            "type": "string",
-                            "description": "Work title."
-                          },
-                          "authors": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            },
-                            "description": "Author display names."
-                          },
-                          "year": {
-                            "type": "string",
-                            "description": "Publication year."
-                          },
-                          "journal": {
-                            "type": "string",
-                            "description": "Containing journal / venue / collection title."
-                          },
-                          "publisher": {
-                            "type": "string",
-                            "description": "Publisher."
-                          },
-                          "volume": {
-                            "type": "string",
-                            "description": "Volume."
-                          },
-                          "issue": {
-                            "type": "string",
-                            "description": "Issue."
-                          },
-                          "pages": {
-                            "type": "string",
-                            "description": "Page range."
-                          },
-                          "doi": {
-                            "type": "string",
-                            "description": "DOI, when known."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "Canonical URL to the work."
-                          },
-                          "abstract": {
-                            "type": "string",
-                            "description": "Abstract / description, when available."
-                          },
-                          "isOA": {
-                            "type": "boolean",
-                            "description": "Whether the work is open access."
-                          },
-                          "type": {
-                            "type": "string",
-                            "description": "Work type (article, book-chapter, dataset, …)."
-                          },
-                          "editors": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            },
-                            "description": "Editors, for edited volumes."
-                          },
-                          "keywords": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            },
-                            "description": "Author/publisher keywords."
-                          },
-                          "subjects": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            },
-                            "description": "Controlled-vocabulary subject terms."
-                          },
-                          "language": {
-                            "type": "string",
-                            "description": "ISO-639 language code, when known."
-                          },
-                          "citedBy": {
-                            "type": [
-                              "number",
-                              "null"
-                            ],
-                            "description": "Citation count, when the work carries one (else null)."
-                          },
-                          "citations": {
+                        "oneOf": [
+                          {
                             "type": "object",
-                            "additionalProperties": {
-                              "type": "string"
-                            },
-                            "description": "Formatted citations: { mla, apa, …extra requested formats }."
+                            "properties": {
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Opaque, deterministic result identifier (prefix oc_). Not an upstream id."
+                              },
+                              "source": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Upstream database that served this record (e.g. OPENALEX, CROSSREF, DOAJ, NCBI, EUROPEANA)."
+                              },
+                              "doi": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "DOI, when known."
+                              },
+                              "title": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Work title."
+                              },
+                              "authors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Up to three author display names, then \"et al.\"."
+                              },
+                              "year": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Publication year."
+                              },
+                              "venue": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Containing journal / venue / collection title."
+                              },
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Canonical URL to the work."
+                              },
+                              "type": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Work type (article, book-chapter, dataset, …)."
+                              },
+                              "citedBy": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "description": "Citation count, when the work carries one (else null)."
+                              },
+                              "evidence": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "One of ok, retracted, corrected, expression_of_concern, unknown. \"unknown\" = no DOI, or both lookups failed."
+                                  },
+                                  "retraction": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "description": "Retraction notice { notice_doi, date, source } when retracted, else null. source = retraction-watch | publisher | openalex."
+                                  },
+                                  "corrections": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    },
+                                    "description": "Correction / erratum notices [{ notice_doi, date, source }]. Empty when none."
+                                  },
+                                  "expression_of_concern": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "description": "Expression-of-concern notice { notice_doi, date, source } or null."
+                                  },
+                                  "work_type": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Work type from the registering agency (journal-article, preprint, book-chapter, dataset, …)."
+                                  },
+                                  "oa_status": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Open-access status: gold | green | hybrid | bronze | diamond | closed, or null."
+                                  },
+                                  "in_doaj": {
+                                    "type": [
+                                      "boolean",
+                                      "null"
+                                    ],
+                                    "description": "Whether the venue is listed in the Directory of Open Access Journals (null when unknown)."
+                                  },
+                                  "indexed_in": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Curated index lists the venue appears in (e.g. medline, cwts-core). Empty when unknown."
+                                  },
+                                  "license": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Content licence of the primary location when stated (e.g. cc-by), else null."
+                                  },
+                                  "checked": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Which evidence sources answered: subset of [crossref, openalex]."
+                                  }
+                                },
+                                "description": "Integrity flags (see evidence fields). Omitted when evidence=0."
+                              },
+                              "citation": {
+                                "type": [
+                                  "string",
+                                  "object"
+                                ],
+                                "description": "The work formatted in the requested `style` (string; an object for csl-json)."
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Opaque, deterministic result identifier (prefix oc_). Not an upstream id."
+                              },
+                              "source": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Upstream database that served this record (e.g. OPENALEX, CROSSREF, DOAJ, NCBI, EUROPEANA)."
+                              },
+                              "title": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Work title."
+                              },
+                              "authors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Author display names."
+                              },
+                              "year": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Publication year."
+                              },
+                              "journal": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Containing journal / venue / collection title."
+                              },
+                              "publisher": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Publisher."
+                              },
+                              "volume": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Volume."
+                              },
+                              "issue": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Issue."
+                              },
+                              "pages": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Page range."
+                              },
+                              "doi": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "DOI, when known."
+                              },
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Canonical URL to the work."
+                              },
+                              "abstract": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Abstract / description, when available."
+                              },
+                              "isOA": {
+                                "type": "boolean",
+                                "description": "Whether the work is open access."
+                              },
+                              "type": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Work type (article, book-chapter, dataset, …)."
+                              },
+                              "editors": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Editors, for edited volumes."
+                              },
+                              "keywords": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Author/publisher keywords."
+                              },
+                              "subjects": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Controlled-vocabulary subject terms."
+                              },
+                              "language": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "ISO-639 language code, when known."
+                              },
+                              "citedBy": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ],
+                                "description": "Citation count, when the work carries one (else null)."
+                              },
+                              "evidence": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "One of ok, retracted, corrected, expression_of_concern, unknown. \"unknown\" = no DOI, or both lookups failed."
+                                  },
+                                  "retraction": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "description": "Retraction notice { notice_doi, date, source } when retracted, else null. source = retraction-watch | publisher | openalex."
+                                  },
+                                  "corrections": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    },
+                                    "description": "Correction / erratum notices [{ notice_doi, date, source }]. Empty when none."
+                                  },
+                                  "expression_of_concern": {
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ],
+                                    "description": "Expression-of-concern notice { notice_doi, date, source } or null."
+                                  },
+                                  "work_type": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Work type from the registering agency (journal-article, preprint, book-chapter, dataset, …)."
+                                  },
+                                  "oa_status": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Open-access status: gold | green | hybrid | bronze | diamond | closed, or null."
+                                  },
+                                  "in_doaj": {
+                                    "type": [
+                                      "boolean",
+                                      "null"
+                                    ],
+                                    "description": "Whether the venue is listed in the Directory of Open Access Journals (null when unknown)."
+                                  },
+                                  "indexed_in": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Curated index lists the venue appears in (e.g. medline, cwts-core). Empty when unknown."
+                                  },
+                                  "license": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "description": "Content licence of the primary location when stated (e.g. cc-by), else null."
+                                  },
+                                  "checked": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Which evidence sources answered: subset of [crossref, openalex]."
+                                  }
+                                },
+                                "description": "Integrity flags (see evidence fields). Omitted when evidence=0."
+                              },
+                              "citations": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "description": "Formatted citations: { mla, apa, …extra requested formats }."
+                              }
+                            }
                           }
-                        }
+                        ]
                       },
-                      "description": "Array of origin-blind result cards (see fields below)."
+                      "description": "Array of result cards (compact by default; see card fields)."
                     },
                     "meta": {
-                      "type": "string",
-                      "description": "Billing metadata: { creditsCharged, balance } — credits spent on this call (coverage-prorated; 0 for unmetered tiers) and the caller's remaining balance."
+                      "type": "object",
+                      "description": "Billing + provenance metadata (see meta fields)."
                     }
                   }
                 }
@@ -264,21 +475,698 @@
             }
           },
           "400": {
-            "description": "Invalid request (e.g. no valid sources selected)."
+            "description": "Invalid request (bad parameter)."
           },
           "401": {
-            "description": "Invalid or missing x-api-key header (a key is always required)."
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
           },
           "402": {
-            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", upgrade_url }."
-          },
-          "405": {
-            "description": "Method not allowed — use GET."
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
           },
           "429": {
-            "description": "Rate limited (per key, and per IP before auth). Retry-After header set."
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'.",
+            "schema": {
+              "type": "string",
+              "description": "Search query (max 512 chars). Separate up to 5 keywords with ';'."
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max merged results, 1..100.",
+            "schema": {
+              "type": "integer",
+              "description": "Max merged results, 1..100.",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+            "schema": {
+              "type": "string",
+              "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+              "enum": [
+                "compact",
+                "full"
+              ],
+              "default": "compact"
+            }
+          },
+          {
+            "name": "style",
+            "in": "query",
+            "required": false,
+            "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+            "schema": {
+              "type": "string",
+              "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+              "enum": [
+                "apa",
+                "mla",
+                "bibtex",
+                "ris",
+                "csl-json"
+              ],
+              "default": "apa"
+            }
+          },
+          {
+            "name": "evidence",
+            "in": "query",
+            "required": false,
+            "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+            "schema": {
+              "type": "boolean",
+              "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+              "default": true
+            }
+          },
+          {
+            "name": "sources",
+            "in": "query",
+            "required": false,
+            "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended).",
+            "schema": {
+              "type": "string",
+              "description": "Advanced: comma-separated subset of source IDs (as returned in each result's `source`) to restrict the search to. Unknown ids are ignored. Omit to search the full available library (recommended)."
+            }
+          },
+          {
+            "name": "authors",
+            "in": "query",
+            "required": false,
+            "description": "1/true to include author-name matches in retrieval.",
+            "schema": {
+              "type": "boolean",
+              "description": "1/true to include author-name matches in retrieval."
+            }
+          },
+          {
+            "name": "cite",
+            "in": "query",
+            "required": false,
+            "description": "detail=full only: extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
+            "schema": {
+              "type": "string",
+              "description": "detail=full only: extra citation formats per result, comma-separated: bibtex, ris, csl-json.",
+              "enum": [
+                "bibtex",
+                "ris",
+                "csl-json"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
+            "schema": {
+              "type": "string",
+              "description": "json (default, structured cards) | mla | apa | bibtex | ris | csl-json (non-json returns a flat bibliography of the returned results).",
+              "enum": [
+                "json",
+                "mla",
+                "apa",
+                "bibtex",
+                "ris",
+                "csl-json"
+              ],
+              "default": "json"
+            }
+          }
+        ]
+      }
+    },
+    "/api/works": {
+      "get": {
+        "operationId": "getPaper",
+        "summary": "Fetch one work by any identifier: its canonical record (compact or full card), every known identifier (doi, pmid, pmcid, openalex), its integrity evidence, and optionally the works that cite it or its reference list.",
+        "description": "Fetch one work by any identifier: its canonical record (compact or full card), every known identifier (doi, pmid, pmcid, openalex), its integrity evidence, and optionally the works that cite it or its reference list. 0.1 credit for the record alone; 1 credit when a citation direction is included.",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The resolved work card (null when the id is unknown to every source).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "work": {
+                      "description": "The resolved work card (null when the id is unknown to every source)."
+                    },
+                    "ids": {
+                      "description": "{ doi, pmid, pmcid, openalex } — every identifier found for the work (null where unknown)."
+                    },
+                    "graph": {
+                      "description": "When include is set: { direction, count, results[] } of cards."
+                    },
+                    "coverage": {
+                      "description": "Band for the lookups made (limited = every upstream failed → free)."
+                    },
+                    "sources": {
+                      "description": "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out."
+                    },
+                    "meta": {
+                      "description": "Billing + provenance metadata (see meta fields)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad parameter)."
+          },
+          "401": {
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "A DOI (10.…), PMID (digits), PMCID (PMC…), or OpenAlex work id (W…). DOI URLs are accepted.",
+            "schema": {
+              "type": "string",
+              "description": "A DOI (10.…), PMID (digits), PMCID (PMC…), or OpenAlex work id (W…). DOI URLs are accepted."
+            }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "description": "Also return the citation graph in one direction: cited-by (works citing it) or refs (its bibliography).",
+            "schema": {
+              "type": "string",
+              "description": "Also return the citation graph in one direction: cited-by (works citing it) or refs (its bibliography).",
+              "enum": [
+                "cited-by",
+                "refs"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max graph edges when include is set (1–200).",
+            "schema": {
+              "type": "integer",
+              "description": "Max graph edges when include is set (1–200).",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 25
+            }
+          },
+          {
+            "name": "minCitations",
+            "in": "query",
+            "required": false,
+            "description": "cited-by only: drop citing works below this cited-by count.",
+            "schema": {
+              "type": "integer",
+              "description": "cited-by only: drop citing works below this cited-by count."
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Graph order: impact (cited-by count) or year (newest first).",
+            "schema": {
+              "type": "string",
+              "description": "Graph order: impact (cited-by count) or year (newest first).",
+              "enum": [
+                "impact",
+                "year"
+              ],
+              "default": "impact"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+            "schema": {
+              "type": "string",
+              "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+              "enum": [
+                "compact",
+                "full"
+              ],
+              "default": "compact"
+            }
+          },
+          {
+            "name": "style",
+            "in": "query",
+            "required": false,
+            "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+            "schema": {
+              "type": "string",
+              "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+              "enum": [
+                "apa",
+                "mla",
+                "bibtex",
+                "ris",
+                "csl-json"
+              ],
+              "default": "apa"
+            }
+          },
+          {
+            "name": "evidence",
+            "in": "query",
+            "required": false,
+            "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+            "schema": {
+              "type": "boolean",
+              "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+              "default": true
+            }
+          }
+        ]
+      }
+    },
+    "/api/citations": {
+      "get": {
+        "operationId": "citations",
+        "summary": "Walk a work's citation network: works that cite it (dir=cited-by) or its reference list (dir=refs).",
+        "description": "Walk a work's citation network: works that cite it (dir=cited-by) or its reference list (dir=refs). Cards carry evidence flags. 1 credit per call; free when every upstream failed.",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cards.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "description": "Echo of id."
+                    },
+                    "direction": {
+                      "description": "cited-by | refs."
+                    },
+                    "count": {
+                      "description": "Cards returned."
+                    },
+                    "coverage": {
+                      "description": "Band for the lookups made."
+                    },
+                    "sources": {
+                      "description": "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out."
+                    },
+                    "results": {
+                      "description": "Cards."
+                    },
+                    "meta": {
+                      "description": "Billing + provenance metadata (see meta fields)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad parameter)."
+          },
+          "401": {
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "A DOI (10.…), PMID (digits), PMCID (PMC…), or OpenAlex work id (W…). DOI URLs are accepted.",
+            "schema": {
+              "type": "string",
+              "description": "A DOI (10.…), PMID (digits), PMCID (PMC…), or OpenAlex work id (W…). DOI URLs are accepted."
+            }
+          },
+          {
+            "name": "dir",
+            "in": "query",
+            "required": false,
+            "description": "cited-by (default) or refs.",
+            "schema": {
+              "type": "string",
+              "description": "cited-by (default) or refs.",
+              "enum": [
+                "cited-by",
+                "refs"
+              ],
+              "default": "cited-by"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max edges, 1–200.",
+            "schema": {
+              "type": "integer",
+              "description": "Max edges, 1–200.",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 25
+            }
+          },
+          {
+            "name": "minCitations",
+            "in": "query",
+            "required": false,
+            "description": "cited-by only: drop citing works below this count.",
+            "schema": {
+              "type": "integer",
+              "description": "cited-by only: drop citing works below this count."
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "impact (default) or year.",
+            "schema": {
+              "type": "string",
+              "description": "impact (default) or year.",
+              "enum": [
+                "impact",
+                "year"
+              ],
+              "default": "impact"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+            "schema": {
+              "type": "string",
+              "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+              "enum": [
+                "compact",
+                "full"
+              ],
+              "default": "compact"
+            }
+          },
+          {
+            "name": "style",
+            "in": "query",
+            "required": false,
+            "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+            "schema": {
+              "type": "string",
+              "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+              "enum": [
+                "apa",
+                "mla",
+                "bibtex",
+                "ris",
+                "csl-json"
+              ],
+              "default": "apa"
+            }
+          },
+          {
+            "name": "evidence",
+            "in": "query",
+            "required": false,
+            "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+            "schema": {
+              "type": "boolean",
+              "description": "0/false to skip the retraction/integrity lookup (evidence block omitted). On by default.",
+              "default": true
+            }
+          }
+        ]
+      }
+    },
+    "/api/ids": {
+      "get": {
+        "operationId": "ids",
+        "summary": "Crosswalk DOI ↔ PMID ↔ PMCID for up to 200 identifiers in one call.",
+        "description": "Crosswalk DOI ↔ PMID ↔ PMCID for up to 200 identifiers in one call. 0.1 credit per call; free when the resolver was unreachable.",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ [inputId]: { doi, pmid, pmcid } }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "description": "Resolved inputs."
+                    },
+                    "requested": {
+                      "description": "Inputs received."
+                    },
+                    "results": {
+                      "description": "{ [inputId]: { doi, pmid, pmcid } }"
+                    },
+                    "coverage": {
+                      "description": "Band for the lookups made."
+                    },
+                    "meta": {
+                      "description": "Billing + provenance metadata (see meta fields)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad parameter)."
+          },
+          "401": {
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "description": "Comma-separated DOIs, PMIDs and/or PMCIDs (any mix, max 200).",
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated DOIs, PMIDs and/or PMCIDs (any mix, max 200)."
+            }
+          }
+        ]
+      }
+    },
+    "/api/verify": {
+      "post": {
+        "operationId": "verifyCitations",
+        "summary": "Verify a list of references before you cite them.",
+        "description": "Verify a list of references before you cite them. For each reference (a DOI, PMID, PMCID, or a free-text citation string) returns a verdict — verified, mismatch (the identifier is real but the supplied title/authors/year disagree), not_found (likely fabricated), ambiguous — plus the canonical record, its integrity evidence (retracted / corrected) and a corrected citation in the requested style. Up to 50 references per call; 0.1 credit per reference.",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "[{ input, verdict, confidence, mismatched_fields[], record, evidence, citation, candidates[] }] in input order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "description": "[{ input, verdict, confidence, mismatched_fields[], record, evidence, citation, candidates[] }] in input order."
+                    },
+                    "summary": {
+                      "description": "{ verified, mismatch, not_found, ambiguous, retracted } counts."
+                    },
+                    "coverage": {
+                      "description": "Band for the lookups made (limited = every upstream failed → free)."
+                    },
+                    "sources": {
+                      "description": "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out."
+                    },
+                    "meta": {
+                      "description": "Billing + provenance metadata (see meta fields)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad parameter)."
+          },
+          "401": {
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refs": {
+                    "type": "array",
+                    "description": "References to check (max 50): DOIs, PMIDs, PMCIDs, DOI URLs, or free-text citation strings.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "style": {
+                    "type": "string",
+                    "description": "Citation style for the compact card's `citation`: apa, mla, bibtex, ris, csl-json.",
+                    "enum": [
+                      "apa",
+                      "mla",
+                      "bibtex",
+                      "ris",
+                      "csl-json"
+                    ],
+                    "default": "apa"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "compact (default): agent-sized cards — title, up to 3 authors, year, venue, doi, url, evidence, one formatted citation. full: every field (abstract, keywords, all authors, every citation format).",
+                    "enum": [
+                      "compact",
+                      "full"
+                    ],
+                    "default": "compact"
+                  }
+                },
+                "required": [
+                  "refs"
+                ],
+                "additionalProperties": false
+              }
+            }
           }
         }
+      }
+    },
+    "/api/credits": {
+      "get": {
+        "operationId": "credits",
+        "summary": "The caller's balance and plan.",
+        "description": "The caller's balance and plan. Free, unmetered. Accepts an API key or a browser session.",
+        "security": [
+          {
+            "ApiKeyHeader": []
+          },
+          {
+            "BearerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remaining credits (null + unlimited:true for unmetered tiers).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credits": {
+                      "description": "Remaining credits (null + unlimited:true for unmetered tiers)."
+                    },
+                    "tier": {
+                      "description": "Plan id."
+                    },
+                    "unlimited": {
+                      "description": "true for unmetered tiers."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (bad parameter)."
+          },
+          "401": {
+            "description": "Missing or invalid credential — body carries { code: \"unauthorized\", signup_url }. Send x-api-key or Authorization: Bearer."
+          },
+          "402": {
+            "description": "Insufficient credits — body carries { code: \"insufficient_credits\", balance, upgrade_url, packs }."
+          },
+          "429": {
+            "description": "Rate limited (per key, and per IP before auth). Retry-After header + body.retry_after."
+          }
+        },
+        "parameters": []
       }
     }
   },
@@ -288,6 +1176,11 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key"
+      },
+      "BearerKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The same oc_live_ API key as a Bearer token."
       }
     }
   }

@@ -96,9 +96,9 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
     <section className="fade-in mb-8 border-2 border-stone-900 bg-amber-50 p-5">
       <h2 className="mono-font text-xs uppercase tracking-widest text-stone-700 mb-1">Developers &amp; AI agents</h2>
       <p className="text-xs text-stone-600 mb-4">
-        One API call (or one MCP tool call) searches 250M+ open-access papers plus museum, library, manuscript and Islamicate
-        archives, deduplicates them, names the source of every record and returns citations in MLA, APA, BibTeX, RIS and CSL-JSON.
-        1 credit per call, prorated by the coverage actually delivered.
+        Verify references before citing them (retracted? fabricated? wrong DOI?), search 250M+ open-access papers plus museum,
+        library, manuscript and Islamicate archives, and fetch any work by DOI, PMID or PMCID. Every record names its source and
+        carries an integrity check. 1 credit per search, 0.1 per reference verified, prorated by the coverage actually delivered.
       </p>
 
       {justPaid && (

@@ -19,7 +19,14 @@ import { readCache, writeCache } from "./cache.js";
 
 const OA_BASE = "https://api.openalex.org/works";
 // Seed lookups also need the outbound-reference list + count, which OA_SELECT omits.
-const SEED_SELECT = `${OA_SELECT},referenced_works,referenced_works_count`;
+// v0.48: + `ids` (doi/pmid/pmcid/mag) so /api/works can return every identifier in one call.
+const SEED_SELECT = `${OA_SELECT},referenced_works,referenced_works_count,ids`;
+
+// v0.48 (sprint v0.45 T5): upstream leg-health tally. Every helper that makes an upstream call
+// bumps `health.attempted` and, on a genuine failure (network, 5xx, 429, circuit-open skip),
+// `health.failed`. A 404 "unknown work" is a SOLD answer, not a failed leg. Callers pass
+// `opts.health = { attempted: 0, failed: 0 }`; meter.legBand turns it into a coverage band.
+const bump = (health, key) => { if (health) health[key] = (health[key] || 0) + 1; };
 // OpenAlex batch-by-ID via `filter=openalex:` is capped at 25 ids per OR-group (live probe,
 // openalex.md §A5). per-page maxes at 200 (hyphenated key). Cursor needed past the 10k window.
 const OA_BATCH = 25;
@@ -51,8 +58,9 @@ async function oaFetch(url, signal) {
 
 // Resolve the input id/DOI to its OpenAlex seed work (carrying referenced_works + cited_by_count).
 // Returns the raw work object, or null when OpenAlex doesn't know it.
-async function resolveSeed(input, { mailto, signal } = {}) {
-  if (isCircuitOpen(CB_OA)) return null;
+async function resolveSeed(input, { mailto, signal, health } = {}) {
+  bump(health, "attempted");
+  if (isCircuitOpen(CB_OA)) { bump(health, "failed"); return null; }
   const sel = `select=${SEED_SELECT}`;
   // DOI path-lookups keep literal slashes (verified live; encoding the slash breaks the lookup).
   // `input` is already normalized to a bare DOI / OA id by the public entry points below.
@@ -61,8 +69,12 @@ async function resolveSeed(input, { mailto, signal } = {}) {
     const work = await oaFetch(`${OA_BASE}/${path}?${sel}${mailtoParam(mailto)}`, signal);
     recordSuccess(CB_OA);
     return work || null;
-  } catch {
+  } catch (err) {
+    // v0.48: a 404 is OpenAlex answering "I don't know this work" — a successful leg and a
+    // legitimate (billable) answer. Anything else is an outage leg (sprint v0.45 T5 finding).
+    if (/OpenAlex 404/.test(err?.message || "")) { recordSuccess(CB_OA); return null; }
     recordFailure(CB_OA);
+    bump(health, "failed");
     return null;
   }
 }
@@ -76,13 +88,16 @@ function chunk(arr, size) {
 
 // Hydrate a list of OpenAlex work ids into UnifiedResult cards via batched `filter=openalex:`.
 // allSettled across chunks: a single failed chunk degrades coverage, never sinks the call.
-async function hydrate(ids, { mailto, signal } = {}) {
-  if (!ids.length || isCircuitOpen(CB_OA)) return [];
+async function hydrate(ids, { mailto, signal, health } = {}) {
+  if (!ids.length) return [];
+  const groups = chunk(ids, OA_BATCH);
+  if (isCircuitOpen(CB_OA)) { groups.forEach(() => { bump(health, "attempted"); bump(health, "failed"); }); return []; }
   const sel = `select=${OA_SELECT}`;
   const settled = await Promise.allSettled(
-    chunk(ids, OA_BATCH).map((group) =>
-      oaFetch(`${OA_BASE}?filter=openalex:${group.join("|")}&${sel}&per-page=${OA_BATCH}${mailtoParam(mailto)}`, signal)
-    )
+    groups.map((group) => {
+      bump(health, "attempted");
+      return oaFetch(`${OA_BASE}?filter=openalex:${group.join("|")}&${sel}&per-page=${OA_BATCH}${mailtoParam(mailto)}`, signal);
+    })
   );
   const out = [];
   let anyOk = false;
@@ -90,6 +105,8 @@ async function hydrate(ids, { mailto, signal } = {}) {
     if (s.status === "fulfilled") {
       anyOk = true;
       (s.value.results || []).forEach((w, i) => out.push(parseOpenAlexWork(w, `ref-${out.length + i}`)));
+    } else {
+      bump(health, "failed");
     }
   }
   anyOk ? recordSuccess(CB_OA) : recordFailure(CB_OA);
@@ -98,11 +115,12 @@ async function hydrate(ids, { mailto, signal } = {}) {
 
 // ── OpenCitations fallback (backward path only, bare-DOI input OpenAlex missed) ──────────────
 // Best-effort + cached. Returns minimal cards (doi + url) — enough to be useful, no full hydrate.
-async function ocReferences(doi, { signal } = {}) {
-  if (isCircuitOpen(CB_OC)) return [];
+async function ocReferences(doi, { signal, health } = {}) {
   const cacheK = `oc:cite:v1:refs:${doi}`;
   const cached = await readCache(cacheK);
-  if (cached) return cached;
+  if (cached) return cached; // a cache hit is not an upstream leg
+  bump(health, "attempted");
+  if (isCircuitOpen(CB_OC)) { bump(health, "failed"); return []; }
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), OC_TIMEOUT_MS);
@@ -131,6 +149,7 @@ async function ocReferences(doi, { signal } = {}) {
     return cards;
   } catch {
     recordFailure(CB_OC);
+    bump(health, "failed");
     return [];
   } finally {
     clearTimeout(timer);
@@ -192,7 +211,8 @@ export async function getCitations(rawInput, opts = {}) {
   const limit = clampLimit(opts.limit);
   const minCitations = Number(opts.minCitations) > 0 ? Number(opts.minCitations) : 0;
   const seed = await resolveSeed(input, opts);
-  if (!seed?.id || isCircuitOpen(CB_OA)) return [];
+  if (!seed?.id) return [];
+  if (isCircuitOpen(CB_OA)) { bump(opts.health, "attempted"); bump(opts.health, "failed"); return []; }
   const id = oaId(seed.id);
 
   const sortField = opts.sort === "year" ? "publication_year:desc" : "cited_by_count:desc";
@@ -203,6 +223,7 @@ export async function getCitations(rawInput, opts = {}) {
     // Page with cursor (mandatory past the 10k window) until we have enough or run out.
     while (cards.length < limit && cursor) {
       const perPage = Math.min(OA_PER_PAGE, limit - cards.length);
+      bump(opts.health, "attempted");
       const data = await oaFetch(
         `${OA_BASE}?filter=cites:${id}&sort=${sortField}&per-page=${perPage}&cursor=${encodeURIComponent(cursor)}&${sel}${mailtoParam(opts.mailto)}`,
         opts.signal
@@ -214,12 +235,38 @@ export async function getCitations(rawInput, opts = {}) {
     recordSuccess(CB_OA);
   } catch {
     recordFailure(CB_OA);
+    bump(opts.health, "failed");
   }
 
   let out = dedupCards(cards);
   if (minCitations) out = out.filter((c) => (c.citedBy ?? 0) >= minCitations);
   out.sort(opts.sort === "year" ? byYear : byImpact);
   return out.slice(0, limit);
+}
+
+/**
+ * getWork(input, opts) → { card, ids } | null   (v0.48, /api/works)
+ * One work by DOI or OpenAlex id: the UnifiedResult card (same parser as search, so cards match)
+ * plus every identifier OpenAlex knows for it. null when OpenAlex doesn't know the work (a sold
+ * "not found", not a failed leg — see resolveSeed). opts.health is tallied like the graph calls.
+ *
+ * @param {string} input  DOI or OpenAlex work id
+ * @param {{mailto?:string, signal?:AbortSignal, health?:{attempted:number, failed:number}}} [opts]
+ */
+export async function getWork(rawInput, opts = {}) {
+  const input = isOpenAlexId(rawInput) ? rawInput : normalizeId(rawInput);
+  const seed = await resolveSeed(input, opts);
+  if (!seed?.id) return null;
+  const strip = (v, re) => (v ? String(v).replace(re, "") : null);
+  return {
+    card: parseOpenAlexWork(seed, "work"),
+    ids: {
+      doi: strip(seed.ids?.doi || seed.doi, /^https?:\/\/doi\.org\//i),
+      pmid: strip(seed.ids?.pmid, /^https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\//i),
+      pmcid: strip(seed.ids?.pmcid, /^https?:\/\/www\.ncbi\.nlm\.nih\.gov\/pmc\/articles\//i),
+      openalex: oaId(seed.id),
+    },
+  };
 }
 
 // Limit guard — 1..200, default 25 (mirrors the search endpoint's posture).

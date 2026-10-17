@@ -1,6 +1,6 @@
 import { INITIAL_PAGE_SIZE, LOAD_MORE_PAGE_SIZE } from "../../constants/defaults.js";
 import { ADAPTER_CATEGORY } from "../../constants/vocabulary.js";
-import { stripHtml } from "../../lib/helpers.js";
+import { parseCrossrefItem } from "../_shared/parseCrossref.js";
 // v0.44 T5: hasContentMatch moved out of lib/scoring.js (engine quarantined) into the
 // adapter layer — the author-search-off content filter is retrieval, not ranking.
 import { hasContentMatch } from "../_shared/contentMatch.js";
@@ -44,40 +44,8 @@ export const CROSSREF_ADAPTER = {
     if (!r.ok) throw new Error(`Crossref ${r.status}`);
     const data = await r.json();
     const items = data.message?.items || [];
-    const mapped = items.map((it, i) => {
-      const doi = it.DOI || "";
-      const title = Array.isArray(it.title) ? it.title[0] : (it.title || "Untitled");
-      const authors = (it.author || [])
-        .map(a => [a.given, a.family].filter(Boolean).join(" "))
-        .filter(Boolean);
-      const editors = (it.editor || [])
-        .map(a => [a.given, a.family].filter(Boolean).join(" "))
-        .filter(Boolean);
-      const dateParts = it.issued?.["date-parts"]?.[0] || it.published?.["date-parts"]?.[0] || [];
-      const year = dateParts[0] ? String(dateParts[0]) : "";
-      const journal = Array.isArray(it["container-title"]) ? it["container-title"][0] : (it["container-title"] || "");
-      return {
-        id: `cr-${doi || `${offset}-${i}`}`,
-        source: "CROSSREF",
-        title: stripHtml(title),
-        authors, year, journal,
-        publisher: it.publisher || "",
-        volume: it.volume || "",
-        issue: it.issue || "",
-        pages: it.page || "",
-        doi,
-        url: it.URL || (doi ? `https://doi.org/${doi}` : ""),
-        abstract: stripHtml(it.abstract || ""),
-        isOA: false,
-        type: it.type || "article",
-        // v.17 enrichment
-        editors,
-        subjects: Array.isArray(it.subject) ? it.subject : [],
-        language: it.language || "",
-        // Sprint 3 — citation count feeds the capability-gated citedBy tiebreak.
-        citedBy: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : null,
-      };
-    });
+    // v0.48: mapping extracted to _shared/parseCrossref.js (shared with the verification path).
+    const mapped = items.map((it, i) => parseCrossrefItem(it, `${offset}-${i}`));
     // authorSearch off → enforce content-scope: drop matches that hit on author name
     // alone (query.bibliographic is author-inclusive). hasMore tracks the raw fetched
     // window so pagination still advances even when a page is heavily filtered.

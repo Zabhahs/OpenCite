@@ -6,6 +6,10 @@
     ],
     [
       "adapters.core.crossref",
+      "adapters.shared.parseCrossref"
+    ],
+    [
+      "adapters.core.crossref",
       "adapters.shared.proxy"
     ],
     [
@@ -15,10 +19,6 @@
     [
       "adapters.core.crossref",
       "constants.vocabulary"
-    ],
-    [
-      "adapters.core.crossref",
-      "lib.helpers"
     ],
     [
       "adapters.core.curatedJournals",
@@ -473,6 +473,10 @@
       "lib.log"
     ],
     [
+      "adapters.shared.parseCrossref",
+      "lib.helpers"
+    ],
+    [
       "adapters.shared.parseOpenAlex",
       "lib.helpers"
     ],
@@ -507,26 +511,6 @@
     [
       "api.checkout",
       "api.shared.prisma"
-    ],
-    [
-      "api.citations",
-      "api.shared.citationGraph"
-    ],
-    [
-      "api.citations",
-      "api.shared.meter"
-    ],
-    [
-      "api.citations",
-      "api.shared.publicResult"
-    ],
-    [
-      "api.ids",
-      "api.shared.meter"
-    ],
-    [
-      "api.ids",
-      "lib.idResolve"
     ],
     [
       "api.proxy",
@@ -586,11 +570,15 @@
     ],
     [
       "api.search",
+      "api.shared.compact"
+    ],
+    [
+      "api.search",
       "api.shared.coverage"
     ],
     [
       "api.search",
-      "api.shared.debugResult"
+      "api.shared.evidence"
     ],
     [
       "api.search",
@@ -599,10 +587,6 @@
     [
       "api.search",
       "api.shared.plans"
-    ],
-    [
-      "api.search",
-      "api.shared.publicResult"
     ],
     [
       "api.search",
@@ -685,8 +669,36 @@
       "lib.idResolve"
     ],
     [
+      "api.shared.compact",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.compact",
+      "api.shared.debugResult"
+    ],
+    [
+      "api.shared.compact",
+      "api.shared.publicResult"
+    ],
+    [
+      "api.shared.compact",
+      "lib.citations"
+    ],
+    [
       "api.shared.debugResult",
       "api.shared.publicResult"
+    ],
+    [
+      "api.shared.evidence",
+      "api.shared.adapterHealth"
+    ],
+    [
+      "api.shared.evidence",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.evidence",
+      "api.shared.cache"
     ],
     [
       "api.shared.handlers.credits",
@@ -707,6 +719,10 @@
     [
       "api.shared.handlers.credits",
       "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.ratelimit"
     ],
     [
       "api.shared.handlers.health",
@@ -769,6 +785,94 @@
       "api.shared.prisma"
     ],
     [
+      "api.shared.handlers.works.citations",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.citationGraph"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.compact"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.evidence"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.serverKeys"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.citationGraph"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.compact"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.evidence"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.serverKeys"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "lib.idResolve"
+    ],
+    [
+      "api.shared.handlers.works.ids",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.handlers.works.ids",
+      "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.ids",
+      "lib.idResolve"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.apiContract"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.compact"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.parseBody"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.serverKeys"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.verify"
+    ],
+    [
       "api.shared.kv",
       "api.shared.log"
     ],
@@ -779,6 +883,10 @@
     [
       "api.shared.meter",
       "api.shared.billing"
+    ],
+    [
+      "api.shared.meter",
+      "api.shared.plans"
     ],
     [
       "api.shared.meter",
@@ -795,6 +903,34 @@
     [
       "api.shared.requireInternalOrigin",
       "api.shared.auth"
+    ],
+    [
+      "api.shared.verify",
+      "adapters.shared.parseCrossref"
+    ],
+    [
+      "api.shared.verify",
+      "adapters.shared.parseOpenAlex"
+    ],
+    [
+      "api.shared.verify",
+      "api.shared.adapterHealth"
+    ],
+    [
+      "api.shared.verify",
+      "api.shared.citationGraph"
+    ],
+    [
+      "api.shared.verify",
+      "api.shared.evidence"
+    ],
+    [
+      "api.shared.verify",
+      "lib.dedup"
+    ],
+    [
+      "api.shared.verify",
+      "lib.idResolve"
     ],
     [
       "api.stripe.webhook",
@@ -839,6 +975,26 @@
     [
       "api.user.[resource]",
       "api.shared.handlers.settings"
+    ],
+    [
+      "api.works.[op]",
+      "api.shared.handlers.works.citations"
+    ],
+    [
+      "api.works.[op]",
+      "api.shared.handlers.works.get"
+    ],
+    [
+      "api.works.[op]",
+      "api.shared.handlers.works.ids"
+    ],
+    [
+      "api.works.[op]",
+      "api.shared.handlers.works.verify"
+    ],
+    [
+      "api.works.[op]",
+      "api.shared.meter"
     ],
     [
       "App",
@@ -931,6 +1087,10 @@
     [
       "App",
       "lib.log"
+    ],
+    [
+      "App",
+      "lib.searchQuota"
     ],
     [
       "components.admin.GoldSetHarness",
@@ -1027,6 +1187,10 @@
     [
       "components.Panels",
       "lib.log"
+    ],
+    [
+      "components.Panels",
+      "lib.searchQuota"
     ],
     [
       "components.ResultCard",
@@ -1177,6 +1341,18 @@
       "lib.goldSetMetrics"
     ],
     [
+      "lib.groupResults",
+      "lib.citations"
+    ],
+    [
+      "lib.groupResults",
+      "lib.dedup"
+    ],
+    [
+      "lib.groupResults.test",
+      "lib.groupResults"
+    ],
+    [
       "lib.history",
       "constants.defaults"
     ],
@@ -1193,6 +1369,10 @@
       "lib.storage"
     ],
     [
+      "lib.searchQuota",
+      "api.shared.plans"
+    ],
+    [
       "lib.storage",
       "constants.defaults"
     ],
@@ -1203,10 +1383,6 @@
     [
       "mcp.bin.opencite-mcp",
       "mcp.server"
-    ],
-    [
-      "mcp.client",
-      "mcp.contract"
     ],
     [
       "mcp.contract",
@@ -1222,16 +1398,24 @@
     ],
     [
       "mcp.server",
+      "mcp.tools"
+    ],
+    [
+      "mcp.tools",
       "mcp.contract"
     ],
     [
-      "mcp.server",
+      "mcp.tools",
       "mcp.schema"
     ]
   ],
   "reverse": {
     "adapters.shared.contentMatch": [
       "adapters.core.crossref"
+    ],
+    "adapters.shared.parseCrossref": [
+      "adapters.core.crossref",
+      "api.shared.verify"
     ],
     "adapters.shared.proxy": [
       "adapters.core.crossref",
@@ -1322,8 +1506,13 @@
       "components.Panels",
       "hooks.useSettings"
     ],
+    "adapters.shared.parseOpenAlex": [
+      "adapters.core.curatedJournals",
+      "adapters.core.openalex",
+      "api.shared.citationGraph",
+      "api.shared.verify"
+    ],
     "lib.helpers": [
-      "adapters.core.crossref",
       "adapters.core.doaj",
       "adapters.extensions.chroniclingAmerica",
       "adapters.extensions.coreAc",
@@ -1335,13 +1524,9 @@
       "adapters.extensions.northwestern",
       "adapters.extensions.oapen",
       "adapters.extensions.princetonDpul",
+      "adapters.shared.parseCrossref",
       "adapters.shared.parseOpenAlex",
       "components.ResultCard"
-    ],
-    "adapters.shared.parseOpenAlex": [
-      "adapters.core.curatedJournals",
-      "adapters.core.openalex",
-      "api.shared.citationGraph"
     ],
     "adapters.shared.xmlUtils": [
       "adapters.extensions.bnfApi",
@@ -1476,7 +1661,8 @@
       "api.checkout",
       "api.shared.handlers.history",
       "api.shared.handlers.library",
-      "api.shared.handlers.settings"
+      "api.shared.handlers.settings",
+      "api.shared.handlers.works.verify"
     ],
     "api.shared.plans": [
       "api.checkout",
@@ -1484,34 +1670,20 @@
       "api.shared.apiAuth",
       "api.shared.handlers.credits",
       "api.shared.handlers.keys",
+      "api.shared.meter",
       "api.stripe.webhook",
-      "constants.pricing"
-    ],
-    "api.shared.citationGraph": [
-      "api.citations"
-    ],
-    "api.shared.meter": [
-      "api.citations",
-      "api.ids",
-      "api.search"
-    ],
-    "api.shared.publicResult": [
-      "api.citations",
-      "api.search",
-      "api.shared.debugResult"
-    ],
-    "lib.idResolve": [
-      "api.ids",
-      "api.search",
-      "api.shared.citationGraph",
-      "lib.idResolve.test"
+      "constants.pricing",
+      "lib.searchQuota"
     ],
     "api.shared.requireInternalOrigin": [
       "api.route.[source]"
     ],
     "api.shared.serverKeys": [
       "api.route.[source]",
-      "api.search"
+      "api.search",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.verify"
     ],
     "adapters.index": [
       "App",
@@ -1524,7 +1696,9 @@
     "api.shared.adapterHealth": [
       "api.search",
       "api.shared.adapterHealth.test",
-      "api.shared.citationGraph"
+      "api.shared.citationGraph",
+      "api.shared.evidence",
+      "api.shared.verify"
     ],
     "api.shared.apiAuth": [
       "api.search",
@@ -1533,7 +1707,13 @@
       "api.stripe.webhook"
     ],
     "api.shared.apiContract": [
-      "api.search"
+      "api.search",
+      "api.shared.compact",
+      "api.shared.evidence",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.ids",
+      "api.shared.handlers.works.verify"
     ],
     "api.shared.billing": [
       "api.search",
@@ -1544,29 +1724,60 @@
     ],
     "api.shared.cache": [
       "api.search",
-      "api.shared.citationGraph"
+      "api.shared.citationGraph",
+      "api.shared.evidence"
+    ],
+    "api.shared.compact": [
+      "api.search",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.verify"
     ],
     "api.shared.coverage": [
       "api.search",
       "api.shared.billing"
     ],
-    "api.shared.debugResult": [
-      "api.search"
+    "api.shared.evidence": [
+      "api.search",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.verify"
+    ],
+    "api.shared.meter": [
+      "api.search",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.ids",
+      "api.shared.handlers.works.verify",
+      "api.works.[op]"
     ],
     "api.shared.ratelimit": [
       "api.search",
+      "api.shared.handlers.credits",
       "api.shared.meter"
     ],
     "lib.citations": [
       "api.search",
+      "api.shared.compact",
       "api.shared.publicResult",
       "components.Panels",
-      "components.ResultCard"
+      "components.ResultCard",
+      "lib.groupResults"
     ],
     "lib.dedup": [
       "api.search",
+      "api.shared.verify",
       "hooks.useSearch",
-      "lib.dedup.test"
+      "lib.dedup.test",
+      "lib.groupResults"
+    ],
+    "lib.idResolve": [
+      "api.search",
+      "api.shared.citationGraph",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.ids",
+      "api.shared.verify",
+      "lib.idResolve.test"
     ],
     "api.shared.crypto": [
       "api.shared.apiAuth",
@@ -1576,6 +1787,21 @@
     "api.shared.kv": [
       "api.shared.cache",
       "api.shared.ratelimit"
+    ],
+    "api.shared.debugResult": [
+      "api.shared.compact"
+    ],
+    "api.shared.publicResult": [
+      "api.shared.compact",
+      "api.shared.debugResult"
+    ],
+    "api.shared.citationGraph": [
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.verify"
+    ],
+    "api.shared.verify": [
+      "api.shared.handlers.works.verify"
     ],
     "api.shared.handlers.credits": [
       "api.user.[resource]"
@@ -1594,6 +1820,18 @@
     ],
     "api.shared.handlers.settings": [
       "api.user.[resource]"
+    ],
+    "api.shared.handlers.works.citations": [
+      "api.works.[op]"
+    ],
+    "api.shared.handlers.works.get": [
+      "api.works.[op]"
+    ],
+    "api.shared.handlers.works.ids": [
+      "api.works.[op]"
+    ],
+    "api.shared.handlers.works.verify": [
+      "api.works.[op]"
     ],
     "components.DevelopersPanel": [
       "App"
@@ -1662,6 +1900,10 @@
       "App",
       "components.AdminConsole"
     ],
+    "lib.searchQuota": [
+      "App",
+      "components.Panels"
+    ],
     "lib.goldSetMetrics": [
       "components.admin.GoldSetHarness",
       "lib.goldSetMetrics.test"
@@ -1721,7 +1963,8 @@
     ],
     "lib.groupResults": [
       "components.SourceSection",
-      "components.UnifiedResultList"
+      "components.UnifiedResultList",
+      "lib.groupResults.test"
     ],
     "lib.auth-client": [
       "contexts.AuthContext"
@@ -1743,19 +1986,21 @@
     "mcp.server": [
       "mcp.bin.opencite-mcp"
     ],
-    "mcp.contract": [
-      "mcp.client",
-      "mcp.schema",
-      "mcp.server"
-    ],
     "mcp.apiContract": [
       "mcp.contract"
+    ],
+    "mcp.contract": [
+      "mcp.schema",
+      "mcp.tools"
     ],
     "mcp.client": [
       "mcp.server"
     ],
-    "mcp.schema": [
+    "mcp.tools": [
       "mcp.server"
+    ],
+    "mcp.schema": [
+      "mcp.tools"
     ]
   }
 }

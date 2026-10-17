@@ -1000,5 +1000,25 @@
       "developers"
     ],
     "notes": "Server side unchanged — talks only to api/_shared/handlers/keys.js and /api/credits."
+  },
+  {
+    "id": "lib.searchQuota",
+    "path": "src/lib/searchQuota.js",
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "v0.47 free-tier web search quota: a per-UTC-day localStorage counter (FREE_WEB_DAILY_SEARCHES) for callers whose plan lacks unlimited web search; soft, client-side only.",
+    "exports": [],
+    "deps": [
+      "api.shared.plans"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usehistory",
+    "tags": [
+      "quota",
+      "free-tier",
+      "client"
+    ],
+    "notes": "Reads hasUnlimitedWebSearch from plans.js (SSOT). Bypassable by design (Shahbaz, v0.47)."
   }
 ]

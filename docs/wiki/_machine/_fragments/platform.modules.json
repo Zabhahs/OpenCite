@@ -24,7 +24,7 @@
     "kind": "mcp",
     "runtime": "server",
     "loc": 66,
-    "purpose": "Creates the MCP Server object; registers ListTools and CallTool handlers; reads OPENCITE_API_KEY and OPENCITE_API_BASE_URL from env.",
+    "purpose": "Stdio MCP server (v0.48): registry-driven; tools/list and tools/call iterate tools.js; version read from package.json.",
     "exports": [
       "createServer",
       "startStdioServer"
@@ -49,7 +49,7 @@
     "kind": "mcp",
     "runtime": "server",
     "loc": 74,
-    "purpose": "REST client for /api/search: enforces TLS, 30s timeout, forwards x-api-key, never logs headers.",
+    "purpose": "httpExecutor (v0.48): one HTTPS executor returning { status, headers, body|text } for every response; never throws on non-2xx so 402/401/429 bodies reach the agent. TLS-only; key never logged.",
     "exports": [
       "searchScholarlySources",
       "resolveBaseUrl",
@@ -73,7 +73,7 @@
     "kind": "mcp",
     "runtime": "server",
     "loc": 57,
-    "purpose": "DRY-4 bridge: re-exports API_CONTRACT/PARAMS/RESULT_FIELDS/RESPONSE_SHAPE/COVERAGE_BANDS from apiContract.js; defines TOOL_PARAM_MAP (query→q, limit, format) and toRestQuery().",
+    "purpose": "Contract bridge (v0.48): three tool names, agent-facing param subsets and the arg-to-REST mappings (query/body) for search_papers, get_paper, verify_citations.",
     "exports": [
       "API_CONTRACT",
       "PARAMS",
@@ -105,7 +105,7 @@
     "kind": "mcp",
     "runtime": "server",
     "loc": 182,
-    "purpose": "Schema generators driven from contract.js: mcpInputSchema(), functionSchemas() (OpenAI + Anthropic), openApiSpec() — single source produces all agent-integration artifacts.",
+    "purpose": "Pure schema generators from the contract SSOT (v0.48): JSON Schema helpers for tool inputs + openApiSpec() over every ENDPOINT. SDK-free.",
     "exports": [
       "mcpInputSchema",
       "mcpToolDefinition",
@@ -337,5 +337,32 @@
       "contract"
     ],
     "notes": "Source of truth stays api/_shared/apiContract.js (SSOT); this file is a build artifact committed so npx-from-git also works."
+  },
+  {
+    "id": "mcp.tools",
+    "path": "mcp/src/tools.js",
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "Tool registry SSOT (v0.48): verify_citations, search_papers, get_paper with when-to-call descriptions, generated input schemas, REST mappings, MCP annotations; toToolResult shapes every HTTP response into an MCP result (payload + billing/trust trailer, or an actionable error). SDK-free so api/ can import it for the remote MCP.",
+    "exports": [
+      "TOOLS",
+      "toolByName",
+      "toolDefinitions",
+      "functionSchemas",
+      "toToolResult"
+    ],
+    "deps": [
+      "mcp.schema",
+      "mcp.contract"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "tools",
+      "dry"
+    ],
+    "notes": "Fewer, clearly-described tools are what a model picks reliably (sprint_log_v0_48 D-10)."
   }
 ]

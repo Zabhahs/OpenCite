@@ -13,14 +13,18 @@
 //
 // Identity resolution mirrors api/search.js:
 //   - resolveSessionAdmin(req) → an allowlisted admin gets the unmetered shape.
+//   - v0.48: resolveApiKey(req) → an API-key holder (x-api-key or Bearer) reads its own balance
+//     without a browser session. This is the MCP/agent balance read; rate-limited per key,
+//     never metered.
 //   - otherwise getSession(req) returns the flat Auth.js user ({ id, name, email }) or null.
 // Reads User.total_credits + User.plan (the same columns billing.js settles against).
 
 import { getSession } from "../auth.js";
 import { prisma } from "../prisma.js";
-import { resolveSessionAdmin, periodOf } from "../apiAuth.js";
+import { resolveSessionAdmin, resolveApiKey, periodOf } from "../apiAuth.js";
 import { getPlan, monthlyGrantFor } from "../plans.js";
-import { applyMonthlyGrant } from "../billing.js";
+import { applyMonthlyGrant, getBalance } from "../billing.js";
+import { checkRateLimit } from "../ratelimit.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -31,6 +35,20 @@ export default async function handler(req, res) {
   // Admin (allowlist) → unmetered. resolveSessionAdmin reads the request itself.
   const admin = await resolveSessionAdmin(req);
   if (admin) return res.status(200).json({ credits: null, unlimited: true, tier: "admin" });
+
+  // v0.48: API-key path (agents). Same plan/limit semantics as the metered endpoints, cost 0.
+  const keyed = await resolveApiKey(req);
+  if (keyed) {
+    const rl = await checkRateLimit(keyed.keyId, keyed.plan);
+    if (!rl.ok) {
+      res.setHeader("Retry-After", String(rl.retryAfter));
+      return res.status(429).json({ error: "Rate limit exceeded. Please retry later.", code: "rate_limited", retry_after: rl.retryAfter });
+    }
+    if (keyed.plan.creditCost === 0) return res.status(200).json({ credits: null, unlimited: true, tier: keyed.plan.id });
+    const credits = await getBalance(keyed.userId);
+    if (credits == null) return res.status(503).json({ error: "Credit balance unavailable" });
+    return res.status(200).json({ credits, tier: keyed.plan.id, upgrade_url: "https://citation.today/#developers" });
+  }
 
   // getSession returns the user object directly (not { user }) or null.
   const user = await getSession(req);

@@ -43,9 +43,17 @@ const ADMIN_EMAILS = (process.env.VITE_ADMIN_EMAILS || process.env.ADMIN_EMAILS 
 // Extract the presented key. v0.46: HEADER ONLY — the old `?key=` query form put a bearer
 // credential into request logs, proxies, browser history and Referer headers. The MCP client
 // and the documented curl quickstart both use the header.
+// v0.48: `Authorization: Bearer <key>` is accepted as an alias. MCP clients that complete an
+// OAuth flow send the access token this way, and the token IS an oc_live_ key (one credential
+// type, one resolution path, identical billing). x-api-key wins when both are present.
 export function presentedKey(req) {
   const k = req.headers?.["x-api-key"];
-  return (Array.isArray(k) ? k[0] : k) || "";
+  const direct = (Array.isArray(k) ? k[0] : k) || "";
+  if (direct) return direct;
+  const auth = req.headers?.authorization;
+  const a = (Array.isArray(auth) ? auth[0] : auth) || "";
+  const m = /^Bearer\s+(\S+)$/i.exec(a.trim());
+  return m ? m[1] : "";
 }
 
 // Customer keys are `oc_live_` + 32 url-safe chars (crypto.js generateApiKey). Anything else is

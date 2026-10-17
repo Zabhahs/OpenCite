@@ -73,5 +73,6 @@ export const CREDIT_PACKS = [
 // Coverage-prorated billing: a query is charged in proportion to how much of the eligible
 // library answered; results below ~50% coverage are free. Surfaced as a footnote so buyers
 // understand they're not billed for blind answers.
+// v0.48: per-endpoint weights come from plans.js ENDPOINT_UNITS (SSOT) — quoted, never retyped.
 export const COVERAGE_NOTE =
-  "1 credit = 1 API call (search, citations, or ID resolution). Charges are coverage-prorated — low-coverage answers (under ~50% of eligible sources) are free. Credits never expire. Prices in USD.";
+  "1 credit = one search or citation-graph call; verifying a reference or resolving an identifier costs 0.1. Charges are coverage-prorated — low-coverage answers (under ~50% of eligible sources) are free, and a call whose sources all failed is never charged. Credits never expire. Prices in USD.";

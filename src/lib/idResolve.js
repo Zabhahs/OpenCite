@@ -8,7 +8,7 @@
 //   1. a pre-dedup canonicalizer — resolve a PMID/PMCID-only record to its DOI so it shares a
 //      doiKey with the DOI-only copy from another source (attacks the v0.35 D5 fragmentation
 //      defect; feeds the v0.42 F-208 / F-210 dedup field-merge).
-//   2. the /api/ids endpoint + MCP `resolve_ids` tool — user/model-facing conversion.
+//   2. the /api/ids and /api/works endpoints + the MCP `get_paper` tool — user/model-facing conversion.
 //
 // Isomorphic: no Node-only imports. `performance.now()` is global in Node ≥16 and browsers;
 // `fetch` is global in Node ≥18 and browsers. The NCBI key (10 req/s vs 3 req/s keyless) is
@@ -95,9 +95,11 @@ function chunk(arr, size) {
   return out;
 }
 
-// One idconv request for a homogeneous group. Returns the raw records array (or [] on failure).
-// 429 comes back as a JSON BODY (not just an HTTP status) — parse it defensively and treat the
-// whole batch as unresolved rather than throwing the caller's whole resolution.
+// One idconv request for a homogeneous group. Returns the raw records array, or `null` when the
+// REQUEST failed (network error, non-JSON body, request-level `status:"error"` — which is how a
+// 429 arrives: as a JSON BODY, not just an HTTP status). `[]` means the request succeeded and
+// matched nothing. The distinction feeds the caller's leg-health tally (v0.48, sprint v0.45 T5)
+// so a resolver outage is billed as a blind answer (free), while "unknown id" is a sold answer.
 async function convertChunk(ids, idtype, { email, apiKey, signal } = {}) {
   const limiter = ncbiLimiter(apiKey ? RATE_KEYED : RATE_KEYLESS);
   await limiter.acquire();
@@ -120,10 +122,10 @@ async function convertChunk(ids, idtype, { email, apiKey, signal } = {}) {
     });
     body = await res.json().catch(() => null);
   } catch {
-    return [];
+    return null;
   }
-  // Request-level error (incl. 429 returned as a JSON body) → no records from this batch.
-  if (!body || body.status === "error") return [];
+  // Request-level error (incl. 429 returned as a JSON body) → the leg failed.
+  if (!body || body.status === "error") return null;
   return Array.isArray(body.records) ? body.records : [];
 }
 
@@ -137,8 +139,12 @@ async function convertChunk(ids, idtype, { email, apiKey, signal } = {}) {
  * The map is keyed by the original input id (the API echoes it as `requested-id`). Inputs that
  * fail to resolve simply have no map entry.
  *
+ * v0.48: pass `opts.health = { attempted: 0, failed: 0 }` to receive a per-request tally of
+ * idconv legs (one per chunk) — additive, mutated in place, ignored by browser callers. The
+ * server turns it into a coverage band (meter.legBand) so an NCBI outage is never billed.
+ *
  * @param {string[]} ids
- * @param {{email?:string, apiKey?:string, signal?:AbortSignal}} [opts]
+ * @param {{email?:string, apiKey?:string, signal?:AbortSignal, health?:{attempted:number, failed:number}}} [opts]
  */
 export async function resolveIds(ids, opts = {}) {
   const out = new Map();
@@ -153,8 +159,13 @@ export async function resolveIds(ids, opts = {}) {
   for (const [idtype, groupIds] of Object.entries(groups)) {
     if (!groupIds.length) continue;
     for (const slice of chunk(groupIds, MAX_BATCH)) {
+      if (opts.health) opts.health.attempted = (opts.health.attempted || 0) + 1;
       jobs.push(
         convertChunk(slice.map(normalizeId), idtype, opts).then((records) => {
+          if (records === null) {
+            if (opts.health) opts.health.failed = (opts.health.failed || 0) + 1;
+            return;
+          }
           for (const rec of records) {
             if (!rec || rec.status === "error") continue; // skip per-record failures
             // Map back to the original (un-normalized) input via requested-id when possible.

@@ -2,13 +2,13 @@
   {
     "id": "adapters.core.crossref",
     "path": "src/adapters/core/crossref.js",
-    "loc": 88,
+    "loc": 56,
     "deps": [
       "adapters.shared.contentMatch",
+      "adapters.shared.parseCrossref",
       "adapters.shared.proxy",
       "constants.defaults",
-      "constants.vocabulary",
-      "lib.helpers"
+      "constants.vocabulary"
     ],
     "kind": "adapter",
     "runtime": "both",
@@ -535,7 +535,7 @@
   {
     "id": "adapters.extensions.ncbi",
     "path": "src/adapters/extensions/ncbi.js",
-    "loc": 90,
+    "loc": 97,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -895,7 +895,7 @@
   {
     "id": "adapters.extensions.smithsonian",
     "path": "src/adapters/extensions/smithsonian.js",
-    "loc": 69,
+    "loc": 73,
     "deps": [
       "adapters.shared.proxy",
       "constants.defaults",
@@ -1064,6 +1064,29 @@
     "notes": "validateNCR is a dev utility never called in production. Phase 2 KV cache hook point is a long-lived comment."
   },
   {
+    "id": "adapters.shared.parseCrossref",
+    "path": "src/adapters/_shared/parseCrossref.js",
+    "loc": 45,
+    "deps": [
+      "lib.helpers"
+    ],
+    "kind": "adapter",
+    "runtime": "both",
+    "purpose": "parseCrossrefItem: Crossref message.items[] to UnifiedResult (v0.48: extracted verbatim from core/crossref.js so the search adapter and the server verification path render the same card).",
+    "exports": [
+      "parseCrossrefItem"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "02-Adapters/Adapter-Architecture.md#key-exports--surface",
+    "tags": [
+      "crossref",
+      "parser",
+      "dry"
+    ],
+    "notes": "SSOT for the Crossref card shape."
+  },
+  {
     "id": "adapters.shared.parseOpenAlex",
     "path": "src/adapters/_shared/parseOpenAlex.js",
     "loc": 63,
@@ -1172,7 +1195,7 @@
   {
     "id": "api.checkout",
     "path": "api/checkout.js",
-    "loc": 158,
+    "loc": 194,
     "deps": [
       "api.shared.auth",
       "api.shared.log",
@@ -1197,57 +1220,6 @@
       "billing"
     ],
     "notes": "Stripe SDK dynamically imported so its absence can't break other routes. baseUrl accepts *.vercel.app — broad redirect origin pattern."
-  },
-  {
-    "id": "api.citations",
-    "path": "api/citations.js",
-    "loc": 67,
-    "deps": [
-      "api.shared.citationGraph",
-      "api.shared.meter",
-      "api.shared.publicResult"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "GET /api/citations — origin-blind citation-graph endpoint (dir=cited-by|refs), metered like /api/search, returns toPublicResult cards.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "04-Backend-API/Search-Endpoint.md",
-    "tags": [
-      "api",
-      "citation-graph",
-      "origin-blind",
-      "billing"
-    ],
-    "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year)."
-  },
-  {
-    "id": "api.ids",
-    "path": "api/ids.js",
-    "loc": 57,
-    "deps": [
-      "api.shared.meter",
-      "lib.idResolve"
-    ],
-    "kind": "api-route",
-    "runtime": "server",
-    "purpose": "GET /api/ids — batched DOI↔PMID↔PMCID resolution via NCBI ID Converter; metered like /api/search.",
-    "exports": [
-      "default"
-    ],
-    "status": "healthy",
-    "findings": [],
-    "wiki": "04-Backend-API/Shared-Modules.md",
-    "tags": [
-      "api",
-      "identifiers",
-      "ncbi",
-      "billing"
-    ],
-    "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak)."
   },
   {
     "id": "api.proxy",
@@ -1462,7 +1434,7 @@
   {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 485,
+    "loc": 528,
     "deps": [
       "adapters.index",
       "api.shared.adapterHealth",
@@ -1470,11 +1442,11 @@
       "api.shared.apiContract",
       "api.shared.billing",
       "api.shared.cache",
+      "api.shared.compact",
       "api.shared.coverage",
-      "api.shared.debugResult",
+      "api.shared.evidence",
       "api.shared.meter",
       "api.shared.plans",
-      "api.shared.publicResult",
       "api.shared.ratelimit",
       "api.shared.serverKeys",
       "constants.defaults",
@@ -1543,7 +1515,7 @@
   {
     "id": "api.shared.apiAuth",
     "path": "api/_shared/apiAuth.js",
-    "loc": 132,
+    "loc": 140,
     "deps": [
       "api.shared.auth",
       "api.shared.billing",
@@ -1576,7 +1548,7 @@
   {
     "id": "api.shared.apiContract",
     "path": "api/_shared/apiContract.js",
-    "loc": 148,
+    "loc": 334,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1637,7 +1609,7 @@
   {
     "id": "api.shared.billing",
     "path": "api/_shared/billing.js",
-    "loc": 142,
+    "loc": 159,
     "deps": [
       "api.shared.coverage",
       "api.shared.prisma"
@@ -1694,7 +1666,7 @@
   {
     "id": "api.shared.citationGraph",
     "path": "api/_shared/citationGraph.js",
-    "loc": 231,
+    "loc": 278,
     "deps": [
       "adapters.shared.parseOpenAlex",
       "api.shared.adapterHealth",
@@ -1719,6 +1691,35 @@
       "enrichment"
     ],
     "notes": "Semantic Scholar deliberately NOT wired (keys approval-gated, 429s even when keyed — Appendix A.4). Pipeline-order invariant: dedup → sort → truncate — never truncate the raw unsorted list first. OpenAlex batch-by-id capped at 25/OR-group (live probe). Distinct circuit-breaker ids OPENALEX_GRAPH/OPENCITATIONS so graph health never collides with search-adapter streaks. OpenCitations TTL 7 days (lookup-only, slow ~900ms warm). TODO(reuse): swap inline OpenCitations fetch for an adopted OpenCitations adapter when one lands."
+  },
+  {
+    "id": "api.shared.compact",
+    "path": "api/_shared/compact.js",
+    "loc": 75,
+    "deps": [
+      "api.shared.apiContract",
+      "api.shared.debugResult",
+      "api.shared.publicResult",
+      "lib.citations"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Card projection SSOT (v0.48, contract v3): renderCard is the single entry point (compact by default, or full = v2 card + evidence, admin debug variant); cardOptsFrom parses detail/style/evidence/cite once for every endpoint.",
+    "exports": [
+      "renderCard",
+      "toCompactResult",
+      "citationIn",
+      "cardOptsFrom"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md#publicresultjs--debugresultjs",
+    "tags": [
+      "card",
+      "compact",
+      "contract-v3"
+    ],
+    "notes": "Composes publicResult/debugResult; never re-implements them."
   },
   {
     "id": "api.shared.coverage",
@@ -1796,15 +1797,48 @@
     "notes": "HARD INVARIANT: only callable when identity.admin === true. source is the single field that breaks origin-blindness."
   },
   {
+    "id": "api.shared.evidence",
+    "path": "api/_shared/evidence.js",
+    "loc": 214,
+    "deps": [
+      "api.shared.adapterHealth",
+      "api.shared.apiContract",
+      "api.shared.cache"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Evidence SSOT (v0.48, G4): batched Crossref updated-by (Retraction Watch) + OpenAlex lookups by DOI to a per-card evidence block (retraction/correction/EoC notices, work type, OA status, DOAJ, index lists, licence). Failure-isolated, cached 24h per DOI.",
+    "exports": [
+      "emptyEvidence",
+      "lookupEvidence",
+      "enrichEvidence",
+      "EVIDENCE_SOURCE_OPENALEX",
+      "EVIDENCE_SOURCE_CROSSREF",
+      "EVIDENCE_UNKNOWN"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "evidence",
+      "retraction",
+      "crossref",
+      "openalex",
+      "cache"
+    ],
+    "notes": "Crossref is authoritative for retractions (D-3); OpenAlex is_retracted is the fallback. Never throws; never moves the coverage band."
+  },
+  {
     "id": "api.shared.handlers.credits",
     "path": "api/_shared/handlers/credits.js",
-    "loc": 68,
+    "loc": 86,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.auth",
       "api.shared.billing",
       "api.shared.plans",
-      "api.shared.prisma"
+      "api.shared.prisma",
+      "api.shared.ratelimit"
     ],
     "kind": "api-route",
     "runtime": "server",
@@ -1950,6 +1984,120 @@
     "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
   },
   {
+    "id": "api.shared.handlers.works.citations",
+    "path": "api/_shared/handlers/works/citations.js",
+    "loc": 82,
+    "deps": [
+      "api.shared.apiContract",
+      "api.shared.citationGraph",
+      "api.shared.compact",
+      "api.shared.evidence",
+      "api.shared.meter",
+      "api.shared.serverKeys"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "Citation-graph operation (cited-by / refs) mounted via api/works/[op].js; v0.48: evidence-flagged compact cards, leg-health billing (free when every upstream leg failed), sources[] row.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Search-Endpoint.md",
+    "tags": [
+      "api",
+      "citation-graph",
+      "origin-blind",
+      "billing"
+    ],
+    "notes": "Clean-room from neuromechanist/opencite citations.py (MIT). Supports id (DOI or OpenAlex W-id), dir (cited-by|refs), limit (1–200, default 25), minCitations (cited-by only), sort (impact|year). v0.48: moved from api/citations.js (public URL kept by vercel.json rewrite)."
+  },
+  {
+    "id": "api.shared.handlers.works.get",
+    "path": "api/_shared/handlers/works/get.js",
+    "loc": 92,
+    "deps": [
+      "api.shared.apiContract",
+      "api.shared.citationGraph",
+      "api.shared.compact",
+      "api.shared.evidence",
+      "api.shared.meter",
+      "api.shared.serverKeys",
+      "lib.idResolve"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "GET /api/works?id= (v0.48): one work by any id (DOI/PMID/PMCID/W-id), every identifier, evidence, optional citation graph. works_meta (0.1) or works (1) unit weight.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "works",
+      "evidence",
+      "billing"
+    ],
+    "notes": "Backs the MCP get_paper tool."
+  },
+  {
+    "id": "api.shared.handlers.works.ids",
+    "path": "api/_shared/handlers/works/ids.js",
+    "loc": 60,
+    "deps": [
+      "api.shared.apiContract",
+      "api.shared.meter",
+      "lib.idResolve"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "DOI/PMID/PMCID crosswalk operation mounted via api/works/[op].js; v0.48: billed at the ids unit weight (0.1), free when the NCBI resolver was unreachable (leg health).",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md",
+    "tags": [
+      "api",
+      "identifiers",
+      "ncbi",
+      "billing"
+    ],
+    "notes": "Clean-room from neuromechanist/opencite id_converter.py (MIT). Max 200 ids per request (NCBI per-request homogeneous-batch cap). NCBI_API_KEY env raises 3→10 req/s. Response is origin-blind (single resolver, no upstream catalog to leak). v0.48: moved from api/ids.js (public URL kept by vercel.json rewrite)."
+  },
+  {
+    "id": "api.shared.handlers.works.verify",
+    "path": "api/_shared/handlers/works/verify.js",
+    "loc": 91,
+    "deps": [
+      "api.shared.apiContract",
+      "api.shared.compact",
+      "api.shared.meter",
+      "api.shared.parseBody",
+      "api.shared.serverKeys",
+      "api.shared.verify"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "POST/GET /api/verify (v0.48): reference verification. Verdict per reference (verified | mismatch | not_found | ambiguous), canonical record, evidence, corrected citation. Billed verify-weight x refs; free when every upstream leg failed.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "verify",
+      "evidence",
+      "billing"
+    ],
+    "notes": "The headline anti-hallucination endpoint (sprint_log_v0_48 E2)."
+  },
+  {
     "id": "api.shared.kv",
     "path": "api/_shared/kv.js",
     "loc": 91,
@@ -2002,10 +2150,11 @@
   {
     "id": "api.shared.meter",
     "path": "api/_shared/meter.js",
-    "loc": 95,
+    "loc": 160,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.billing",
+      "api.shared.plans",
       "api.shared.ratelimit"
     ],
     "kind": "api-shared",
@@ -2056,7 +2205,7 @@
   {
     "id": "api.shared.plans",
     "path": "api/_shared/plans.js",
-    "loc": 159,
+    "loc": 198,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2203,9 +2352,40 @@
     "notes": "Missing env var yields undefined (not empty string) so presence-guard in search.js correctly drops unconfigured sources."
   },
   {
+    "id": "api.shared.verify",
+    "path": "api/_shared/verify.js",
+    "loc": 243,
+    "deps": [
+      "adapters.shared.parseCrossref",
+      "adapters.shared.parseOpenAlex",
+      "api.shared.adapterHealth",
+      "api.shared.citationGraph",
+      "api.shared.evidence",
+      "lib.dedup",
+      "lib.idResolve"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Citation verification SSOT (v0.48, G1): id refs resolve to the canonical record (OpenAlex getWork, Crossref /works fallback); free-text refs go to Crossref query.bibliographic top-3 (OpenAlex search fallback); weighted containment scoring (title/author/year/venue) yields the verdict. Thresholds in THRESHOLDS.",
+    "exports": [
+      "verifyReferences",
+      "THRESHOLDS"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "verify",
+      "scoring",
+      "crossref",
+      "openalex"
+    ],
+    "notes": "Prefers ambiguous over a wrong verified. Leg health tallied into opts.health for billing."
+  },
+  {
     "id": "api.stripe.webhook",
     "path": "api/stripe/webhook.js",
-    "loc": 266,
+    "loc": 284,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.billing",
@@ -2265,9 +2445,36 @@
     "notes": "Folds 5 Node functions into 1 to stay under Vercel Hobby's 12-Serverless-Function cap (Edge functions don't count). The handler modules moved verbatim to api/_shared/handlers/. Legacy paths /api/{credits,history,keys,library,settings} preserved by vercel.json rewrites → /api/user/<resource>, so nothing client-side changed. Unknown resource → 404."
   },
   {
+    "id": "api.works.[op]",
+    "path": "api/works/[op].js",
+    "loc": 29,
+    "deps": [
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.ids",
+      "api.shared.handlers.works.verify",
+      "api.shared.meter"
+    ],
+    "kind": "api-route",
+    "runtime": "server",
+    "purpose": "Works dispatcher (v0.48): one Serverless Function fronting citations, ids, verify and get, keeping the deploy at 9/12 functions. Public URLs preserved by vercel.json rewrites.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "04-Backend-API/Shared-Modules.md#v048-works-dispatcher--evidence-layer",
+    "tags": [
+      "api",
+      "dispatcher",
+      "hobby-cap"
+    ],
+    "notes": "Same pattern as api/user/[resource].js."
+  },
+  {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 502,
+    "loc": 519,
     "deps": [
       "adapters.index",
       "components.DevelopersPanel",
@@ -2291,7 +2498,8 @@
       "hooks.useTheme",
       "launchers.index",
       "lib.admin",
-      "lib.log"
+      "lib.log",
+      "lib.searchQuota"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2498,7 +2706,7 @@
   {
     "id": "components.Layout",
     "path": "src/components/Layout.jsx",
-    "loc": 452,
+    "loc": 450,
     "deps": [
       "constants.app",
       "constants.themes",
@@ -2534,7 +2742,7 @@
   {
     "id": "components.Panels",
     "path": "src/components/Panels.jsx",
-    "loc": 565,
+    "loc": 595,
     "deps": [
       "adapters.shared.base",
       "adapters.shared.normalize",
@@ -2545,7 +2753,8 @@
       "lib.checkout",
       "lib.citations",
       "lib.library",
-      "lib.log"
+      "lib.log",
+      "lib.searchQuota"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2577,7 +2786,7 @@
   {
     "id": "components.ResultCard",
     "path": "src/components/ResultCard.jsx",
-    "loc": 241,
+    "loc": 292,
     "deps": [
       "components.EagleTooltip",
       "hooks.useEagleTooltip",
@@ -2667,7 +2876,7 @@
   {
     "id": "components.SourceSection",
     "path": "src/components/SourceSection.jsx",
-    "loc": 112,
+    "loc": 113,
     "deps": [
       "components.BookGroupHeader",
       "components.ResultCard",
@@ -2693,7 +2902,7 @@
   {
     "id": "components.UnifiedResultList",
     "path": "src/components/UnifiedResultList.jsx",
-    "loc": 199,
+    "loc": 201,
     "deps": [
       "adapters.index",
       "components.BookGroupHeader",
@@ -2766,7 +2975,7 @@
   {
     "id": "constants.pricing",
     "path": "src/constants/pricing.js",
-    "loc": 83,
+    "loc": 79,
     "deps": [
       "adapters.index",
       "api.shared.plans"
@@ -3253,7 +3462,7 @@
   {
     "id": "lib.checkout",
     "path": "src/lib/checkout.js",
-    "loc": 22,
+    "loc": 31,
     "deps": [],
     "kind": "lib",
     "runtime": "client",
@@ -3302,7 +3511,7 @@
   {
     "id": "lib.dedup",
     "path": "src/lib/dedup.js",
-    "loc": 145,
+    "loc": 161,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -3330,7 +3539,7 @@
   {
     "id": "lib.dedup.test",
     "path": "src/lib/dedup.test.js",
-    "loc": 172,
+    "loc": 193,
     "deps": [
       "lib.dedup"
     ]
@@ -3371,8 +3580,11 @@
   {
     "id": "lib.groupResults",
     "path": "src/lib/groupResults.js",
-    "loc": 38,
-    "deps": [],
+    "loc": 102,
+    "deps": [
+      "lib.citations",
+      "lib.dedup"
+    ],
     "kind": "lib",
     "runtime": "client",
     "purpose": "Clusters book-chapter results under their container/book title for the source-view layout; non-chapter results pass through as single-item groups.",
@@ -3387,6 +3599,14 @@
       "render"
     ],
     "notes": "Render-time only — not called during scoring or dedup."
+  },
+  {
+    "id": "lib.groupResults.test",
+    "path": "src/lib/groupResults.test.js",
+    "loc": 133,
+    "deps": [
+      "lib.groupResults"
+    ]
   },
   {
     "id": "lib.helpers",
@@ -3434,7 +3654,7 @@
   {
     "id": "lib.idResolve",
     "path": "src/lib/idResolve.js",
-    "loc": 193,
+    "loc": 204,
     "deps": [],
     "kind": "lib",
     "runtime": "isomorphic",
@@ -3595,6 +3815,27 @@
     "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: D1/D2/D5 are FIXED in current source. D3/D4 partially fixed (client UI path uses RRF; server path still raw BM25F). IDF is per-pool over 14-45 docs — degenerate by design until v0.35 T2 server extension."
   },
   {
+    "id": "lib.searchQuota",
+    "path": "src/lib/searchQuota.js",
+    "loc": 32,
+    "deps": [
+      "api.shared.plans"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "v0.47 free-tier web search quota: a per-UTC-day localStorage counter (FREE_WEB_DAILY_SEARCHES) for callers whose plan lacks unlimited web search; soft, client-side only.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "01-Frontend/Hooks.md#usehistory",
+    "tags": [
+      "quota",
+      "free-tier",
+      "client"
+    ],
+    "notes": "Reads hasUnlimitedWebSearch from plans.js (SSOT). Bypassable by design (Shahbaz, v0.47)."
+  },
+  {
     "id": "lib.semantic",
     "path": "src/lib/semantic.js",
     "loc": 0,
@@ -3687,7 +3928,7 @@
   {
     "id": "mcp.apiContract",
     "path": "mcp/src/apiContract.js",
-    "loc": 150,
+    "loc": 336,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -3733,13 +3974,11 @@
   {
     "id": "mcp.client",
     "path": "mcp/src/client.js",
-    "loc": 134,
-    "deps": [
-      "mcp.contract"
-    ],
+    "loc": 80,
+    "deps": [],
     "kind": "mcp",
     "runtime": "server",
-    "purpose": "REST client for /api/search: enforces TLS, 30s timeout, forwards x-api-key, never logs headers.",
+    "purpose": "httpExecutor (v0.48): one HTTPS executor returning { status, headers, body|text } for every response; never throws on non-2xx so 402/401/429 bodies reach the agent. TLS-only; key never logged.",
     "exports": [
       "searchScholarlySources",
       "resolveBaseUrl",
@@ -3757,13 +3996,13 @@
   {
     "id": "mcp.contract",
     "path": "mcp/src/contract.js",
-    "loc": 84,
+    "loc": 83,
     "deps": [
       "mcp.apiContract"
     ],
     "kind": "mcp",
     "runtime": "server",
-    "purpose": "DRY-4 bridge: re-exports API_CONTRACT/PARAMS/RESULT_FIELDS/RESPONSE_SHAPE/COVERAGE_BANDS from apiContract.js; defines TOOL_PARAM_MAP (query→q, limit, format) and toRestQuery().",
+    "purpose": "Contract bridge (v0.48): three tool names, agent-facing param subsets and the arg-to-REST mappings (query/body) for search_papers, get_paper, verify_citations.",
     "exports": [
       "API_CONTRACT",
       "PARAMS",
@@ -3789,13 +4028,13 @@
   {
     "id": "mcp.schema",
     "path": "mcp/src/schema.js",
-    "loc": 271,
+    "loc": 165,
     "deps": [
       "mcp.contract"
     ],
     "kind": "mcp",
     "runtime": "server",
-    "purpose": "Schema generators driven from contract.js: mcpInputSchema(), functionSchemas() (OpenAI + Anthropic), openApiSpec() — single source produces all agent-integration artifacts.",
+    "purpose": "Pure schema generators from the contract SSOT (v0.48): JSON Schema helpers for tool inputs + openApiSpec() over every ENDPOINT. SDK-free.",
     "exports": [
       "mcpInputSchema",
       "mcpToolDefinition",
@@ -3815,15 +4054,14 @@
   {
     "id": "mcp.server",
     "path": "mcp/src/server.js",
-    "loc": 96,
+    "loc": 65,
     "deps": [
       "mcp.client",
-      "mcp.contract",
-      "mcp.schema"
+      "mcp.tools"
     ],
     "kind": "mcp",
     "runtime": "server",
-    "purpose": "Creates the MCP Server object; registers ListTools and CallTool handlers; reads OPENCITE_API_KEY and OPENCITE_API_BASE_URL from env.",
+    "purpose": "Stdio MCP server (v0.48): registry-driven; tools/list and tools/call iterate tools.js; version read from package.json.",
     "exports": [
       "createServer",
       "startStdioServer"
@@ -3836,6 +4074,34 @@
       "server"
     ],
     "notes": "v0.43: two new tools added — search_citations (wraps /api/citations, dir=cited-by|refs) and resolve_ids (wraps /api/ids, DOI↔PMID↔PMCID). Structural scan will pick up code; this note records the curated intent."
+  },
+  {
+    "id": "mcp.tools",
+    "path": "mcp/src/tools.js",
+    "loc": 177,
+    "deps": [
+      "mcp.contract",
+      "mcp.schema"
+    ],
+    "kind": "mcp",
+    "runtime": "server",
+    "purpose": "Tool registry SSOT (v0.48): verify_citations, search_papers, get_paper with when-to-call descriptions, generated input schemas, REST mappings, MCP annotations; toToolResult shapes every HTTP response into an MCP result (payload + billing/trust trailer, or an actionable error). SDK-free so api/ can import it for the remote MCP.",
+    "exports": [
+      "TOOLS",
+      "toolByName",
+      "toolDefinitions",
+      "functionSchemas",
+      "toToolResult"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "mcp",
+      "tools",
+      "dry"
+    ],
+    "notes": "Fewer, clearly-described tools are what a model picks reliably (sprint_log_v0_48 D-10)."
   },
   {
     "id": "package",
@@ -3935,6 +4201,25 @@
     ]
   },
   {
+    "id": "scripts.gen-openapi",
+    "path": "scripts/gen-openapi.mjs",
+    "loc": 20,
+    "deps": [],
+    "kind": "script",
+    "runtime": "server",
+    "purpose": "Regenerates public/openapi.json from the contract SSOT (re-syncs the vendored copy, then mcp/src/schema.js openApiSpec). public/openapi.json is generated, never hand-edited.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "06-MCP-Server/MCP-Server.md",
+    "tags": [
+      "openapi",
+      "generated",
+      "script"
+    ],
+    "notes": "v0.48."
+  },
+  {
     "id": "scripts.migrate",
     "path": "scripts/migrate.mjs",
     "loc": 81,
@@ -4021,7 +4306,7 @@
   {
     "id": "vercel",
     "path": "vercel.json",
-    "loc": 35,
+    "loc": 39,
     "deps": [],
     "kind": "config",
     "runtime": "infra",
