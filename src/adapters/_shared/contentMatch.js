@@ -13,7 +13,7 @@
 const CONTENT_FIELDS = ["title", "abstract", "keywords"];
 
 // Common English stopwords that carry no topical signal.
-const STOPWORDS = new Set([
+export const STOPWORDS = new Set([
   "a","an","the","and","or","but","in","on","at","to","for","of","with",
   "by","from","as","is","are","was","were","be","been","being","have","has",
   "had","do","does","did","will","would","could","should","may","might",

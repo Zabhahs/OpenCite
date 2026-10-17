@@ -2474,7 +2474,7 @@
   {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 519,
+    "loc": 542,
     "deps": [
       "adapters.index",
       "components.DevelopersPanel",
@@ -2494,12 +2494,14 @@
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSearch",
+      "hooks.useSemanticRerank",
       "hooks.useSettings",
       "hooks.useTheme",
       "launchers.index",
       "lib.admin",
       "lib.log",
-      "lib.searchQuota"
+      "lib.searchQuota",
+      "lib.semantic"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2569,11 +2571,39 @@
     "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve."
   },
   {
+    "id": "components.admin.SemanticCompare",
+    "path": "src/components/admin/SemanticCompare.jsx",
+    "loc": 259,
+    "deps": [
+      "lib.goldSetMetrics",
+      "lib.history",
+      "lib.semantic",
+      "lib.semanticCompare",
+      "lib.storage"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "Admin console tab 'Semantic A/B (v0.49)': query textarea prefilled with gold set ∪ local history, bulk run, aggregate nDCG/MRR/recall per arm with Δ, avg overlap and timings, per-query expandable side-by-side top-10 with _sim, JSON export; last 10 runs in opencite:semantic_ab_runs.",
+    "exports": [
+      "SemanticCompare"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "admin",
+      "semantic",
+      "evaluation",
+      "component"
+    ]
+  },
+  {
     "id": "components.AdminConsole",
     "path": "src/components/AdminConsole.jsx",
-    "loc": 57,
+    "loc": 62,
     "deps": [
       "components.admin.GoldSetHarness",
+      "components.admin.SemanticCompare",
       "contexts.AuthContext",
       "lib.admin"
     ],
@@ -2813,8 +2843,10 @@
   {
     "id": "components.SearchControls",
     "path": "src/components/SearchControls.jsx",
-    "loc": 88,
-    "deps": [],
+    "loc": 96,
+    "deps": [
+      "lib.semantic"
+    ],
     "kind": "component",
     "runtime": "client",
     "purpose": "Always-visible relevance controls under the search bar: Lexical↔Semantic RRF slider + 'Search settings' disclosure (layout toggle, semantic/synonym/author/simpleSearch toggles).",
@@ -2902,12 +2934,13 @@
   {
     "id": "components.UnifiedResultList",
     "path": "src/components/UnifiedResultList.jsx",
-    "loc": 201,
+    "loc": 198,
     "deps": [
       "adapters.index",
       "components.BookGroupHeader",
       "components.ResultCard",
-      "lib.groupResults"
+      "lib.groupResults",
+      "lib.semanticSearch"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2950,7 +2983,7 @@
   {
     "id": "constants.defaults",
     "path": "src/constants/defaults.js",
-    "loc": 49,
+    "loc": 53,
     "deps": [],
     "kind": "constant",
     "runtime": "client",
@@ -3213,10 +3246,11 @@
   {
     "id": "hooks.useSearch",
     "path": "src/hooks/useSearch.js",
-    "loc": 156,
+    "loc": 170,
     "deps": [
       "adapters.index",
-      "lib.dedup"
+      "lib.dedup",
+      "lib.semanticSearch"
     ],
     "kind": "hook",
     "runtime": "client",
@@ -3240,27 +3274,29 @@
   {
     "id": "hooks.useSemanticRerank",
     "path": "src/hooks/useSemanticRerank.js",
-    "loc": 0,
-    "deps": [],
-    "quarantined": true,
+    "loc": 84,
+    "deps": [
+      "lib.semantic",
+      "lib.semanticSearch"
+    ],
     "kind": "hook",
     "runtime": "client",
-    "purpose": "Two-phase React hook: expensive pass embeds query+corpus once per result set (builds lexical/semantic/native rank maps); cheap pass re-fuses on semanticWeight slider change without re-embedding.",
+    "purpose": "Once every adapter settles, scores the pool on-device (lib.semantic) and returns a copy of sectionStates with `_sim` on each result, ordered by it per section; incremental on load-more, resets on new search, clears on toggle-off, falls back to native order on error.",
     "exports": [
       "useSemanticRerank"
     ],
-    "status": "quarantined",
+    "status": "healthy",
     "findings": [
       "F-205"
     ],
-    "wiki": "99-Archive/_quarantine/_index.md",
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
     "tags": [
       "hook",
       "rerank",
-      "rrf",
+      "semantic",
       "pipeline"
     ],
-    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: CAP_BY_SOURCE built once at module load from ADAPTERS registry. Three-input fusion: native (pool-size-weighted) + lexical + semantic (slider-weighted remainder)."
+    "notes": "Revived v0.49 (sprint_log_v0_49 §2) from docs/wiki/99-Archive/_quarantine/v0_44_engine/ — rewritten, not restored verbatim. No RRF/slider any more: pure semantic order behind ONE toggle (settings.semanticSearch). App.jsx layers rerankedStates over useSearch state and holds resultsReady until status is done|error."
   },
   {
     "id": "hooks.useSettings",
@@ -3838,26 +3874,90 @@
   {
     "id": "lib.semantic",
     "path": "src/lib/semantic.js",
-    "loc": 0,
+    "loc": 98,
     "deps": [],
-    "quarantined": true,
     "kind": "lib",
     "runtime": "client",
-    "purpose": "Manages the embed.worker singleton, dispatches embedding jobs via a promise Map keyed by msgId, constructs the title+abstract+keywords input string within a 512-char budget, returns a cosine-similarity rank Map.",
+    "purpose": "On-device embedder client: owns the embed.worker singleton, builds the title+abstract+keywords text (700-char budget), prefixes the QUERY with the arctic-embed query instruction, embeds query+docs in one batch and returns a cosine similarity per result; per-id embedding cache for load-more.",
     "exports": [
-      "computeSemanticRanks"
+      "MODEL_ID",
+      "MODEL_SIZE_MB",
+      "QUERY_PREFIX",
+      "embedTexts",
+      "docText",
+      "scoreResults"
     ],
-    "status": "quarantined",
+    "status": "healthy",
     "findings": [
       "F-205"
     ],
-    "wiki": "99-Archive/_quarantine/_index.md",
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
     "tags": [
       "semantic",
       "embeddings",
       "pipeline"
     ],
-    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Worker runs Xenova/all-MiniLM-L6-v2 (~23MB) from CDN, browser-cached. Cannot run server-side — Web Worker API unavailable in Vercel Functions."
+    "notes": "Revived v0.49 (sprint_log_v0_49 §2) from docs/wiki/99-Archive/_quarantine/v0_44_engine/ — rewritten, not restored verbatim. Model: Snowflake/snowflake-arctic-embed-xs (22 MB quantized, CLS pooling, English-only, Apache-2.0). Cannot run server-side (Web Worker) — F-205 remains the documented API gap."
+  },
+  {
+    "id": "lib.semanticCompare",
+    "path": "src/lib/semanticCompare.js",
+    "loc": 102,
+    "deps": [
+      "adapters.index",
+      "lib.dedup",
+      "lib.goldSetMetrics",
+      "lib.semantic",
+      "lib.semanticSearch"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Admin A/B runner: runs one query through the browser pipeline twice (toggle off / on) via the same adapters + policy as the live app, dedups in registry order, returns both ordered lists, per-arm gold-set metrics when labels exist, overlap@10, baseline-top-5 landing ranks and timings.",
+    "exports": [
+      "compareQuery",
+      "compactRun"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "admin",
+      "semantic",
+      "evaluation"
+    ],
+    "notes": "No server call; both arms hit the sources from the browser like a normal search. There is no server-side query log — query lists come from the gold set, local history or paste."
+  },
+  {
+    "id": "lib.semanticSearch",
+    "path": "src/lib/semanticSearch.js",
+    "loc": 76,
+    "deps": [
+      "adapters.shared.contentMatch"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "Semantic-search policy SSOT: R1 queryForAdapter (stopword keyword rewrite for every source except OpenAlex), R2 optsForAdapter (100-deep OpenAlex first page), R3 orderBySimilarity; also interleaveLists (the v0.44 D-3 default order, shared by the unified list and the A/B harness).",
+    "exports": [
+      "DEEP_SOURCE_ID",
+      "DEEP_PAGE_SIZE",
+      "isSemanticOn",
+      "toKeywordQuery",
+      "queryForAdapter",
+      "optsForAdapter",
+      "interleaveLists",
+      "hasSemanticOrder",
+      "orderBySimilarity"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "semantic",
+      "policy",
+      "ssot",
+      "ranking"
+    ],
+    "notes": "Pure functions, no network/model. Consumers: hooks.useSearch, components.UnifiedResultList, hooks.useSemanticRerank, lib.semanticCompare. Any future ranking change must go through here so the live app and the admin A/B cannot drift."
   },
   {
     "id": "lib.storage",
@@ -4339,26 +4439,25 @@
     ]
   },
   {
-    "id": "workers.embed",
+    "id": "workers.embed.worker",
     "path": "src/workers/embed.worker.js",
-    "loc": 0,
+    "loc": 57,
     "deps": [],
-    "quarantined": true,
     "kind": "worker",
     "runtime": "client",
-    "purpose": "Loads and runs all-MiniLM-L6-v2 via @xenova/transformers@2.17.2 from jsDelivr CDN; handles embed messages, returns L2-normalised embedding arrays.",
+    "purpose": "Web Worker running Snowflake/snowflake-arctic-embed-xs via @xenova/transformers@2.17.2 from jsDelivr; CLS pooling + L2 normalize; posts model download progress, then embedding arrays. Browser-cached after first load.",
     "exports": [],
-    "status": "quarantined",
+    "status": "healthy",
     "findings": [
       "F-205"
     ],
-    "wiki": "99-Archive/_quarantine/_index.md",
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
     "tags": [
       "worker",
       "embeddings",
       "pipeline"
     ],
-    "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: Model is cached in IndexedDB after first load via env.useBrowserCache=true. Pipeline singleton — only one instance regardless of message count."
+    "notes": "Revived v0.49 (sprint_log_v0_49 §2) from docs/wiki/99-Archive/_quarantine/v0_44_engine/ — rewritten, not restored verbatim. Verified 2026-10-17 against the HF repo: onnx/model_quantized.onnx = 22,972,992 bytes; 1_Pooling/config.json pooling_mode_cls_token=true."
   },
   {
     "id": "workers.synonyms.worker",

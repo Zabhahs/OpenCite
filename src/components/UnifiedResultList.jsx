@@ -3,6 +3,7 @@ import { ResultCard } from "./ResultCard.jsx";
 import { BookGroupHeader } from "./BookGroupHeader.jsx";
 import { ADAPTERS } from "../adapters/index.js";
 import { groupForDisplay, groupRecordCount } from "../lib/groupResults.js";
+import { interleaveLists, hasSemanticOrder, orderBySimilarity } from "../lib/semanticSearch.js";
 
 const INITIAL_DISPLAY = 20;
 const LOAD_STEP = 10;
@@ -56,15 +57,11 @@ export function UnifiedResultList({
     } else if (sortBy === "year") {
       return lists.flat().sort((a, b) => parseInt(b.year, 10) - parseInt(a.year, 10));
     }
-    // "default" → round-robin interleave: result #1 of each section, then #2, …
-    const out = [];
-    const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0);
-    for (let i = 0; i < maxLen; i++) {
-      for (const l of lists) {
-        if (i < l.length) out.push(l[i]);
-      }
-    }
-    return out;
+    // "default" → v0.49: when the semantic reranker has scored the pool, one global order by
+    // meaning across all sources; otherwise the v0.44 round-robin interleave (result #1 of
+    // each section, then #2, …). Both live in lib/semanticSearch.js (SSOT with the A/B harness).
+    const flat = lists.flat();
+    return hasSemanticOrder(flat) ? orderBySimilarity(flat) : interleaveLists(lists);
   }, [filteredSections, sortBy]);
 
   // Fold editions into one card each, then cluster book chapters under their parent work

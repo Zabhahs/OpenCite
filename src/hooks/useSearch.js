@@ -1,11 +1,17 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { ADAPTERS, runSearch } from "../adapters/index.js";
 import { doiKey, titleFingerprint, dedupFirstWins } from "../lib/dedup.js";
+import { queryForAdapter, optsForAdapter } from "../lib/semanticSearch.js";
 
 // v0.44 — engine teardown (sprint D-2): the browser pipeline is raw pass-through +
 // streaming dedup. Retrieval order from each source IS the display order; no BM25F
 // scoring, no synonym expansion, no confidence gate. Dedup (verdict-HEALTHY in the
 // v0.36 diagnostic) is the only post-retrieve step that remains.
+//
+// v0.49 — Semantic search toggle: this hook stays retrieval-only. When the setting is on,
+// the per-adapter query/opts are shaped by lib/semanticSearch.js (keyword rewrite for
+// non-OpenAlex sources, 100-deep OpenAlex first page); ordering by meaning happens after
+// the fact in hooks/useSemanticRerank.js, which App.jsx layers over sectionStates.
 export function useSearch(settings, isEnabled) {
   const [sectionStates, setSectionStates] = useState({});
   const [hasSearched, setHasSearched] = useState(false);
@@ -22,6 +28,9 @@ export function useSearch(settings, isEnabled) {
   // F-A3 — loadMore must page the query that PRODUCED the current results, not whatever
   // is in the live input box. search() records its executed query here; loadMore reads it.
   const executedQueryRef = useRef("");
+  // v0.49 — the same value as state, for consumers that must re-render on it (the semantic
+  // reranker embeds the query that PRODUCED the results, never the live input box).
+  const [executedQuery, setExecutedQuery] = useState("");
 
   const reset = useCallback(() => {
     setHasSearched(false);
@@ -38,6 +47,7 @@ export function useSearch(settings, isEnabled) {
     seenTitles.current.clear();
     const thisId = ++searchIdRef.current;
     executedQueryRef.current = query; // F-A3 — pin the query loadMore will page
+    setExecutedQuery(query);
 
     // C3 — multi-keyword parsing
     const terms = query.split(";").map(s => s.trim()).filter(Boolean);
@@ -60,14 +70,18 @@ export function useSearch(settings, isEnabled) {
           // C3 — run all terms in parallel per adapter, then merge with a within-batch
           // DOI dedup (the same record often matches several of the user's terms).
           const batches = await Promise.all(
-            terms.map(t => runSearch(adapter, t, settings, { offset: 0, pageToken: undefined }))
+            terms.map(t => runSearch(adapter, queryForAdapter(adapter, t, settings), settings,
+              optsForAdapter(adapter, settings, { offset: 0, pageToken: undefined })))
           );
           const merged = batches.flatMap(b => b.results || []);
           results = dedupFirstWins(merged, doiKey, new Set());
           hasMore = false; // load more not supported for multi-keyword
           nextPageToken = undefined;
         } else {
-          ({ results, hasMore, nextPageToken } = await runSearch(adapter, terms[0], settings, { offset: 0, pageToken: undefined }));
+          ({ results, hasMore, nextPageToken } = await runSearch(
+            adapter, queryForAdapter(adapter, terms[0], settings), settings,
+            optsForAdapter(adapter, settings, { offset: 0, pageToken: undefined })
+          ));
         }
 
         // C1 — cross-adapter dedup: DOI first, then same-paper title fingerprint
@@ -114,8 +128,8 @@ export function useSearch(settings, isEnabled) {
       // Thread both offset (for offset-based adapters) and pageToken (for token-based adapters,
       // e.g. Rijksmuseum) into the opts object. Adapters that don't use pageToken ignore it.
       const { results: newResults, hasMore, nextPageToken } = await runSearch(
-        adapter, terms[0], settings,
-        { offset: current.offset, pageToken: current.pageToken }
+        adapter, queryForAdapter(adapter, terms[0], settings), settings,
+        optsForAdapter(adapter, settings, { offset: current.offset, pageToken: current.pageToken })
       );
 
       // C1 — dedup load-more results against everything already seen (DOI + title fingerprint)
@@ -151,5 +165,5 @@ export function useSearch(settings, isEnabled) {
     return total < 5;
   }, [sectionStates]);
 
-  return { sectionStates, hasSearched, search, loadMore, reset, isSparseResults };
+  return { sectionStates, hasSearched, search, loadMore, reset, isSparseResults, executedQuery };
 }

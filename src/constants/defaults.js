@@ -45,4 +45,8 @@ export const DEFAULT_SETTINGS = {
   // so a query like "memon" no longer returns papers merely authored by someone named Memon.
   // When true: adapters revert to author-inclusive / all-field search.
   authorSearch: false,
+  // v0.49 — Semantic search (opt-in). On: natural-language queries are keyword-cleaned for
+  // non-OpenAlex sources, OpenAlex is fetched 100-deep, and results are ordered by meaning
+  // using an on-device embedding model (policy: src/lib/semanticSearch.js). Off: native order.
+  semanticSearch: false,
 };

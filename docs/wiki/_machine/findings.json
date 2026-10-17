@@ -316,11 +316,11 @@
     "type": "perf",
     "severity": "med",
     "title": "Semantic rerank is client-only — API consumers and MCP endpoint receive no semantic signal",
-    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI.",
+    "detail": "MOOT — engine deprecated in v0.44 (sprint_log_v0_44 D-1..D-7); the module this finding patched is quarantined. computeSemanticRanks uses the Web Worker API (not available in Vercel Functions). The server api/search path uses only BM25F scores; semantic rerank is silently absent for all non-UI callers. The MCP grounding endpoint therefore gets degraded ranking relative to the browser UI. v0.49 revived the client-side semantic order behind an opt-in toggle; the constraint is unchanged — /api/search and MCP still return native order (sprint_log_v0_49 §5).",
     "path": "src/lib/semantic.js",
     "modules": [
       "lib.semantic",
-      "workers.embed"
+      "workers.embed.worker"
     ],
     "status": "moot",
     "wiki": "03-Search-Pipeline/Known-Defects.md",

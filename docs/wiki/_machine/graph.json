@@ -1070,6 +1070,10 @@
     ],
     [
       "App",
+      "hooks.useSemanticRerank"
+    ],
+    [
+      "App",
       "hooks.useSettings"
     ],
     [
@@ -1093,6 +1097,10 @@
       "lib.searchQuota"
     ],
     [
+      "App",
+      "lib.semantic"
+    ],
+    [
       "components.admin.GoldSetHarness",
       "lib.goldSetMetrics"
     ],
@@ -1101,8 +1109,32 @@
       "lib.storage"
     ],
     [
+      "components.admin.SemanticCompare",
+      "lib.goldSetMetrics"
+    ],
+    [
+      "components.admin.SemanticCompare",
+      "lib.history"
+    ],
+    [
+      "components.admin.SemanticCompare",
+      "lib.semantic"
+    ],
+    [
+      "components.admin.SemanticCompare",
+      "lib.semanticCompare"
+    ],
+    [
+      "components.admin.SemanticCompare",
+      "lib.storage"
+    ],
+    [
       "components.AdminConsole",
       "components.admin.GoldSetHarness"
+    ],
+    [
+      "components.AdminConsole",
+      "components.admin.SemanticCompare"
     ],
     [
       "components.AdminConsole",
@@ -1209,6 +1241,10 @@
       "lib.helpers"
     ],
     [
+      "components.SearchControls",
+      "lib.semantic"
+    ],
+    [
       "components.SearchInput",
       "constants.app"
     ],
@@ -1239,6 +1275,10 @@
     [
       "components.UnifiedResultList",
       "lib.groupResults"
+    ],
+    [
+      "components.UnifiedResultList",
+      "lib.semanticSearch"
     ],
     [
       "constants.pricing",
@@ -1295,6 +1335,18 @@
     [
       "hooks.useSearch",
       "lib.dedup"
+    ],
+    [
+      "hooks.useSearch",
+      "lib.semanticSearch"
+    ],
+    [
+      "hooks.useSemanticRerank",
+      "lib.semantic"
+    ],
+    [
+      "hooks.useSemanticRerank",
+      "lib.semanticSearch"
     ],
     [
       "hooks.useSettings",
@@ -1373,6 +1425,30 @@
       "api.shared.plans"
     ],
     [
+      "lib.semanticCompare",
+      "adapters.index"
+    ],
+    [
+      "lib.semanticCompare",
+      "lib.dedup"
+    ],
+    [
+      "lib.semanticCompare",
+      "lib.goldSetMetrics"
+    ],
+    [
+      "lib.semanticCompare",
+      "lib.semantic"
+    ],
+    [
+      "lib.semanticCompare",
+      "lib.semanticSearch"
+    ],
+    [
+      "lib.semanticSearch",
+      "adapters.shared.contentMatch"
+    ],
+    [
       "lib.storage",
       "constants.defaults"
     ],
@@ -1411,7 +1487,8 @@
   ],
   "reverse": {
     "adapters.shared.contentMatch": [
-      "adapters.core.crossref"
+      "adapters.core.crossref",
+      "lib.semanticSearch"
     ],
     "adapters.shared.parseCrossref": [
       "adapters.core.crossref",
@@ -1691,7 +1768,8 @@
       "components.UnifiedResultList",
       "constants.pricing",
       "hooks.useSearch",
-      "hooks.useSettings"
+      "hooks.useSettings",
+      "lib.semanticCompare"
     ],
     "api.shared.adapterHealth": [
       "api.search",
@@ -1769,7 +1847,8 @@
       "api.shared.verify",
       "hooks.useSearch",
       "lib.dedup.test",
-      "lib.groupResults"
+      "lib.groupResults",
+      "lib.semanticCompare"
     ],
     "lib.idResolve": [
       "api.search",
@@ -1887,6 +1966,9 @@
     "hooks.useSearch": [
       "App"
     ],
+    "hooks.useSemanticRerank": [
+      "App"
+    ],
     "hooks.useSettings": [
       "App"
     ],
@@ -1904,19 +1986,39 @@
       "App",
       "components.Panels"
     ],
+    "lib.semantic": [
+      "App",
+      "components.SearchControls",
+      "components.admin.SemanticCompare",
+      "hooks.useSemanticRerank",
+      "lib.semanticCompare"
+    ],
     "lib.goldSetMetrics": [
       "components.admin.GoldSetHarness",
-      "lib.goldSetMetrics.test"
+      "components.admin.SemanticCompare",
+      "lib.goldSetMetrics.test",
+      "lib.semanticCompare"
     ],
     "lib.storage": [
       "components.admin.GoldSetHarness",
+      "components.admin.SemanticCompare",
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSettings",
       "lib.history",
       "lib.library"
     ],
+    "lib.history": [
+      "components.admin.SemanticCompare",
+      "hooks.useHistory"
+    ],
+    "lib.semanticCompare": [
+      "components.admin.SemanticCompare"
+    ],
     "components.admin.GoldSetHarness": [
+      "components.AdminConsole"
+    ],
+    "components.admin.SemanticCompare": [
       "components.AdminConsole"
     ],
     "lib.api": [
@@ -1966,6 +2068,12 @@
       "components.UnifiedResultList",
       "lib.groupResults.test"
     ],
+    "lib.semanticSearch": [
+      "components.UnifiedResultList",
+      "hooks.useSearch",
+      "hooks.useSemanticRerank",
+      "lib.semanticCompare"
+    ],
     "lib.auth-client": [
       "contexts.AuthContext"
     ],
@@ -1973,9 +2081,6 @@
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSettings"
-    ],
-    "lib.history": [
-      "hooks.useHistory"
     ],
     "launchers._factory": [
       "launchers.index"

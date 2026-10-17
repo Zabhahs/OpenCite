@@ -2,11 +2,14 @@ import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { isAdmin } from "../lib/admin.js";
 import { GoldSetHarness } from "./admin/GoldSetHarness.jsx";
+import { SemanticCompare } from "./admin/SemanticCompare.jsx";
 
 // Admin console — F2 (Gold-Set Harness): recall grading is ranking-independent, so it
 // survives the v0.44 engine teardown. The Score Explainer (F1) tab was removed with the
 // scoring engine (quarantined at docs/wiki/99-Archive/_quarantine/v0_44_engine/).
-export function AdminConsole() {
+// v0.49 — Semantic A/B tab: bulk baseline-vs-semantic comparison over any query list
+// (gold set + local history by default); needs the live settings + adapter predicate.
+export function AdminConsole({ settings, isEnabled }) {
   const { user, status } = useAuth();
   const [activeTab, setActiveTab] = useState("gold-set");
 
@@ -32,6 +35,7 @@ export function AdminConsole() {
       <div className="flex gap-2 border-b border-stone-200 pb-3">
         {[
           { id: "gold-set", label: "Gold-Set Harness (F2)" },
+          { id: "semantic-ab", label: "Semantic A/B (v0.49)" },
         ].map(tab => (
           <button
             key={tab.id}
@@ -50,6 +54,7 @@ export function AdminConsole() {
       {/* Tab content */}
       <div>
         {activeTab === "gold-set" && <GoldSetHarness />}
+        {activeTab === "semantic-ab" && <SemanticCompare settings={settings} isEnabled={isEnabled} />}
       </div>
     </div>
   );

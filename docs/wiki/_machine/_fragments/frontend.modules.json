@@ -1020,5 +1020,78 @@
       "client"
     ],
     "notes": "Reads hasUnlimitedWebSearch from plans.js (SSOT). Bypassable by design (Shahbaz, v0.47)."
+  },
+  {
+    "id": "lib.semanticSearch",
+    "path": "src/lib/semanticSearch.js",
+    "kind": "lib",
+    "runtime": "client",
+    "loc": 0,
+    "purpose": "Semantic-search policy SSOT: R1 queryForAdapter (stopword keyword rewrite for every source except OpenAlex), R2 optsForAdapter (100-deep OpenAlex first page), R3 orderBySimilarity; also interleaveLists (the v0.44 D-3 default order, shared by the unified list and the A/B harness).",
+    "exports": [
+      "DEEP_SOURCE_ID",
+      "DEEP_PAGE_SIZE",
+      "isSemanticOn",
+      "toKeywordQuery",
+      "queryForAdapter",
+      "optsForAdapter",
+      "interleaveLists",
+      "hasSemanticOrder",
+      "orderBySimilarity"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "semantic",
+      "policy",
+      "ssot",
+      "ranking"
+    ],
+    "notes": "Pure functions, no network/model. Consumers: hooks.useSearch, components.UnifiedResultList, hooks.useSemanticRerank, lib.semanticCompare. Any future ranking change must go through here so the live app and the admin A/B cannot drift."
+  },
+  {
+    "id": "lib.semanticCompare",
+    "path": "src/lib/semanticCompare.js",
+    "kind": "lib",
+    "runtime": "client",
+    "loc": 0,
+    "purpose": "Admin A/B runner: runs one query through the browser pipeline twice (toggle off / on) via the same adapters + policy as the live app, dedups in registry order, returns both ordered lists, per-arm gold-set metrics when labels exist, overlap@10, baseline-top-5 landing ranks and timings.",
+    "exports": [
+      "compareQuery",
+      "compactRun"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "admin",
+      "semantic",
+      "evaluation"
+    ],
+    "notes": "No server call; both arms hit the sources from the browser like a normal search. There is no server-side query log — query lists come from the gold set, local history or paste."
+  },
+  {
+    "id": "components.admin.SemanticCompare",
+    "path": "src/components/admin/SemanticCompare.jsx",
+    "kind": "component",
+    "runtime": "client",
+    "loc": 0,
+    "purpose": "Admin console tab 'Semantic A/B (v0.49)': query textarea prefilled with gold set ∪ local history, bulk run, aggregate nDCG/MRR/recall per arm with Δ, avg overlap and timings, per-query expandable side-by-side top-10 with _sim, JSON export; last 10 runs in opencite:semantic_ab_runs.",
+    "exports": [
+      "SemanticCompare"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "10-Sprints/sprint_log_v0_49.md",
+    "tags": [
+      "admin",
+      "semantic",
+      "evaluation",
+      "component"
+    ]
   }
 ]

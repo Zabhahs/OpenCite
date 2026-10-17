@@ -9,6 +9,8 @@ import { useHistory } from "./hooks/useHistory.js";
 import { useLibrary } from "./hooks/useLibrary.js";
 import { useSearch } from "./hooks/useSearch.js";
 import { useFilters } from "./hooks/useFilters.js";
+import { useSemanticRerank } from "./hooks/useSemanticRerank.js"; // v0.49
+import { MODEL_SIZE_MB } from "./lib/semantic.js";
 
 // Data
 import { ADAPTERS } from "./adapters/index.js";
@@ -76,7 +78,15 @@ function OpenCITE() {
   const hist = useHistory();
   const lib = useLibrary();
   const [filterState, setFilterState] = useState({});
-  const { sectionStates, hasSearched, search, loadMore, reset, isSparseResults } = useSearch(settings, isEnabled);
+  const { sectionStates: rawSectionStates, hasSearched, search, loadMore, reset, isSparseResults, executedQuery } = useSearch(settings, isEnabled);
+  // v0.49 — Semantic search: when the toggle is on, layer an on-device meaning-ordered copy
+  // of the sections over the raw retrieval state. Null until scored (or on failure), in which
+  // case the raw native-order state flows through untouched. Everything below reads
+  // `sectionStates`, so filters, status bar, and both result views see the ordered copy.
+  const semanticOn = !!settings.semanticSearch;
+  const { rerankedStates, status: semanticStatus, progress: semanticProgress } =
+    useSemanticRerank(rawSectionStates, executedQuery, semanticOn);
+  const sectionStates = rerankedStates || rawSectionStates;
   const filteredSections = useFilters(sectionStates, filterState);
 
   // v.19 — install debug logger ring buffer once when admin signs in
@@ -212,8 +222,10 @@ function OpenCITE() {
   );
 
   // v.31 — hold the list until every adapter has settled: no populate-then-reshuffle.
-  // (v0.44: ranking is gone, so "settled" is the only reveal condition left.)
-  const resultsReady = hasSearched && allDone;
+  // v0.49: with Semantic search on, also hold until the on-device reranker has finished
+  // (done) or given up (error → native order). Same no-reshuffle contract, one more gate.
+  const semanticSettled = !semanticOn || semanticStatus === "done" || semanticStatus === "error";
+  const resultsReady = hasSearched && allDone && semanticSettled;
 
   // v0.44 — scores no longer exist: sections rank purely by result count
   // (sections with results always sort before empty ones).
@@ -289,7 +301,7 @@ function OpenCITE() {
           <div className="my-6 border-b border-stone-200 pb-4">
             <p className="mono-font text-xs uppercase tracking-widest text-stone-600 mb-4">Admin Console (v0.33)</p>
             <Suspense fallback={null}>
-              <AdminConsole />
+              <AdminConsole settings={settings} isEnabled={isEnabled} />
             </Suspense>
           </div>
           <Footer />
@@ -393,10 +405,21 @@ function OpenCITE() {
             {!resultsReady ? (
               /* ── Loading — hold the list until every adapter settles (no reshuffle) ── */
               <div className="py-6 space-y-2">
-                {!isUnified && (
+                {!isUnified && !allDone && (
                   <div className="flex items-center gap-2">
                     <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
                     <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Searching sources…</span>
+                  </div>
+                )}
+                {/* v0.49 — sources are done; the on-device reranker is still working */}
+                {allDone && semanticOn && !semanticSettled && (
+                  <div className="flex items-center gap-2">
+                    <span className="pulse-dot mono-font text-[9px] text-amber-700">●</span>
+                    <span className="mono-font text-[9px] uppercase tracking-widest text-stone-500">
+                      {semanticStatus === "loading-model"
+                        ? `Downloading semantic model (one time, ${MODEL_SIZE_MB} MB)${semanticProgress?.progress ? ` · ${Math.round(semanticProgress.progress)}%` : "…"}`
+                        : "Ordering results by meaning…"}
+                    </span>
                   </div>
                 )}
               </div>

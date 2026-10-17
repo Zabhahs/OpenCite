@@ -1,9 +1,11 @@
 // OpenCITE — SearchControls
 // Quick search settings that live directly under the search bar (no Settings detour):
-// result layout (Unified/Source) and author search. The Lexical↔Semantic slider and
-// synonym/semantic/simple toggles were removed in v0.44 — the ranking engine is gone;
-// results display in each source's native relevance order.
+// result layout (Unified/Source), author search, and (v0.49) the Semantic search toggle.
+// The v0.31 Lexical↔Semantic slider and synonym/simple toggles were removed in v0.44 with
+// the ranking engine; v0.49 reintroduces ONE opt-in switch that orders results by meaning
+// using an on-device model (see src/lib/semanticSearch.js for the policy it enables).
 import { useState } from "react";
+import { MODEL_SIZE_MB } from "../lib/semantic.js";
 
 // Compact On/Off toggle matching the panel button-group idiom.
 function Toggle({ label, value, onChange }) {
@@ -71,6 +73,12 @@ export function SearchControls({ settings, onSave, onOpenSettings }) {
           </div>
 
           <Toggle label="Author search" value={s.authorSearch} onChange={v => upd({ authorSearch: v })} />
+
+          <Toggle label="Semantic search" value={s.semanticSearch} onChange={v => upd({ semanticSearch: v })} />
+          <p className="mono-font text-[9px] text-stone-500 leading-snug -mt-0.5 pb-1">
+            Orders results by meaning, on your device. First use downloads a {MODEL_SIZE_MB} MB model once.
+            English queries only.
+          </p>
 
           <div className="pt-2 mt-1 border-t border-stone-200">
             <button
