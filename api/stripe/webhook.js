@@ -26,12 +26,14 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../_shared/prisma.js";
-import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS, PACK_BUYER_PLAN_ID } from "../_shared/plans.js";
-import { applyMonthlyGrant, applyUpgradeGrant, clawbackCredits } from "../_shared/billing.js";
-import { periodOf } from "../_shared/apiAuth.js";
+import { getPack, getPlan, monthlyGrantFor, planIdForPriceId, PLANS, CREDIT_PACKS, PACK_BUYER_PLAN_ID, downgradePlanFor, isPostpaid } from "../_shared/plans.js";
+import { applyMonthlyGrant, applyUpgradeGrant, clawbackCredits, grantCredits, periodOf } from "../_shared/billing.js";
 import { log } from "../_shared/log.js";
 
-const dec = (n) => new Prisma.Decimal(n);
+// v0.48 (D-12): early-invoice threshold for the metered plan, in cents — Stripe can't set it at
+// Checkout, so it is applied to the subscription right after completion. Best-effort: a Stripe
+// refusal is logged, never fatal; our own metered_cap_usd (billing.js) is the real control.
+const BILLING_THRESHOLD_CENTS = Number(process.env.STRIPE_BILLING_THRESHOLD_CENTS || 5000);
 
 // Event groups (kept here so the handler reads declaratively).
 const RENEWAL_EVENTS = new Set(["invoice.paid", "invoice.payment_succeeded"]);
@@ -176,10 +178,14 @@ export default async function handler(req, res) {
 
         const pack = rawPack && CREDIT_PACKS[rawPack] ? getPack(rawPack) : null;
         if (pack) {
-          await tx.user.update({ where: { id: userId }, data: { total_credits: { increment: dec(pack.credits) } } });
+          // v0.48: purchased bucket + journal row in this transaction (billing.grantCredits).
+          await grantCredits(userId, pack.credits, { client: tx, source: event.id });
           // v0.46: a pack buyer on the free tier moves to the machine plan (full server-safe set,
           // machine burst cap). Never downgrades a subscriber or admin — free rows only.
           await tx.user.updateMany({ where: { id: userId, plan: "free" }, data: { plan: PACK_BUYER_PLAN_ID } });
+          // v0.48 (leak L2): remember the purchase so a later subscription cancellation falls back
+          // to `machine`, not `free` (plans.downgradePlanFor). First purchase only.
+          await tx.user.updateMany({ where: { id: userId, pack_purchased_at: null }, data: { pack_purchased_at: new Date() } });
         }
         const planId = rawPlan && PLANS[rawPlan] ? rawPlan : null;
         if (planId && getPlan(planId).subscription) {
@@ -189,8 +195,18 @@ export default async function handler(req, res) {
             data: {
               plan: getPlan(planId).id,
               stripe_subscription_id: obj.subscription ? String(obj.subscription) : undefined,
+              subscription_status: "active", // v0.48: postpaid plans serve only while active
             },
           });
+          // v0.48 (D-12): early invoice for the metered plan. Checkout can't carry
+          // billing_thresholds; apply it now. Best-effort (see BILLING_THRESHOLD_CENTS).
+          if (isPostpaid(planId) && obj.subscription && BILLING_THRESHOLD_CENTS > 0) {
+            try {
+              await stripe.subscriptions.update(String(obj.subscription), { billing_thresholds: { amount_gte: BILLING_THRESHOLD_CENTS, reset_billing_cycle_anchor: false } });
+            } catch (e) {
+              log.warn("stripe", "billing-threshold-rejected", { userId, subscription: obj.subscription, msg: e.message });
+            }
+          }
         }
         return { kind: "checkout", pack: pack?.id, plan: planId };
       }
@@ -208,36 +224,48 @@ export default async function handler(req, res) {
         }
         const grant = monthlyGrantFor({ plan: planId });
         const period = periodOf();
-        const res = await applyMonthlyGrant(userId, grant, period, { client: tx });
+        const res = await applyMonthlyGrant(userId, grant, period, { client: tx, source: event.id });
+        // v0.48: a paid invoice means the subscription is serving again (clears past_due).
+        await tx.user.updateMany({ where: { id: userId, stripe_subscription_id: { not: null } }, data: { subscription_status: "active" } });
         return { kind: "renewal", plan: planId, period, granted: res.granted };
       }
 
       // Tier change / status transition. Re-sync the plan from the live Price id when
       // the subscription is in a serving state; otherwise treat it as downgraded.
       if (event.type === "customer.subscription.updated" && userId) {
-        const active = ["active", "trialing", "past_due"].includes(obj.status);
         const mapped = planIdForPriceId(priceIdFromSubscription(obj));
-        const data = {};
-        if (active && mapped) {
+        // v0.48: flat plans keep serving through dunning (past_due); a POSTPAID plan serves only
+        // while `active` — billing.js reads subscription_status before spending the metered bucket.
+        const serving = isPostpaid(mapped) ? obj.status === "active" : ["active", "trialing", "past_due"].includes(obj.status);
+        const data = { subscription_status: obj.status };
+        if (serving && mapped) {
           data.plan = mapped;
           await grantOnUpgrade(tx, userId, mapped); // v0.47: portal Student → Pro switch
         }
-        if (!active) {
-          data.plan = "free";
+        if (["canceled", "unpaid", "incomplete_expired"].includes(obj.status)) {
+          // v0.48 (leak L2): a pack buyer keeps `machine`; everyone else → free.
+          const u = await tx.user.findUnique({ where: { id: userId }, select: { pack_purchased_at: true } });
+          data.plan = downgradePlanFor(u);
           data.stripe_subscription_id = null;
         }
-        if (Object.keys(data).length) await tx.user.update({ where: { id: userId }, data });
+        await tx.user.update({ where: { id: userId }, data });
         return { kind: "sub-updated", status: obj.status, plan: data.plan };
       }
 
       if (event.type === "customer.subscription.deleted" && userId) {
-        await tx.user.update({ where: { id: userId }, data: { plan: "free", stripe_subscription_id: null } });
-        return { kind: "unsubscribe" };
+        const u = await tx.user.findUnique({ where: { id: userId }, select: { pack_purchased_at: true } });
+        await tx.user.update({ where: { id: userId }, data: { plan: downgradePlanFor(u), stripe_subscription_id: null, subscription_status: "canceled" } });
+        return { kind: "unsubscribe", plan: downgradePlanFor(u) };
       }
 
-      // Failed renewal charge: no credit change. Stripe's dunning retries the invoice;
-      // a terminal failure flips the subscription, which arrives as updated/deleted.
+      // Failed renewal charge: no credit change. Stripe's dunning retries the invoice; a terminal
+      // failure flips the subscription, which arrives as updated/deleted. v0.48: a POSTPAID plan
+      // stops metered spending immediately (purchased credits still work) until invoice.paid.
       if (event.type === "invoice.payment_failed") {
+        if (userId) {
+          const u = await tx.user.findUnique({ where: { id: userId }, select: { plan: true } });
+          if (isPostpaid(u?.plan)) await tx.user.update({ where: { id: userId }, data: { subscription_status: "past_due" } });
+        }
         return { kind: "payment-failed" };
       }
 
@@ -258,7 +286,7 @@ export default async function handler(req, res) {
         const pack = meta.pack && CREDIT_PACKS[meta.pack] ? getPack(meta.pack) : null;
         const target = userId || (meta.userId ? String(meta.userId) : null);
         if (pack && target) {
-          await clawbackCredits(target, pack.credits, { client: tx });
+          await clawbackCredits(target, pack.credits, { client: tx, source: event.id });
           log.warn("stripe", "credits-clawed-back", { eventId: event.id, type: event.type, userId: target, pack: pack.id, credits: pack.credits });
           return { kind: "reversal", pack: pack.id, credits: pack.credits };
         }

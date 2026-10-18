@@ -11,13 +11,15 @@
 
 const MAX_BYTES = 65_536; // 64 KB
 
-export async function parseBody(req, res) {
+// v0.50: `maxBytes` lets one route raise the cap — the search-telemetry beacon carries a
+// 100-deep page of records with abstracts (~150 KB). Every other caller keeps the default.
+export async function parseBody(req, res, { maxBytes = MAX_BYTES } = {}) {
   return new Promise((resolve) => {
     let data = "", bytes = 0, aborted = false;
     req.on("data", (chunk) => {
       if (aborted) return;
       bytes += chunk.length;
-      if (bytes > MAX_BYTES) {
+      if (bytes > maxBytes) {
         aborted = true;
         if (res) {
           res.statusCode = 413;

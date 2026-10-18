@@ -10,6 +10,9 @@
     { "source": "/api/library", "destination": "/api/user/library" },
     { "source": "/api/settings", "destination": "/api/user/settings" },
     { "source": "/api/health", "destination": "/api/user/health" },
+    { "source": "/api/telemetry", "destination": "/api/user/telemetry" },
+    { "source": "/api/usage", "destination": "/api/user/usage" },
+    { "source": "/api/billing-sweep", "destination": "/api/user/billing-sweep" },
     { "source": "/api/citations", "destination": "/api/works/citations" },
     { "source": "/api/ids", "destination": "/api/works/ids" },
     { "source": "/api/verify", "destination": "/api/works/verify" },
@@ -20,7 +23,8 @@
     }
   ],
   "crons": [
-    { "path": "/api/health", "schedule": "0 6 * * *" }
+    { "path": "/api/health", "schedule": "0 6 * * *" },
+    { "path": "/api/billing-sweep", "schedule": "0 5 * * *" }
   ],
   "headers": [
     {

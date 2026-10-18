@@ -1064,6 +1064,29 @@
     "notes": "validateNCR is a dev utility never called in production. Phase 2 KV cache hook point is a long-lived comment."
   },
   {
+    "id": "adapters.shared.ordinals",
+    "path": "src/adapters/_shared/ordinals.js",
+    "loc": 65,
+    "deps": [],
+    "kind": "constant",
+    "runtime": "shared",
+    "purpose": "v0.50 append-only adapter id → small-int ordinal map used to pack search_events.top_src; quarantined ids keep their slot; UNSEEN=255 sentinel.",
+    "exports": [
+      "ADAPTER_ORDINAL",
+      "UNKNOWN_ORDINAL",
+      "ordinalOf",
+      "ADAPTER_BY_ORDINAL"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "adapter",
+      "telemetry",
+      "v0.50"
+    ]
+  },
+  {
     "id": "adapters.shared.parseCrossref",
     "path": "src/adapters/_shared/parseCrossref.js",
     "loc": 45,
@@ -1195,13 +1218,14 @@
   {
     "id": "api.checkout",
     "path": "api/checkout.js",
-    "loc": 194,
+    "loc": 215,
     "deps": [
       "api.shared.auth",
       "api.shared.log",
       "api.shared.parseBody",
       "api.shared.plans",
-      "api.shared.prisma"
+      "api.shared.prisma",
+      "api.shared.ratelimit"
     ],
     "kind": "api-route",
     "runtime": "server",
@@ -1434,7 +1458,7 @@
   {
     "id": "api.search",
     "path": "api/search.js",
-    "loc": 528,
+    "loc": 575,
     "deps": [
       "adapters.index",
       "api.shared.adapterHealth",
@@ -1445,9 +1469,11 @@
       "api.shared.compact",
       "api.shared.coverage",
       "api.shared.evidence",
+      "api.shared.licenses",
       "api.shared.meter",
       "api.shared.plans",
       "api.shared.ratelimit",
+      "api.shared.searchLog",
       "api.shared.serverKeys",
       "constants.defaults",
       "lib.citations",
@@ -1515,7 +1541,7 @@
   {
     "id": "api.shared.apiAuth",
     "path": "api/_shared/apiAuth.js",
-    "loc": 140,
+    "loc": 134,
     "deps": [
       "api.shared.auth",
       "api.shared.billing",
@@ -1548,7 +1574,7 @@
   {
     "id": "api.shared.apiContract",
     "path": "api/_shared/apiContract.js",
-    "loc": 334,
+    "loc": 335,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -1609,14 +1635,14 @@
   {
     "id": "api.shared.billing",
     "path": "api/_shared/billing.js",
-    "loc": 159,
+    "loc": 330,
     "deps": [
       "api.shared.coverage",
       "api.shared.prisma"
     ],
     "kind": "api-shared",
     "runtime": "server",
-    "purpose": "Two-phase credit ledger: preAuthorize (atomic compare-and-decrement), settle (coverage-prorated refund), refund, grantCredits, applyMonthlyGrant (idempotent per-month top-up).",
+    "purpose": "Credit billing SSOT (v0.48 Phase 2): THREE buckets on the user row — allowance (monthly, reset) → purchased (packs, never expire) → metered (postpaid `api` plan, capped, gated on an active subscription) — spent by ONE guarded SQL statement in preAuthorize; settle/refund reverse bucket-by-bucket; every mutation writes a credit_events journal row in the same transaction (sprint v0.45 T1). Grants: applyMonthlyGrant RESETS the allowance (closes the GREATEST leak), applyUpgradeGrant GREATEST on the allowance, clawback purchased-only. Sweep helpers listUnreportedUsage/consumeReported.",
     "exports": [
       "preAuthorize",
       "refund",
@@ -1829,13 +1855,42 @@
     "notes": "Crossref is authoritative for retractions (D-3); OpenAlex is_retracted is the fallback. Never throws; never moves the coverage band."
   },
   {
+    "id": "api.shared.handlers.billingSweep",
+    "path": "api/_shared/handlers/billingSweep.js",
+    "loc": 132,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.billing",
+      "api.shared.log",
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "Daily billing sweep (v0.48 Phase 2; /api/billing-sweep via the user dispatcher; vercel.json cron, CRON_SECRET or admin session): (1) sprint v0.45 T2 orphaned-preauth reconcile (30 min, insert-reconcile-first idempotency), (2) Stripe Billing Meter report of floor(metered_unreported) per postpaid user (identifier userId:day, backdated to the end of the previous UTC day) then consumeReported, (3) retention pruning (journal 12 months, trial_usage 7 days).",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "cron",
+      "billing",
+      "stripe",
+      "meter"
+    ],
+    "notes": "Never throws to the caller; each job reports its own counts/errors."
+  },
+  {
     "id": "api.shared.handlers.credits",
     "path": "api/_shared/handlers/credits.js",
-    "loc": 86,
+    "loc": 103,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.auth",
       "api.shared.billing",
+      "api.shared.parseBody",
       "api.shared.plans",
       "api.shared.prisma",
       "api.shared.ratelimit"
@@ -1882,11 +1937,12 @@
   {
     "id": "api.shared.handlers.history",
     "path": "api/_shared/handlers/history.js",
-    "loc": 87,
+    "loc": 91,
     "deps": [
       "api.shared.auth",
       "api.shared.parseBody",
-      "api.shared.prisma"
+      "api.shared.prisma",
+      "api.shared.searchLog"
     ],
     "kind": "api-route",
     "runtime": "server",
@@ -1984,15 +2040,72 @@
     "notes": "POST reads req.body directly (framework-parsed) instead of parseBody — inconsistent with other routes. Decrypt failure falls back to null (client uses localStorage)."
   },
   {
+    "id": "api.shared.handlers.telemetry",
+    "path": "api/_shared/handlers/telemetry.js",
+    "loc": 269,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.auth",
+      "api.shared.parseBody",
+      "api.shared.prisma",
+      "api.shared.ratelimit",
+      "api.shared.requireInternalOrigin",
+      "api.shared.searchLog"
+    ],
+    "kind": "handler",
+    "runtime": "server",
+    "purpose": "v0.50 /api/telemetry: browser beacon (search · signal · dwell; same-origin guard + per-actor window) and admin-only views (summary/zero/sources/semantic/export) + label promotion.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "admin",
+      "api",
+      "v0.50"
+    ],
+    "notes": "Mounted on api/user/[resource].js (no new Serverless Function). Body cap raised to 256 KB via parseBody maxBytes."
+  },
+  {
+    "id": "api.shared.handlers.usage",
+    "path": "api/_shared/handlers/usage.js",
+    "loc": 119,
+    "deps": [
+      "api.shared.apiAuth",
+      "api.shared.auth",
+      "api.shared.prisma",
+      "api.shared.ratelimit"
+    ],
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "GET /api/usage (v0.48 M5): usage export from the credit_events journal — per day/key/endpoint, JSON or CSV, session or API key (a key sees its own account), net spend per request_id, grants separate, ≤366 days.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "usage",
+      "export",
+      "journal"
+    ],
+    "notes": "Backs the Developers panel CSV link."
+  },
+  {
     "id": "api.shared.handlers.works.citations",
     "path": "api/_shared/handlers/works/citations.js",
-    "loc": 82,
+    "loc": 86,
     "deps": [
       "api.shared.apiContract",
       "api.shared.citationGraph",
       "api.shared.compact",
       "api.shared.evidence",
       "api.shared.meter",
+      "api.shared.searchLog",
       "api.shared.serverKeys"
     ],
     "kind": "api-handler",
@@ -2015,13 +2128,14 @@
   {
     "id": "api.shared.handlers.works.get",
     "path": "api/_shared/handlers/works/get.js",
-    "loc": 92,
+    "loc": 96,
     "deps": [
       "api.shared.apiContract",
       "api.shared.citationGraph",
       "api.shared.compact",
       "api.shared.evidence",
       "api.shared.meter",
+      "api.shared.searchLog",
       "api.shared.serverKeys",
       "lib.idResolve"
     ],
@@ -2045,10 +2159,11 @@
   {
     "id": "api.shared.handlers.works.ids",
     "path": "api/_shared/handlers/works/ids.js",
-    "loc": 60,
+    "loc": 67,
     "deps": [
       "api.shared.apiContract",
       "api.shared.meter",
+      "api.shared.searchLog",
       "lib.idResolve"
     ],
     "kind": "api-handler",
@@ -2071,13 +2186,16 @@
   {
     "id": "api.shared.handlers.works.verify",
     "path": "api/_shared/handlers/works/verify.js",
-    "loc": 91,
+    "loc": 120,
     "deps": [
       "api.shared.apiContract",
       "api.shared.compact",
       "api.shared.meter",
       "api.shared.parseBody",
+      "api.shared.plans",
+      "api.shared.searchLog",
       "api.shared.serverKeys",
+      "api.shared.trial",
       "api.shared.verify"
     ],
     "kind": "api-handler",
@@ -2128,6 +2246,30 @@
     "notes": "Config priority: KV_REST_API_URL+KV_REST_API_TOKEN then UPSTASH_REDIS_REST_URL+UPSTASH_REDIS_REST_TOKEN. claimOnce is the idempotency primitive (INCR-based, unambiguous vs SET NX)."
   },
   {
+    "id": "api.shared.licenses",
+    "path": "api/_shared/licenses.js",
+    "loc": 47,
+    "deps": [],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Metadata licence SSOT (v0.48 E4, G2): per-source licence facts transcribed from the capability dossiers / TOS-items.md only (unknown otherwise); licensesFor() builds the response `licenses` block; scripts/gen-licensing.mjs renders public/docs/licensing.html from it.",
+    "exports": [
+      "LICENSES",
+      "UNKNOWN_LICENSE",
+      "licenseFor",
+      "licensesFor"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "licence",
+      "provenance",
+      "docs"
+    ],
+    "notes": "Per-WORK content licences ride on evidence.license, not here."
+  },
+  {
     "id": "api.shared.log",
     "path": "api/_shared/log.js",
     "loc": 26,
@@ -2150,7 +2292,7 @@
   {
     "id": "api.shared.meter",
     "path": "api/_shared/meter.js",
-    "loc": 160,
+    "loc": 219,
     "deps": [
       "api.shared.apiAuth",
       "api.shared.billing",
@@ -2159,7 +2301,7 @@
     ],
     "kind": "api-shared",
     "runtime": "server",
-    "purpose": "Shared auth + rate-limit + two-phase credit charge scaffolding for the additive v0.43 endpoints (/api/citations, /api/ids); /api/search keeps its own inline path and is intentionally NOT refactored onto this.",
+    "purpose": "Metered-endpoint scaffolding + the SSOT for every agent-visible error body (401 unauthorized · 402 insufficient_credits | subscription_required | spend_cap_reached | payment_failed · 429) with pricing/packs derived from plans.js; legBand/sourceRow (v0.45 T5); unitCost per endpoint; charge() threads the ledger context (plan, requestId, key) and maps preAuthorize refusals to the right 402 (paymentRequired); authAndLimitOptional for the verify trial.",
     "exports": [
       "authAndLimit",
       "charge",
@@ -2182,7 +2324,7 @@
   {
     "id": "api.shared.parseBody",
     "path": "api/_shared/parseBody.js",
-    "loc": 39,
+    "loc": 41,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2205,7 +2347,7 @@
   {
     "id": "api.shared.plans",
     "path": "api/_shared/plans.js",
-    "loc": 198,
+    "loc": 240,
     "deps": [],
     "kind": "api-shared",
     "runtime": "server",
@@ -2331,6 +2473,46 @@
     "notes": "Browsers omit Origin on same-origin GET, so an Origin-only check would 403 legitimate search; Sec-Fetch-Site (a forbidden, browser-set header) is the primary signal. Soft quota guard, not a hard auth boundary — Origin/Referer are forgeable by non-browser clients."
   },
   {
+    "id": "api.shared.searchLog",
+    "path": "api/_shared/searchLog.js",
+    "loc": 334,
+    "deps": [
+      "adapters.shared.ordinals",
+      "api.shared.log",
+      "api.shared.prisma",
+      "api.shared.publicResult"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "v0.50 search data capture SSOT: upserts `works`, writes `search_events` (ranked page as parallel int arrays) and `search_signals`; machine-signal join; fail-open, budget-bounded.",
+    "exports": [
+      "SURFACE",
+      "SIGNAL",
+      "LOG_BUDGET_MS",
+      "requestContext",
+      "surfaceFor",
+      "withBudget",
+      "workRowFrom",
+      "upsertWorks",
+      "logSearch",
+      "logSignal",
+      "setDwell",
+      "logMachineSignal",
+      "deidentifyUser",
+      "clientIp"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "data",
+      "ranking",
+      "v0.50"
+    ],
+    "notes": "Raw SQL via prisma.$queryRaw (multi-row ON CONFLICT upsert, int[] columns, GIN `top @>` join). Never throws to callers."
+  },
+  {
     "id": "api.shared.serverKeys",
     "path": "api/_shared/serverKeys.js",
     "loc": 21,
@@ -2350,6 +2532,33 @@
       "secret-boundary"
     ],
     "notes": "Missing env var yields undefined (not empty string) so presence-guard in search.js correctly drops unconfigured sources."
+  },
+  {
+    "id": "api.shared.trial",
+    "path": "api/_shared/trial.js",
+    "loc": 67,
+    "deps": [
+      "api.shared.plans",
+      "api.shared.prisma"
+    ],
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Verify trial SSOT (v0.48 D-4): per-identity (user:<id> for credentialed-but-unentitled callers — Claude.ai connectors arrive from Anthropic IPs — else ip:<addr>) daily counter in Postgres (trial_usage), claimed by ONE atomic upsert. Verify-only; fail-closed on DB error.",
+    "exports": [
+      "claimTrial",
+      "trialIdentity",
+      "trialMeta",
+      "trialExhausted"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "trial",
+      "verify",
+      "free-tier"
+    ],
+    "notes": "TRIAL.refsPerDay = 25 (plans.js)."
   },
   {
     "id": "api.shared.verify",
@@ -2385,9 +2594,8 @@
   {
     "id": "api.stripe.webhook",
     "path": "api/stripe/webhook.js",
-    "loc": 284,
+    "loc": 312,
     "deps": [
-      "api.shared.apiAuth",
       "api.shared.billing",
       "api.shared.log",
       "api.shared.plans",
@@ -2417,14 +2625,18 @@
   {
     "id": "api.user.[resource]",
     "path": "api/user/[resource].js",
-    "loc": 34,
+    "loc": 57,
     "deps": [
+      "api.shared.handlers.billingSweep",
       "api.shared.handlers.credits",
       "api.shared.handlers.health",
       "api.shared.handlers.history",
       "api.shared.handlers.keys",
       "api.shared.handlers.library",
-      "api.shared.handlers.settings"
+      "api.shared.handlers.settings",
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.usage",
+      "api.shared.ratelimit"
     ],
     "kind": "api-route",
     "runtime": "server",
@@ -2474,7 +2686,7 @@
   {
     "id": "App",
     "path": "src/App.jsx",
-    "loc": 542,
+    "loc": 551,
     "deps": [
       "adapters.index",
       "components.DevelopersPanel",
@@ -2494,6 +2706,7 @@
       "hooks.useHistory",
       "hooks.useLibrary",
       "hooks.useSearch",
+      "hooks.useSearchTelemetry",
       "hooks.useSemanticRerank",
       "hooks.useSettings",
       "hooks.useTheme",
@@ -2571,6 +2784,29 @@
     "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve."
   },
   {
+    "id": "components.admin.SearchData",
+    "path": "src/components/admin/SearchData.jsx",
+    "loc": 167,
+    "deps": [
+      "adapters.shared.ordinals",
+      "lib.api"
+    ],
+    "kind": "component",
+    "runtime": "client",
+    "purpose": "v0.50 admin console tab: summary / zero-result / source share / semantic split panels over /api/telemetry views; Promote signals → labels; NDJSON export link.",
+    "exports": [
+      "SearchData"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "admin",
+      "telemetry",
+      "v0.50"
+    ]
+  },
+  {
     "id": "components.admin.SemanticCompare",
     "path": "src/components/admin/SemanticCompare.jsx",
     "loc": 259,
@@ -2600,9 +2836,10 @@
   {
     "id": "components.AdminConsole",
     "path": "src/components/AdminConsole.jsx",
-    "loc": 62,
+    "loc": 65,
     "deps": [
       "components.admin.GoldSetHarness",
+      "components.admin.SearchData",
       "components.admin.SemanticCompare",
       "contexts.AuthContext",
       "lib.admin"
@@ -2646,7 +2883,7 @@
   {
     "id": "components.DevelopersPanel",
     "path": "src/components/DevelopersPanel.jsx",
-    "loc": 211,
+    "loc": 281,
     "deps": [
       "contexts.BillingContext",
       "lib.api"
@@ -2816,12 +3053,13 @@
   {
     "id": "components.ResultCard",
     "path": "src/components/ResultCard.jsx",
-    "loc": 292,
+    "loc": 302,
     "deps": [
       "components.EagleTooltip",
       "hooks.useEagleTooltip",
       "lib.citations",
-      "lib.helpers"
+      "lib.helpers",
+      "lib.telemetry"
     ],
     "kind": "component",
     "runtime": "client",
@@ -2843,7 +3081,7 @@
   {
     "id": "components.SearchControls",
     "path": "src/components/SearchControls.jsx",
-    "loc": 96,
+    "loc": 103,
     "deps": [
       "lib.semantic"
     ],
@@ -2983,7 +3221,7 @@
   {
     "id": "constants.defaults",
     "path": "src/constants/defaults.js",
-    "loc": 53,
+    "loc": 57,
     "deps": [],
     "kind": "constant",
     "runtime": "client",
@@ -3008,7 +3246,7 @@
   {
     "id": "constants.pricing",
     "path": "src/constants/pricing.js",
-    "loc": 79,
+    "loc": 96,
     "deps": [
       "adapters.index",
       "api.shared.plans"
@@ -3270,6 +3508,29 @@
       "hook"
     ],
     "notes": "No AbortController — stale adapter responses from a superseded search can land in state."
+  },
+  {
+    "id": "hooks.useSearchTelemetry",
+    "path": "src/hooks/useSearchTelemetry.js",
+    "loc": 59,
+    "deps": [
+      "lib.semanticSearch",
+      "lib.telemetry"
+    ],
+    "kind": "hook",
+    "runtime": "client",
+    "purpose": "v0.50: fires the search beacon when resultsReady flips (order rebuilt with the semanticSearch SSOT), again per load-more page; flushes page dwell on next search / reset.",
+    "exports": [
+      "useSearchTelemetry"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "hook",
+      "v0.50"
+    ]
   },
   {
     "id": "hooks.useSemanticRerank",
@@ -4005,6 +4266,35 @@
     "notes": "Quarantined v0.44 (engine teardown, sprint_log_v0_44 D-4): source preserved at docs/wiki/99-Archive/_quarantine/v0_44_engine/. Virtual record kept so cross-refs resolve. Prior notes: MAX_MOBY_SYNS=24 cap. Shard files are large (some letters >2MB JSON). v0.42 (F-207): loadShard now fetches+parses inside workers.synonyms.worker off the main thread, with an inline main-thread fallback when Worker is undefined (SSR/tests)."
   },
   {
+    "id": "lib.telemetry",
+    "path": "src/lib/telemetry.js",
+    "loc": 155,
+    "deps": [
+      "lib.api"
+    ],
+    "kind": "lib",
+    "runtime": "client",
+    "purpose": "v0.50 browser capture client: sendSearchEvent (ordered page), emitSignal, result-dwell clock, page-dwell flush (fetch keepalive / sendBeacon). Honors settings.telemetry.",
+    "exports": [
+      "SIGNAL",
+      "setTelemetryEnabled",
+      "currentEventId",
+      "trimRecord",
+      "sendSearchEvent",
+      "emitSignal",
+      "startResultDwell",
+      "flushPageDwell",
+      "ensureTelemetryListeners"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "v0.50"
+    ]
+  },
+  {
     "id": "main",
     "path": "src/main.jsx",
     "loc": 10,
@@ -4028,7 +4318,7 @@
   {
     "id": "mcp.apiContract",
     "path": "mcp/src/apiContract.js",
-    "loc": 336,
+    "loc": 337,
     "deps": [],
     "kind": "lib",
     "runtime": "shared",
@@ -4074,7 +4364,7 @@
   {
     "id": "mcp.client",
     "path": "mcp/src/client.js",
-    "loc": 80,
+    "loc": 90,
     "deps": [],
     "kind": "mcp",
     "runtime": "server",
@@ -4154,7 +4444,7 @@
   {
     "id": "mcp.server",
     "path": "mcp/src/server.js",
-    "loc": 65,
+    "loc": 66,
     "deps": [
       "mcp.client",
       "mcp.tools"
@@ -4224,6 +4514,18 @@
     ]
   },
   {
+    "id": "prisma.data.2026-10-18_v0_48_backfill_pack_purchased_at",
+    "path": "prisma/data/2026-10-18_v0_48_backfill_pack_purchased_at.sql",
+    "loc": 21,
+    "deps": []
+  },
+  {
+    "id": "prisma.data.2026-10-18_v0_48_zero_free_balances",
+    "path": "prisma/data/2026-10-18_v0_48_zero_free_balances.sql",
+    "loc": 27,
+    "deps": []
+  },
+  {
     "id": "prisma.migrations.20260530120000_billing.migration",
     "path": "prisma/migrations/20260530120000_billing/migration.sql",
     "loc": 54,
@@ -4242,9 +4544,21 @@
     "deps": []
   },
   {
+    "id": "prisma.migrations.20261017000000_search_capture.migration",
+    "path": "prisma/migrations/20261017000000_search_capture/migration.sql",
+    "loc": 96,
+    "deps": []
+  },
+  {
+    "id": "prisma.migrations.20261018000000_v0_48_evidence_metering.migration",
+    "path": "prisma/migrations/20261018000000_v0_48_evidence_metering/migration.sql",
+    "loc": 51,
+    "deps": []
+  },
+  {
     "id": "prisma.schema",
     "path": "prisma/schema.prisma",
-    "loc": 197,
+    "loc": 339,
     "deps": [],
     "kind": "schema",
     "runtime": "infra",
@@ -4299,6 +4613,25 @@
       "security",
       "regression"
     ]
+  },
+  {
+    "id": "scripts.gen-licensing",
+    "path": "scripts/gen-licensing.mjs",
+    "loc": 64,
+    "deps": [],
+    "kind": "script",
+    "runtime": "server",
+    "purpose": "Renders public/docs/licensing.html from api/_shared/licenses.js + the adapter registry. Generated page — never hand-edited.",
+    "exports": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "docs",
+      "generated",
+      "script"
+    ],
+    "notes": "v0.48 E4."
   },
   {
     "id": "scripts.gen-openapi",
@@ -4406,7 +4739,7 @@
   {
     "id": "vercel",
     "path": "vercel.json",
-    "loc": 39,
+    "loc": 43,
     "deps": [],
     "kind": "config",
     "runtime": "infra",

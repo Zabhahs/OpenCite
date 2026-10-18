@@ -166,7 +166,7 @@
     "kind": "api-shared",
     "runtime": "server",
     "loc": 126,
-    "purpose": "Two-phase credit ledger: preAuthorize (atomic compare-and-decrement), settle (coverage-prorated refund), refund, grantCredits, applyMonthlyGrant (idempotent per-month top-up).",
+    "purpose": "Credit billing SSOT (v0.48 Phase 2): THREE buckets on the user row — allowance (monthly, reset) → purchased (packs, never expire) → metered (postpaid `api` plan, capped, gated on an active subscription) — spent by ONE guarded SQL statement in preAuthorize; settle/refund reverse bucket-by-bucket; every mutation writes a credit_events journal row in the same transaction (sprint v0.45 T1). Grants: applyMonthlyGrant RESETS the allowance (closes the GREATEST leak), applyUpgradeGrant GREATEST on the allowance, clawback purchased-only. Sweep helpers listUnreportedUsage/consumeReported.",
     "exports": [
       "preAuthorize",
       "refund",
@@ -662,7 +662,7 @@
     "path": "api/_shared/meter.js",
     "kind": "api-shared",
     "runtime": "server",
-    "purpose": "Shared auth + rate-limit + two-phase credit charge scaffolding for the additive v0.43 endpoints (/api/citations, /api/ids); /api/search keeps its own inline path and is intentionally NOT refactored onto this.",
+    "purpose": "Metered-endpoint scaffolding + the SSOT for every agent-visible error body (401 unauthorized · 402 insufficient_credits | subscription_required | spend_cap_reached | payment_failed · 429) with pricing/packs derived from plans.js; legBand/sourceRow (v0.45 T5); unitCost per endpoint; charge() threads the ledger context (plan, requestId, key) and maps preAuthorize refusals to the right 402 (paymentRequired); authAndLimitOptional for the verify trial.",
     "exports": [
       "authAndLimit",
       "charge",
@@ -1350,5 +1350,177 @@
       "script"
     ],
     "notes": "v0.48."
+  },
+  {
+    "id": "api.shared.searchLog",
+    "path": "api/_shared/searchLog.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "v0.50 search data capture SSOT: upserts `works`, writes `search_events` (ranked page as parallel int arrays) and `search_signals`; machine-signal join; fail-open, budget-bounded.",
+    "exports": [
+      "SURFACE",
+      "SIGNAL",
+      "LOG_BUDGET_MS",
+      "requestContext",
+      "surfaceFor",
+      "withBudget",
+      "workRowFrom",
+      "upsertWorks",
+      "logSearch",
+      "logSignal",
+      "setDwell",
+      "logMachineSignal",
+      "deidentifyUser",
+      "clientIp"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "data",
+      "ranking",
+      "v0.50"
+    ],
+    "notes": "Raw SQL via prisma.$queryRaw (multi-row ON CONFLICT upsert, int[] columns, GIN `top @>` join). Never throws to callers."
+  },
+  {
+    "id": "api.shared.handlers.telemetry",
+    "path": "api/_shared/handlers/telemetry.js",
+    "kind": "handler",
+    "runtime": "server",
+    "purpose": "v0.50 /api/telemetry: browser beacon (search · signal · dwell; same-origin guard + per-actor window) and admin-only views (summary/zero/sources/semantic/export) + label promotion.",
+    "exports": [
+      "default"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "07-Data-Layer/Search-Data-Capture.md",
+    "tags": [
+      "telemetry",
+      "admin",
+      "api",
+      "v0.50"
+    ],
+    "notes": "Mounted on api/user/[resource].js (no new Serverless Function). Body cap raised to 256 KB via parseBody maxBytes."
+  },
+  {
+    "id": "api.shared.trial",
+    "path": "api/_shared/trial.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Verify trial SSOT (v0.48 D-4): per-identity (user:<id> for credentialed-but-unentitled callers — Claude.ai connectors arrive from Anthropic IPs — else ip:<addr>) daily counter in Postgres (trial_usage), claimed by ONE atomic upsert. Verify-only; fail-closed on DB error.",
+    "exports": [
+      "claimTrial",
+      "trialIdentity",
+      "trialMeta",
+      "trialExhausted"
+    ],
+    "deps": [
+      "api.shared.prisma",
+      "api.shared.plans"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "trial",
+      "verify",
+      "free-tier"
+    ],
+    "notes": "TRIAL.refsPerDay = 25 (plans.js)."
+  },
+  {
+    "id": "api.shared.licenses",
+    "path": "api/_shared/licenses.js",
+    "kind": "api-shared",
+    "runtime": "server",
+    "purpose": "Metadata licence SSOT (v0.48 E4, G2): per-source licence facts transcribed from the capability dossiers / TOS-items.md only (unknown otherwise); licensesFor() builds the response `licenses` block; scripts/gen-licensing.mjs renders public/docs/licensing.html from it.",
+    "exports": [
+      "LICENSES",
+      "UNKNOWN_LICENSE",
+      "licenseFor",
+      "licensesFor"
+    ],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "licence",
+      "provenance",
+      "docs"
+    ],
+    "notes": "Per-WORK content licences ride on evidence.license, not here."
+  },
+  {
+    "id": "api.shared.handlers.billingSweep",
+    "path": "api/_shared/handlers/billingSweep.js",
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "Daily billing sweep (v0.48 Phase 2; /api/billing-sweep via the user dispatcher; vercel.json cron, CRON_SECRET or admin session): (1) sprint v0.45 T2 orphaned-preauth reconcile (30 min, insert-reconcile-first idempotency), (2) Stripe Billing Meter report of floor(metered_unreported) per postpaid user (identifier userId:day, backdated to the end of the previous UTC day) then consumeReported, (3) retention pruning (journal 12 months, trial_usage 7 days).",
+    "exports": [
+      "default"
+    ],
+    "deps": [
+      "api.shared.prisma",
+      "api.shared.billing",
+      "api.shared.apiAuth",
+      "api.shared.plans",
+      "api.shared.log"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "cron",
+      "billing",
+      "stripe",
+      "meter"
+    ],
+    "notes": "Never throws to the caller; each job reports its own counts/errors."
+  },
+  {
+    "id": "api.shared.handlers.usage",
+    "path": "api/_shared/handlers/usage.js",
+    "kind": "api-handler",
+    "runtime": "server",
+    "purpose": "GET /api/usage (v0.48 M5): usage export from the credit_events journal — per day/key/endpoint, JSON or CSV, session or API key (a key sees its own account), net spend per request_id, grants separate, ≤366 days.",
+    "exports": [
+      "default"
+    ],
+    "deps": [
+      "api.shared.prisma",
+      "api.shared.auth",
+      "api.shared.apiAuth",
+      "api.shared.ratelimit"
+    ],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "usage",
+      "export",
+      "journal"
+    ],
+    "notes": "Backs the Developers panel CSV link."
+  },
+  {
+    "id": "scripts.gen-licensing",
+    "path": "scripts/gen-licensing.mjs",
+    "kind": "script",
+    "runtime": "server",
+    "purpose": "Renders public/docs/licensing.html from api/_shared/licenses.js + the adapter registry. Generated page — never hand-edited.",
+    "exports": [],
+    "deps": [],
+    "status": "healthy",
+    "findings": [],
+    "wiki": "05-Billing/Billing-Credits.md#v048-three-bucket-ledger-journal-metered-plan-trial",
+    "tags": [
+      "docs",
+      "generated",
+      "script"
+    ],
+    "notes": "v0.48 E4."
   }
 ]

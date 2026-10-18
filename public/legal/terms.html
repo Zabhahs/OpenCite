@@ -29,7 +29,7 @@
   <p>OpenCITE is a meta-search over third-party open-access scholarly, library, museum and archive databases, available at <a href="https://citation.today">citation.today</a> as a free website and as a paid API and MCP server. We retrieve, deduplicate and relay records and format citations. We do not own the underlying records and do not guarantee their completeness or accuracy. Sources may be added, changed or removed at any time.</p>
 
   <h2>2. Web search and subscriptions</h2>
-  <p>Searching on the website is free for up to 10 searches per day. Signing in with Google adds a saved library and search history synced to your account and gives you a monthly allowance of free API credits.</p>
+  <p>Searching on the website is free for up to 10 searches per day. Signing in with Google adds a saved library and search history synced to your account. Signing in does not include API credits; see section 3.</p>
   <ul>
     <li>Student ($5/month) and Pro ($10/month) are subscriptions processed by Stripe, priced in US dollars, that renew monthly until cancelled. Both remove the daily web search limit and include a monthly API credit allowance (Student 500, Pro 1,000) that tops the balance up each calendar month and does not accumulate.</li>
     <li>Manage your subscription yourself from Plans → Manage billing (a Stripe-hosted page): cancel, switch between Student and Pro, update your payment method or billing details, and download invoices and receipts.</li>
@@ -37,14 +37,16 @@
     <li>Student is for enrolled students. We may move an account that misuses it to another plan.</li>
   </ul>
 
-  <h2>3. API credits</h2>
+  <h2>3. API credits and pay as you go</h2>
   <ul>
-    <li>API and MCP calls are metered in credits: one credit per call to <code>/api/search</code>, <code>/api/citations</code> or <code>/api/ids</code>, charged in proportion to the share of the eligible sources that actually answered. Calls where fewer than about half of the eligible sources answered are free.</li>
-    <li>Credit packs are one-time purchases processed by Stripe, priced in US dollars. Credits do not expire.</li>
+    <li>API and MCP calls are metered in credits: one credit per search or citation-graph call (<code>/api/search</code>, <code>/api/citations</code>, <code>/api/works</code> with a citation direction), and one tenth of a credit per reference verified (<code>/api/verify</code>), per identifier resolved (<code>/api/ids</code>) or per work fetched without a graph. Charges are prorated by the share of the eligible sources that actually answered; calls where fewer than about half of the eligible sources answered, or where every upstream source failed, are free.</li>
+    <li><strong>Pay as you go</strong> is a subscription with no base fee, processed by Stripe and priced in US dollars: 1,000 calls per calendar month are included, further usage is billed at $2.50 per 1,000 calls ($0.25 per 1,000 verifications or identifier lookups), invoiced monthly in arrears to the card on file. You set a monthly spending cap (default $25) in Developers → Billing; metered calls stop when the cap is reached. Usage is reported to the billing system daily, so calls near the end of a period may appear on the next invoice. If a payment fails, metered calls pause until the card is updated; purchased credits still work. Cancel at any time from Plans → Manage billing; usage up to cancellation is still invoiced.</li>
+    <li>Credit packs are one-time purchases processed by Stripe, priced in US dollars. Credits do not expire. Spending order is: the monthly allowance of your plan, then purchased credits, then pay-as-you-go usage.</li>
     <li>Some purchases are sold through Link, a Stripe service, which is then the seller of record and handles sales tax, VAT or GST, receipts and payment support; the checkout page says so when this applies. Your use of OpenCITE is still governed by these terms.</li>
-    <li>Free accounts receive 20 credits per calendar month. Allowances top the balance up to 20; they do not accumulate.</li>
+    <li>There are no free API credits. Reference verification is free up to 25 references per day per caller (per IP address, or per account), with no account or card required; everything else requires a plan or credits.</li>
+    <li>Monthly allowances (Student, Pro, pay as you go) reset at the start of each calendar month and do not accumulate; purchased credits are unaffected.</li>
     <li>API keys are shown once and stored only as a hash. You are responsible for keeping keys secret; usage on a key is billed to the owning account. You can revoke keys at any time.</li>
-    <li>A purchase moves a free account to the machine tier (all sources, higher rate limit). Rate limits protect the service and the upstream sources and may change.</li>
+    <li>A pack purchase moves a free account to the machine tier (all sources, higher rate limit for API calls). Neither packs nor pay as you go remove the daily web search limit. Rate limits protect the service and the upstream sources and may change.</li>
   </ul>
 
   <h2>4. Refunds</h2>

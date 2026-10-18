@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenCITE — Source licensing</title>
+<meta name="description" content="What you may do with the metadata each OpenCITE source returns. Generated from the licence SSOT." />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root { --bg:#fdf8ee; --fg:#1c1917; --muted:#57534e; --rule:#a8a29e; --accent:#7f1d1d; --code:#f5efe1; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1c1917; --fg:#f5f0e6; --muted:#c7bfb2; --rule:#57534e; --accent:#fca5a5; --code:#292524; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "Mulish", system-ui, sans-serif; }
+  main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+  h1 { font-size:1.7rem; margin:0 0 .25rem; }
+  .meta { color:var(--muted); font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; }
+  a { color:var(--accent); }
+  code { font: 13px/1.5 "JetBrains Mono", ui-monospace, monospace; }
+  table { border-collapse: collapse; width:100%; font-size:.9rem; }
+  td, th { text-align:left; vertical-align:top; padding:.4rem .5rem .4rem 0; border-bottom:1px solid var(--rule); }
+  nav { border-top:1px solid var(--rule); margin-top:3rem; padding-top:1rem; font: 12px/1.6 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.06em; text-transform: uppercase; display:flex; gap:1rem; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<main>
+  <p class="meta">OpenCITE · Developers · generated 2026-10-18</p>
+  <h1>Source licensing</h1>
+  <p>What you may do with the <strong>metadata</strong> each source returns through the API. OpenCITE relays metadata and links; it does not redistribute full text. Per-work content licences, where the source states one, are on each card as <code>evidence.license</code>. Every API response lists the licences of the sources present under <code>licenses</code>. A source whose terms we have not confirmed is marked <code>unknown</code> — that is a statement of what we know, not a grant.</p>
+  <table>
+    <tr><th>Source id</th><th>Name</th><th>Metadata licence</th><th>Note</th></tr>
+    <tr><td><code>DOAJ</code></td><td>DOAJ</td><td><a href="https://doaj.org/terms">CC0-1.0</a></td><td>Article metadata CC0 by DOAJ policy (doaj.md).</td></tr>
+    <tr><td><code>OPENALEX</code></td><td>OpenAlex</td><td><a href="https://openalex.org/">CC0-1.0</a></td><td>Metadata released under CC0 (dossier: openalex.md).</td></tr>
+    <tr><td><code>CROSSREF</code></td><td>Crossref</td><td><a href="https://www.crossref.org/documentation/retrieve-metadata/rest-api/">open</a></td><td>"Almost none of the metadata is subject to copyright, and you may use it for any purpose"; abstracts may carry publisher copyright (crossref.md).</td></tr>
+    <tr><td><code>CURATED</code></td><td>Curated Journals</td><td><a href="https://openalex.org/">CC0-1.0</a></td><td>An OpenAlex filter — same CC0 metadata (curated.md).</td></tr>
+    <tr><td><code>EUROPEANA</code></td><td>Europeana</td><td><a href="https://pro.europeana.eu/page/api-terms-of-use">CC0-1.0</a></td><td>Metadata CC0; item content carries per-object edm:rights (TOS-items.md).</td></tr>
+    <tr><td><code>MET</code></td><td>The Met</td><td><a href="https://metmuseum.github.io/">CC0-1.0</a></td><td>CC0 declared; unrestricted commercial and non-commercial use (MET.md).</td></tr>
+    <tr><td><code>SMITHSONIAN</code></td><td>Smithsonian</td><td><a href="https://www.si.edu/openaccess">CC0-1.0</a></td><td>Open Access metadata + designated assets CC0 (TOS-items.md).</td></tr>
+    <tr><td><code>DPLA</code></td><td>DPLA</td><td><a href="https://pro.dp.la/about-the-hubs/dpla-api-terms-of-use">CC0-1.0</a></td><td>Metadata CC0; the underlying resource is not (TOS-items.md).</td></tr>
+    <tr><td><code>RIJKS</code></td><td>Rijksmuseum</td><td><a href="https://data.rijksmuseum.nl/policy">CC0-1.0 / CC-BY-4.0</a></td><td>CC0 / CC BY 4.0 policy; attribution requested for CC BY objects (RIJKSMUSEUM.md).</td></tr>
+    <tr><td><code>IA</code></td><td>Internet Archive</td><td><a href="https://archive.org/about/terms.php">no-copyright-asserted</a></td><td>Internet Archive asserts no copyright over metadata (INTERNET_ARCHIVE.md).</td></tr>
+    <tr><td><code>NCBI</code></td><td>NCBI Entrez</td><td><a href="https://www.ncbi.nlm.nih.gov/home/about/policies/">public-domain</a></td><td>U.S. government work, largely public domain (ncbi.md).</td></tr>
+    <tr><td><code>OAPEN</code></td><td>OAPEN</td><td><a href="https://oapen.org">CC0-1.0</a></td><td>Metadata CC0 1.0; PDFs CC-licensed per book (OAPEN.md).</td></tr>
+    <tr><td><code>OPEN_LIBRARY</code></td><td>Open Library</td><td><a href="https://openlibrary.org/developers/licensing">no-copyright-asserted</a></td><td>IA/Open Library asserts no new copyright over bibliographic metadata (OPEN_LIBRARY.md).</td></tr>
+    <tr><td><code>NORTHWESTERN</code></td><td>Northwestern Digital</td><td>item-level</td><td>No API licence published; each item carries rights_statement / license (NORTHWESTERN.md).</td></tr>
+    <tr><td><code>PRINCETON_DPUL</code></td><td>Princeton DPUL</td><td>item-level</td><td>No API licence published; each item carries edm-rights (PRINCETON_DPUL.md).</td></tr>
+    <tr><td><code>CHRONICLING_AMERICA</code></td><td>Chronicling America</td><td><a href="https://www.loc.gov/legal/">public-domain</a></td><td>US government works / public-domain historical newspapers (CHRONICLING_AMERICA.md).</td></tr>
+    <tr><td><code>ONB</code></td><td>ONB / ANNO</td><td>unknown</td><td>Terms not confirmed (ONB.md).</td></tr>
+    <tr><td><code>BNF_API</code></td><td>BnF Catalogue</td><td><a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/">etalab-2.0</a></td><td>Licence Ouverte de l'État (Etalab open licence, CC-BY-equivalent) (BNF_API.md).</td></tr>
+    <tr><td><code>LC_DATASETS</code></td><td>Library of Congress</td><td><a href="https://www.loc.gov/legal/">public-domain</a></td><td>US government works, public domain (LC_DATASETS.md).</td></tr>
+    <tr><td><code>WIKIDATA</code></td><td>Wikidata</td><td><a href="https://www.wikidata.org/wiki/Wikidata:Licensing">CC0-1.0</a></td><td>Wikidata is CC0 (WIKIDATA.md).</td></tr>
+  </table>
+  <nav>
+    <a href="/docs/">API docs</a>
+    <a href="/llms.txt">llms.txt</a>
+    <a href="/legal/terms.html">Terms</a>
+  </nav>
+</main>
+</body>
+</html>

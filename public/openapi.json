@@ -62,6 +62,10 @@
                       },
                       "description": "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out."
                     },
+                    "licenses": {
+                      "type": "string",
+                      "description": "Metadata licence of each source searched, { [sourceId]: licence } (e.g. CC0-1.0, public-domain, open, unknown). Full table: /docs/licensing.html."
+                    },
                     "count": {
                       "type": "integer",
                       "description": "Number of results returned."

@@ -16,11 +16,19 @@
 
 export const CORE_SOURCE_IDS = ["OPENALEX", "CROSSREF", "DOAJ", "CURATED"];
 
-// Free tier monthly allowance. Verification on the free tier does NOT bump the
-// allowance. Kept as a named constant (equal to free) so a free-student bump can be
-// re-introduced later by changing one number.
-export const FREE_MONTHLY_GRANT = 20;
-export const FREE_STUDENT_MONTHLY_GRANT = 20;
+// v0.48 (D-14): NO free API credits. The free plan is the web app (FREE_WEB_DAILY_SEARCHES) plus
+// the verify trial (TRIAL); API/MCP calls need a paid plan or purchased credits. Both constants
+// stay named so a future free allowance is a one-number change.
+export const FREE_MONTHLY_GRANT = 0;
+export const FREE_STUDENT_MONTHLY_GRANT = 0;
+
+// v0.48 (directive 3b / D-4): the keyless, card-less trial — `verify` only, per identity per UTC
+// day. Enforced by api/_shared/trial.js (Postgres counter). Every other endpoint stays metered.
+export const TRIAL = { endpoint: "verify", refsPerDay: 25 };
+
+// v0.48 metered plan price (display SSOT; the Stripe Price is the billing truth and M4 keeps
+// them equal). $2.50 per 1,000 search calls = half of Brave's search rate.
+export const API_UNIT_PRICE_USD = 0.0025;
 
 // v0.47: web searches per UTC day for anyone NOT on a paid plan (signed-out visitors and the
 // free plan). Web search runs in the browser, so this is a soft client-side cap
@@ -66,13 +74,31 @@ export const PLANS = {
   },
   machine: {
     id: "machine",
-    label: "Machine (pay-as-you-go)",
+    label: "Prepaid credits",
     tier: "all",
     monthlyGrant: 0,                    // no allowance — agents buy credit packs
     creditCost: 1,
     rateLimit: { windowSeconds: 60, max: 300 },
     freeBelowBand: "limited",
     payg: true,
+  },
+  // v0.48 (Brave model, directive 2/3a): the metered API subscription. $0 base, a card at Checkout,
+  // usage invoiced monthly in arrears at API_UNIT_PRICE_USD per unit, and — like Brave's included
+  // credit — an allowance of 1,000 units a month (= $2.50) that resets each period. Spending order
+  // is allowance → purchased packs → metered (billing.js preAuthorize). Postpaid plans serve only
+  // while subscription_status = active, and never unlock unlimited web search (D-1/D-8).
+  api: {
+    id: "api",
+    label: "API (pay as you go)",
+    tier: "all",
+    monthlyGrant: 1000,
+    creditCost: 1,
+    rateLimit: { windowSeconds: 60, max: 300 },
+    freeBelowBand: "limited",
+    subscription: true,
+    postpaid: true,
+    priceEnv: "STRIPE_PRICE_API_METERED", // Stripe metered Price id (meter-backed) — set in Vercel env
+    unitPriceUsd: API_UNIT_PRICE_USD,
   },
   // Internal/admin tier — never offered for purchase, provisioned out-of-band
   // (a real user row with plan='admin', or the OPENCITE_API_KEY master key).
@@ -122,10 +148,24 @@ export function unitCost(plan, endpoint, qty = 1) {
 // plan checkouts and PricingPanel hides the cards while this is false.
 export const SUBSCRIPTIONS_ENABLED = true;
 
-// True when a plan id (BillingContext `tier`) searches the web without the daily cap: any paid or
-// internal plan. Unknown/missing ids resolve to free via getPlan → capped.
+// True when a plan id (BillingContext `tier`) searches the web without the daily cap: a FLAT-FEE
+// subscription (Student/Pro) or an internal plan. v0.48 (D-8, closes leak L1): neither a prepaid
+// pack (`machine`) nor the $0-base metered `api` plan unlocks unlimited web — a $10 pack used to
+// buy it forever, undercutting Pro at $10/month. Unknown/missing ids resolve to free → capped.
 export function hasUnlimitedWebSearch(planId) {
-  return getPlan(planId).id !== DEFAULT_PLAN_ID;
+  const p = getPlan(planId);
+  return !!((p.subscription && !p.postpaid) || p.internal);
+}
+
+// v0.48: postpaid (metered) plans bill usage in arrears; billing.js spends their third bucket.
+export function isPostpaid(planId) {
+  return !!getPlan(planId).postpaid;
+}
+
+// v0.48 (closes leak L2): the plan a user falls back to when a subscription ends. A user who ever
+// bought a pack keeps the `machine` tier (their credits are still theirs); everyone else → free.
+export function downgradePlanFor(user) {
+  return user?.pack_purchased_at ? PACK_BUYER_PLAN_ID : DEFAULT_PLAN_ID;
 }
 
 // True when a plan id implies the user has paid through Stripe (subscriber or pack buyer), i.e.
@@ -141,13 +181,15 @@ export function isPaidPlan(planId) {
 //
 // v0.46 repricing (cost-plus): OpenAlex bills $0.001 per search call (since Feb 2026), so the old
 // $0.00067–$0.001/query packs lost money on the flagship source alone. The Stripe Prices (env var
-// names) are unchanged — only the credits granted per price changed: $10 → 2,000 · $50 → 12,000 ·
-// $150 → 45,000 ($5.00 / $4.17 / $3.33 per 1k; the live Stripe price is $150, verified 2026-10-16). Pack ids keep their historical names so
-// existing checkout metadata keeps resolving.
+// names) are unchanged — only the credits granted per price change. Pack ids keep their
+// historical names so existing checkout metadata keeps resolving.
+// v0.48 (D-12): repriced to the metered rate ($2.50 / 1k = API_UNIT_PRICE_USD) so packs are the
+// prepaid option for buyers who can't run postpaid card billing, never a discount below metered:
+// $10 → 4,000 · $50 → 20,000 · $150 → 60,000 (the live Stripe price for the top pack is $150).
 export const CREDIT_PACKS = {
-  pack_10k:  { id: "pack_10k",  credits: 2000,  usd: 10,  priceEnv: "STRIPE_PRICE_PACK_10K" },
-  pack_60k:  { id: "pack_60k",  credits: 12000, usd: 50,  priceEnv: "STRIPE_PRICE_PACK_60K" },
-  pack_300k: { id: "pack_300k", credits: 45000, usd: 150, priceEnv: "STRIPE_PRICE_PACK_300K" },
+  pack_10k:  { id: "pack_10k",  credits: 4000,  usd: 10,  priceEnv: "STRIPE_PRICE_PACK_10K" },
+  pack_60k:  { id: "pack_60k",  credits: 20000, usd: 50,  priceEnv: "STRIPE_PRICE_PACK_60K" },
+  pack_300k: { id: "pack_300k", credits: 60000, usd: 150, priceEnv: "STRIPE_PRICE_PACK_300K" },
 };
 
 // Plan a pack buyer lands on when they are still on the free tier: the full server-safe set at the

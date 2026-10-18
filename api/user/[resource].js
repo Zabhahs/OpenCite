@@ -17,9 +17,22 @@ import keys from "../_shared/handlers/keys.js";
 import library from "../_shared/handlers/library.js";
 import settings from "../_shared/handlers/settings.js";
 import health from "../_shared/handlers/health.js";
+import telemetry from "../_shared/handlers/telemetry.js";
+import usage from "../_shared/handlers/usage.js";
+import billingSweep from "../_shared/handlers/billingSweep.js";
+import { checkRateLimit, ANON_PLAN } from "../_shared/ratelimit.js";
 
 // v0.46: `health` rides this dispatcher too (see handlers/health.js) — no new function file.
-const HANDLERS = { credits, history, keys, library, settings, health };
+// v0.50: `telemetry` (search-capture beacon + admin views) likewise — see handlers/telemetry.js.
+// v0.48: `usage` (journal export) and `billing-sweep` (daily cron: reconcile + meter report +
+// prune) likewise — see handlers/usage.js, handlers/billingSweep.js.
+const HANDLERS = { credits, history, keys, library, settings, health, telemetry, usage, "billing-sweep": billingSweep };
+
+const clientIp = (req) => {
+  const xff = req.headers?.["x-forwarded-for"];
+  const first = Array.isArray(xff) ? xff[0] : xff;
+  return (first || "").split(",")[0].trim() || "anon";
+};
 
 export default async function handler(req, res) {
   const resource = (Array.isArray(req.query?.resource) ? req.query.resource[0] : req.query?.resource) || "";
@@ -28,6 +41,16 @@ export default async function handler(req, res) {
     res.statusCode = 404;
     res.setHeader("Content-Type", "application/json");
     return res.end(JSON.stringify({ error: `Unknown resource "${resource}"` }));
+  }
+  // v0.48 (sprint v0.45 T7 remainder): the same pre-auth per-IP window the metered endpoints use,
+  // once here for every session route — these used to be entirely unthrottled, so a bad-cookie
+  // spray drove unbounded Prisma session lookups. Fail-open on a KV outage (ratelimit.js).
+  const rl = await checkRateLimit(`ip:${clientIp(req)}`, ANON_PLAN);
+  if (!rl.ok) {
+    res.statusCode = 429;
+    res.setHeader("Retry-After", String(rl.retryAfter));
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: "Rate limit exceeded. Please retry later.", code: "rate_limited", retry_after: rl.retryAfter }));
   }
   return fn(req, res);
 }

@@ -26,8 +26,8 @@ Cards are compact by default (title, ≤3 authors, year, venue, doi, url, type, 
 
 ## Errors (JSON body always carries `code`)
 
-- 401 `unauthorized` → `signup_url`
-- 402 `insufficient_credits` → `balance`, `upgrade_url`, `packs` (a human must top up)
+- 401 `unauthorized` → `signup_url`, `pricing`
+- 402 `subscription_required` (free account) → `subscribe_url`, `pricing`, `packs` · `insufficient_credits` → `balance`, `upgrade_url`, `packs` · `spend_cap_reached` → `manage_url` · `payment_failed` → `portal_url` · `trial_exhausted` → `resets_at` (a human must act on all of these)
 - 429 `rate_limited` → `retry_after` seconds
 
 ## MCP
@@ -38,8 +38,11 @@ Cards are compact by default (title, ≤3 authors, year, venue, doi, url, type, 
 
 ## Keys and pricing
 
-Sign in at https://citation.today → Developers → Create key. Current plans and credit packs: https://citation.today/#developers. Pricing is quoted in credits: 1 credit = one search call; verification and id lookups are 0.1 credit each.
+- Trial: `POST /api/verify` needs no key — 25 references per day per caller.
+- Pay as you go: $2.50 per 1,000 calls (verify and id lookups $0.25 per 1,000), 1,000 calls a month included, $0 base fee, card at sign-up, invoiced monthly in arrears, user-set monthly cap (default $25). Prepaid packs at the same rate: $10 → 4,000 · $50 → 20,000 · $150 → 60,000 credits.
+- 1 credit = one search or citation-graph call; verification, id lookup and a work fetched without a graph = 0.1 credit. Spending order: monthly allowance → purchased credits → metered usage.
+- Sign in at https://citation.today → Developers → Create key. Plans: https://citation.today/#developers
 
 ## Licensing
 
-Metadata comes from open sources (OpenAlex and Crossref are CC0). Per-record content licences, where stated, are in `evidence.license`. Terms: https://citation.today/legal/terms.html · Privacy: https://citation.today/legal/privacy.html
+Every response lists the metadata licence of each source present under `licenses` (e.g. OpenAlex, DOAJ, Europeana, DPLA, Smithsonian, Wikidata are CC0; Crossref metadata is usable for any purpose; PubMed/LoC are US public domain). Full table: https://citation.today/docs/licensing.html. Per-work content licences, where stated, are in `evidence.license`. Terms: https://citation.today/legal/terms.html · Privacy: https://citation.today/legal/privacy.html

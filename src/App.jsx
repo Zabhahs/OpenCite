@@ -10,6 +10,7 @@ import { useLibrary } from "./hooks/useLibrary.js";
 import { useSearch } from "./hooks/useSearch.js";
 import { useFilters } from "./hooks/useFilters.js";
 import { useSemanticRerank } from "./hooks/useSemanticRerank.js"; // v0.49
+import { useSearchTelemetry } from "./hooks/useSearchTelemetry.js"; // v0.50
 import { MODEL_SIZE_MB } from "./lib/semantic.js";
 
 // Data
@@ -226,6 +227,14 @@ function OpenCITE() {
   // (done) or given up (error → native order). Same no-reshuffle contract, one more gate.
   const semanticSettled = !semanticOn || semanticStatus === "done" || semanticStatus === "error";
   const resultsReady = hasSearched && allDone && semanticSettled;
+
+  // v0.50 — search data capture: log the page exactly as shown once resultsReady flips (and again
+  // on load-more). Signals come straight from ResultCard via lib/telemetry.js. Off → no-op.
+  useSearchTelemetry({
+    enabled: settings.telemetry !== false,
+    hasSearched, resultsReady, executedQuery, query, sectionStates, settings, enabledAdapters, searchCount,
+    sortBy: filterState.sortBy,
+  });
 
   // v0.44 — scores no longer exist: sections rank purely by result count
   // (sections with results always sort before empty ones).

@@ -9,6 +9,10 @@ import { buildMLA, buildAPA, segmentsToPlain, isBookChapter } from "../lib/citat
 import { truncate } from "../lib/helpers.js";
 import { EagleTooltip } from "./EagleTooltip.jsx";
 import { useEagleTooltip } from "../hooks/useEagleTooltip.js";
+// v0.50 — search data capture: every user action on a card is a relevance signal (lib/telemetry.js
+// no-ops when the setting is off or no search event is live). Editions are stripped first so the
+// signal names the record itself.
+import { emitSignal, startResultDwell, SIGNAL } from "../lib/telemetry.js";
 
 const EAGLE_LIBRARY_MSG =
   "Saved! ★ Open your Library to select favourites and export them as BibTeX, RIS, or CSL-JSON.";
@@ -33,14 +37,18 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
   // Eagle tooltip — one-time, triggered on first ever library save
   const eagle = useEagleTooltip("eagle_library_prompted");
 
+  // Save the record itself, not the editions folded onto it for display.
+  const { _editions, ...record } = result;
+
   const handleToggleLibrary = () => {
     if (!isInLibrary) {
       eagle.show();
+      emitSignal(record, SIGNAL.save_library); // v0.50 — add only; un-saving is not a signal
     }
-    // Save the record itself, not the editions folded onto it for display.
-    const { _editions, ...record } = result;
     onToggleLibrary(record);
   };
+  // v0.50 — outbound click: signal + start the result-dwell clock (settles when the tab refocuses).
+  const handleOpen = (action, meta) => { emitSignal(record, action, meta); startResultDwell(record); };
 
   return (
     <article
@@ -100,7 +108,7 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
       <div className={hasImage ? "grid grid-cols-[120px_1fr] md:grid-cols-[160px_1fr] gap-4 md:gap-5" : ""}>
         {hasImage && (
           <div className="shrink-0">
-            <a href={result.url || result.previewImage} target="_blank" rel="noopener noreferrer">
+            <a href={result.url || result.previewImage} target="_blank" rel="noopener noreferrer" onClick={() => handleOpen(SIGNAL.open_link, { via: "image" })}>
               <img
                 src={result.previewImage}
                 alt={result.title}
@@ -122,6 +130,7 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:underline hover:text-red-900 transition"
+                onClick={() => handleOpen(SIGNAL.click_title, { via: result.doi ? "doi" : "url" })}
               >
                 {result.title}
               </a>
@@ -197,6 +206,7 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block mono-font text-[10px] uppercase tracking-widest text-stone-900 underline-thick hover:text-red-900 transition mb-4 break-all"
+          onClick={() => handleOpen(SIGNAL.open_link, { via: "fulltext" })}
         >
           Read full text →
         </a>
@@ -205,7 +215,7 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
       {/* Citations — MLA + APA */}
       <div className="border border-stone-300 bg-white">
         <button
-          onClick={() => setCitationsOpen((o) => !o)}
+          onClick={() => { if (!citationsOpen) emitSignal(record, SIGNAL.expand_cite); setCitationsOpen((o) => !o); }}
           className="w-full flex items-center justify-between px-3 py-2 hover:bg-stone-50 transition"
           aria-expanded={citationsOpen}
         >
@@ -229,7 +239,7 @@ export const ResultCard = React.memo(function ResultCard({ result, index, onCopy
                     {label}
                   </span>
                   <button
-                    onClick={() => onCopy(plain, cardId, style)}
+                    onClick={() => { emitSignal(record, SIGNAL.copy_cite, { style }); onCopy(plain, cardId, style); }}
                     className="mono-font text-[10px] uppercase tracking-widest text-stone-700 hover:text-red-900 transition"
                   >
                     {copied.id === cardId && copied.style === style ? "✓ Copied" : "Copy"}

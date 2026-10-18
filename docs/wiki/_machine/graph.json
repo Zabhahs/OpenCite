@@ -513,6 +513,10 @@
       "api.shared.prisma"
     ],
     [
+      "api.checkout",
+      "api.shared.ratelimit"
+    ],
+    [
       "api.proxy",
       "api.shared.log"
     ],
@@ -582,6 +586,10 @@
     ],
     [
       "api.search",
+      "api.shared.licenses"
+    ],
+    [
+      "api.search",
       "api.shared.meter"
     ],
     [
@@ -591,6 +599,10 @@
     [
       "api.search",
       "api.shared.ratelimit"
+    ],
+    [
+      "api.search",
+      "api.shared.searchLog"
     ],
     [
       "api.search",
@@ -701,6 +713,26 @@
       "api.shared.cache"
     ],
     [
+      "api.shared.handlers.billingSweep",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.shared.handlers.billingSweep",
+      "api.shared.billing"
+    ],
+    [
+      "api.shared.handlers.billingSweep",
+      "api.shared.log"
+    ],
+    [
+      "api.shared.handlers.billingSweep",
+      "api.shared.plans"
+    ],
+    [
+      "api.shared.handlers.billingSweep",
+      "api.shared.prisma"
+    ],
+    [
       "api.shared.handlers.credits",
       "api.shared.apiAuth"
     ],
@@ -711,6 +743,10 @@
     [
       "api.shared.handlers.credits",
       "api.shared.billing"
+    ],
+    [
+      "api.shared.handlers.credits",
+      "api.shared.parseBody"
     ],
     [
       "api.shared.handlers.credits",
@@ -741,6 +777,10 @@
       "api.shared.prisma"
     ],
     [
+      "api.shared.handlers.history",
+      "api.shared.searchLog"
+    ],
+    [
       "api.shared.handlers.keys",
       "api.shared.auth"
     ],
@@ -785,6 +825,50 @@
       "api.shared.prisma"
     ],
     [
+      "api.shared.handlers.telemetry",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.parseBody"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.ratelimit"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.requireInternalOrigin"
+    ],
+    [
+      "api.shared.handlers.telemetry",
+      "api.shared.searchLog"
+    ],
+    [
+      "api.shared.handlers.usage",
+      "api.shared.apiAuth"
+    ],
+    [
+      "api.shared.handlers.usage",
+      "api.shared.auth"
+    ],
+    [
+      "api.shared.handlers.usage",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.handlers.usage",
+      "api.shared.ratelimit"
+    ],
+    [
       "api.shared.handlers.works.citations",
       "api.shared.apiContract"
     ],
@@ -803,6 +887,10 @@
     [
       "api.shared.handlers.works.citations",
       "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.citations",
+      "api.shared.searchLog"
     ],
     [
       "api.shared.handlers.works.citations",
@@ -827,6 +915,10 @@
     [
       "api.shared.handlers.works.get",
       "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.get",
+      "api.shared.searchLog"
     ],
     [
       "api.shared.handlers.works.get",
@@ -843,6 +935,10 @@
     [
       "api.shared.handlers.works.ids",
       "api.shared.meter"
+    ],
+    [
+      "api.shared.handlers.works.ids",
+      "api.shared.searchLog"
     ],
     [
       "api.shared.handlers.works.ids",
@@ -866,7 +962,19 @@
     ],
     [
       "api.shared.handlers.works.verify",
+      "api.shared.plans"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.searchLog"
+    ],
+    [
+      "api.shared.handlers.works.verify",
       "api.shared.serverKeys"
+    ],
+    [
+      "api.shared.handlers.works.verify",
+      "api.shared.trial"
     ],
     [
       "api.shared.handlers.works.verify",
@@ -905,6 +1013,30 @@
       "api.shared.auth"
     ],
     [
+      "api.shared.searchLog",
+      "adapters.shared.ordinals"
+    ],
+    [
+      "api.shared.searchLog",
+      "api.shared.log"
+    ],
+    [
+      "api.shared.searchLog",
+      "api.shared.prisma"
+    ],
+    [
+      "api.shared.searchLog",
+      "api.shared.publicResult"
+    ],
+    [
+      "api.shared.trial",
+      "api.shared.plans"
+    ],
+    [
+      "api.shared.trial",
+      "api.shared.prisma"
+    ],
+    [
       "api.shared.verify",
       "adapters.shared.parseCrossref"
     ],
@@ -934,10 +1066,6 @@
     ],
     [
       "api.stripe.webhook",
-      "api.shared.apiAuth"
-    ],
-    [
-      "api.stripe.webhook",
       "api.shared.billing"
     ],
     [
@@ -951,6 +1079,10 @@
     [
       "api.stripe.webhook",
       "api.shared.prisma"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.billingSweep"
     ],
     [
       "api.user.[resource]",
@@ -975,6 +1107,18 @@
     [
       "api.user.[resource]",
       "api.shared.handlers.settings"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.telemetry"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.handlers.usage"
+    ],
+    [
+      "api.user.[resource]",
+      "api.shared.ratelimit"
     ],
     [
       "api.works.[op]",
@@ -1070,6 +1214,10 @@
     ],
     [
       "App",
+      "hooks.useSearchTelemetry"
+    ],
+    [
+      "App",
       "hooks.useSemanticRerank"
     ],
     [
@@ -1109,6 +1257,14 @@
       "lib.storage"
     ],
     [
+      "components.admin.SearchData",
+      "adapters.shared.ordinals"
+    ],
+    [
+      "components.admin.SearchData",
+      "lib.api"
+    ],
+    [
       "components.admin.SemanticCompare",
       "lib.goldSetMetrics"
     ],
@@ -1131,6 +1287,10 @@
     [
       "components.AdminConsole",
       "components.admin.GoldSetHarness"
+    ],
+    [
+      "components.AdminConsole",
+      "components.admin.SearchData"
     ],
     [
       "components.AdminConsole",
@@ -1241,6 +1401,10 @@
       "lib.helpers"
     ],
     [
+      "components.ResultCard",
+      "lib.telemetry"
+    ],
+    [
       "components.SearchControls",
       "lib.semantic"
     ],
@@ -1339,6 +1503,14 @@
     [
       "hooks.useSearch",
       "lib.semanticSearch"
+    ],
+    [
+      "hooks.useSearchTelemetry",
+      "lib.semanticSearch"
+    ],
+    [
+      "hooks.useSearchTelemetry",
+      "lib.telemetry"
     ],
     [
       "hooks.useSemanticRerank",
@@ -1451,6 +1623,10 @@
     [
       "lib.storage",
       "constants.defaults"
+    ],
+    [
+      "lib.telemetry",
+      "lib.api"
     ],
     [
       "main",
@@ -1710,6 +1886,8 @@
       "api.shared.handlers.keys",
       "api.shared.handlers.library",
       "api.shared.handlers.settings",
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.usage",
       "api.shared.requireInternalOrigin"
     ],
     "api.shared.prisma": [
@@ -1718,12 +1896,17 @@
       "api.shared.apiAuth",
       "api.shared.auth",
       "api.shared.billing",
+      "api.shared.handlers.billingSweep",
       "api.shared.handlers.credits",
       "api.shared.handlers.health",
       "api.shared.handlers.history",
       "api.shared.handlers.keys",
       "api.shared.handlers.library",
       "api.shared.handlers.settings",
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.usage",
+      "api.shared.searchLog",
+      "api.shared.trial",
       "api.stripe.webhook"
     ],
     "api.shared.log": [
@@ -1731,29 +1914,46 @@
       "api.proxy",
       "api.route.gallica",
       "api.route.openedition",
+      "api.shared.handlers.billingSweep",
       "api.shared.kv",
+      "api.shared.searchLog",
       "api.stripe.webhook"
     ],
     "api.shared.parseBody": [
       "api.checkout",
+      "api.shared.handlers.credits",
       "api.shared.handlers.history",
       "api.shared.handlers.library",
       "api.shared.handlers.settings",
+      "api.shared.handlers.telemetry",
       "api.shared.handlers.works.verify"
     ],
     "api.shared.plans": [
       "api.checkout",
       "api.search",
       "api.shared.apiAuth",
+      "api.shared.handlers.billingSweep",
       "api.shared.handlers.credits",
       "api.shared.handlers.keys",
+      "api.shared.handlers.works.verify",
       "api.shared.meter",
+      "api.shared.trial",
       "api.stripe.webhook",
       "constants.pricing",
       "lib.searchQuota"
     ],
+    "api.shared.ratelimit": [
+      "api.checkout",
+      "api.search",
+      "api.shared.handlers.credits",
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.usage",
+      "api.shared.meter",
+      "api.user.[resource]"
+    ],
     "api.shared.requireInternalOrigin": [
-      "api.route.[source]"
+      "api.route.[source]",
+      "api.shared.handlers.telemetry"
     ],
     "api.shared.serverKeys": [
       "api.route.[source]",
@@ -1780,9 +1980,11 @@
     ],
     "api.shared.apiAuth": [
       "api.search",
+      "api.shared.handlers.billingSweep",
       "api.shared.handlers.credits",
-      "api.shared.meter",
-      "api.stripe.webhook"
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.usage",
+      "api.shared.meter"
     ],
     "api.shared.apiContract": [
       "api.search",
@@ -1796,6 +1998,7 @@
     "api.shared.billing": [
       "api.search",
       "api.shared.apiAuth",
+      "api.shared.handlers.billingSweep",
       "api.shared.handlers.credits",
       "api.shared.meter",
       "api.stripe.webhook"
@@ -1821,6 +2024,9 @@
       "api.shared.handlers.works.get",
       "api.shared.verify"
     ],
+    "api.shared.licenses": [
+      "api.search"
+    ],
     "api.shared.meter": [
       "api.search",
       "api.shared.handlers.works.citations",
@@ -1829,10 +2035,14 @@
       "api.shared.handlers.works.verify",
       "api.works.[op]"
     ],
-    "api.shared.ratelimit": [
+    "api.shared.searchLog": [
       "api.search",
-      "api.shared.handlers.credits",
-      "api.shared.meter"
+      "api.shared.handlers.history",
+      "api.shared.handlers.telemetry",
+      "api.shared.handlers.works.citations",
+      "api.shared.handlers.works.get",
+      "api.shared.handlers.works.ids",
+      "api.shared.handlers.works.verify"
     ],
     "lib.citations": [
       "api.search",
@@ -1872,15 +2082,26 @@
     ],
     "api.shared.publicResult": [
       "api.shared.compact",
-      "api.shared.debugResult"
+      "api.shared.debugResult",
+      "api.shared.searchLog"
     ],
     "api.shared.citationGraph": [
       "api.shared.handlers.works.citations",
       "api.shared.handlers.works.get",
       "api.shared.verify"
     ],
+    "api.shared.trial": [
+      "api.shared.handlers.works.verify"
+    ],
     "api.shared.verify": [
       "api.shared.handlers.works.verify"
+    ],
+    "adapters.shared.ordinals": [
+      "api.shared.searchLog",
+      "components.admin.SearchData"
+    ],
+    "api.shared.handlers.billingSweep": [
+      "api.user.[resource]"
     ],
     "api.shared.handlers.credits": [
       "api.user.[resource]"
@@ -1898,6 +2119,12 @@
       "api.user.[resource]"
     ],
     "api.shared.handlers.settings": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.telemetry": [
+      "api.user.[resource]"
+    ],
+    "api.shared.handlers.usage": [
       "api.user.[resource]"
     ],
     "api.shared.handlers.works.citations": [
@@ -1966,6 +2193,9 @@
     "hooks.useSearch": [
       "App"
     ],
+    "hooks.useSearchTelemetry": [
+      "App"
+    ],
     "hooks.useSemanticRerank": [
       "App"
     ],
@@ -2008,6 +2238,13 @@
       "lib.history",
       "lib.library"
     ],
+    "lib.api": [
+      "components.DevelopersPanel",
+      "components.admin.SearchData",
+      "contexts.BillingContext",
+      "hooks.useSyncedStore",
+      "lib.telemetry"
+    ],
     "lib.history": [
       "components.admin.SemanticCompare",
       "hooks.useHistory"
@@ -2018,13 +2255,11 @@
     "components.admin.GoldSetHarness": [
       "components.AdminConsole"
     ],
-    "components.admin.SemanticCompare": [
+    "components.admin.SearchData": [
       "components.AdminConsole"
     ],
-    "lib.api": [
-      "components.DevelopersPanel",
-      "contexts.BillingContext",
-      "hooks.useSyncedStore"
+    "components.admin.SemanticCompare": [
+      "components.AdminConsole"
     ],
     "lib.langNormalize": [
       "components.FilterBar",
@@ -2059,6 +2294,10 @@
     "hooks.useEagleTooltip": [
       "components.ResultCard"
     ],
+    "lib.telemetry": [
+      "components.ResultCard",
+      "hooks.useSearchTelemetry"
+    ],
     "components.BookGroupHeader": [
       "components.SourceSection",
       "components.UnifiedResultList"
@@ -2071,6 +2310,7 @@
     "lib.semanticSearch": [
       "components.UnifiedResultList",
       "hooks.useSearch",
+      "hooks.useSearchTelemetry",
       "hooks.useSemanticRerank",
       "lib.semanticCompare"
     ],

@@ -38,7 +38,10 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-Get a key: sign in at https://citation.today → **Developers** → *Create key*.
+Get a key: sign in at https://citation.today → **Developers** → *Create key*. Pay as you go is
+$2.50 per 1,000 calls with 1,000 calls a month included (card at sign-up, billed monthly, you set
+the cap); prepaid packs cost the same per call. `verify_citations` works **without a key** for up
+to 25 references a day — the only tool that does.
 
 ### Environment
 

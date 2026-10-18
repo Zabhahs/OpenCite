@@ -189,6 +189,7 @@ export const RESPONSE_SHAPE = {
   terms: "Parsed keyword terms.",
   coverage: `Corpus-weighted coverage band for this request: one of ${COVERAGE_BANDS.join(", ")}.`,
   sources: "Per-source outcome for this request (see source row fields) — which sources answered, failed or timed out.",
+  licenses: "Metadata licence of each source searched, { [sourceId]: licence } (e.g. CC0-1.0, public-domain, open, unknown). Full table: /docs/licensing.html.",
   count: "Number of results returned.",
   totalCandidates: "Total deduped candidates considered before the limit.",
   tookMs: "Server processing time in milliseconds.",

@@ -10,6 +10,7 @@
 import { prisma } from "../prisma.js";
 import { setCorsHeaders, getSession } from "../auth.js";
 import { parseBody } from "../parseBody.js";
+import { deidentifyUser } from "../searchLog.js"; // v0.50
 
 export default async function handler(req, res) {
   setCorsHeaders(req, res, "GET, POST, DELETE, OPTIONS");
@@ -71,6 +72,9 @@ export default async function handler(req, res) {
 
     if (clear) {
       await prisma.search_history.deleteMany({ where: { user_id: userId } });
+      // v0.50 (sprint §6): clearing history also de-identifies this user's search-log rows —
+      // the rows stay (dataset not holed), the link to the account goes. Fail-open.
+      await deidentifyUser(userId);
       return res.status(200).json({ ok: true });
     }
 

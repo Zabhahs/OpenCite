@@ -43,7 +43,8 @@ export function createServer({ apiKey, baseUrl } = {}) {
     const tool = toolByName(name);
     if (!tool) return { isError: true, content: [{ type: "text", text: `Unknown tool: ${name}` }] };
     try {
-      return toToolResult(await execute(tool.toRequest(args)));
+      // v0.50: the tool name rides along as X-OpenCITE-Tool (client.js) for the search log.
+      return toToolResult(await execute({ ...tool.toRequest(args), tool: name }));
     } catch (err) {
       // err.message is built in client.js without headers, so the key can't leak.
       return { isError: true, content: [{ type: "text", text: err.message }] };

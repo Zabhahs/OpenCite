@@ -13,6 +13,7 @@ import { resolveIds, detectIdType, normalizeId } from "../../../../src/lib/idRes
 import { renderCard, cardOptsFrom } from "../../compact.js";
 import { enrichEvidence } from "../../evidence.js";
 import { authAndLimit, charge, sendJson, firstParam, meterMeta, legBand, sourceRow } from "../../meter.js";
+import { logMachineSignal, withBudget, SIGNAL } from "../../searchLog.js"; // v0.50: an agent's "click"
 import { serverInjectedKeys } from "../../serverKeys.js";
 import { ENDPOINTS, API_VERSION } from "../../apiContract.js";
 
@@ -77,6 +78,9 @@ export default async function handler(req, res) {
   if (!outcome.ok) return sendJson(res, outcome.status, outcome.body);
 
   const { work, ids, graph, evSources } = outcome.result;
+  // v0.50: fetching a work after a search is the machine equivalent of a click. Joins to the
+  // caller's latest search that showed it (searchLog.logMachineSignal). Bounded, fail-open.
+  await withBudget(logMachineSignal({ identity, req, ref: rawId, record: work, action: SIGNAL.get_work, meta: { op: "get", include: include || null, found: !!work } }));
   const render = (r) => renderCard(r, { ...cardOpts, debug: !!identity.admin && cardOpts.detail === "full" });
   return sendJson(res, 200, {
     id: rawId,

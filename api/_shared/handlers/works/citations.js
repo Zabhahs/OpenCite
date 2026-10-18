@@ -25,6 +25,7 @@ import { getReferences, getCitations } from "../../citationGraph.js";
 import { renderCard, cardOptsFrom } from "../../compact.js";
 import { enrichEvidence } from "../../evidence.js";
 import { authAndLimit, charge, sendJson, firstParam, meterMeta, legBand, sourceRow } from "../../meter.js";
+import { logMachineSignal, withBudget, SIGNAL } from "../../searchLog.js"; // v0.50: an agent's "click"
 import { serverInjectedKeys } from "../../serverKeys.js";
 import { API_VERSION } from "../../apiContract.js";
 
@@ -66,6 +67,9 @@ export default async function handler(req, res) {
   if (!outcome.ok) return sendJson(res, outcome.status, outcome.body);
 
   const { cards, evSources } = outcome.result;
+  // v0.50: walking a work's graph after a search = machine click on that work (DOI / oc_ join;
+  // an OpenAlex W-id we never surfaced becomes an UNSEEN stub). Bounded, fail-open.
+  await withBudget(logMachineSignal({ identity, req, ref: id, action: SIGNAL.citations_graph, meta: { op: "citations", dir, edges: cards.length } }));
   const results = cards.map((r) => renderCard(r, { ...cardOpts, debug: !!identity.admin && cardOpts.detail === "full" }));
   return sendJson(res, 200, {
     id,

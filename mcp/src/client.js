@@ -13,8 +13,13 @@
 // forwarded as the `x-api-key` header and is NEVER logged or echoed (error messages carry no
 // headers).
 
+import { createRequire } from "node:module";
+
 export const DEFAULT_BASE_URL = "https://citation.today";
 const REQUEST_TIMEOUT_MS = 30000;
+// v0.50: `opencite-mcp/<version>` — read from package.json so it can never go stale.
+const { name: PKG_NAME, version: PKG_VERSION } = createRequire(import.meta.url)("../package.json");
+export const CLIENT_ID = `${PKG_NAME}/${PKG_VERSION}`;
 
 export function resolveBaseUrl(raw) {
   const base = (raw || DEFAULT_BASE_URL).replace(/\/+$/, "");
@@ -39,7 +44,7 @@ export function resolveBaseUrl(raw) {
  */
 export function httpExecutor({ baseUrl, apiKey } = {}) {
   const base = resolveBaseUrl(baseUrl);
-  return async function execute({ method = "GET", path, query, body, signal } = {}) {
+  return async function execute({ method = "GET", path, query, body, signal, tool } = {}) {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
     const qs = params.toString();
@@ -47,6 +52,11 @@ export function httpExecutor({ baseUrl, apiKey } = {}) {
 
     const headers = { Accept: "application/json" };
     if (apiKey) headers["x-api-key"] = apiKey; // forwarded, never logged
+    // v0.50: surface attribution for the server-side search log (api/_shared/searchLog.js) —
+    // `client` says this call came through the MCP package (not raw curl on the same key);
+    // `tool` names the MCP tool the model invoked. Neither carries user data.
+    headers["X-OpenCITE-Client"] = CLIENT_ID;
+    if (tool) headers["X-OpenCITE-Tool"] = String(tool);
     const init = { method, headers };
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";

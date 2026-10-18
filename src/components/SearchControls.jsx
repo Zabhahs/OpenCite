@@ -80,6 +80,13 @@ export function SearchControls({ settings, onSave, onOpenSettings }) {
             English queries only.
           </p>
 
+          {/* v0.50 — search data capture opt-out (default on; defaults.js `telemetry`). */}
+          <Toggle label="Share searches" value={s.telemetry !== false} onChange={v => upd({ telemetry: v })} />
+          <p className="mono-font text-[9px] text-stone-500 leading-snug -mt-0.5 pb-1">
+            Sends your searches and which results you open, copy or save to improve ranking.
+            {" "}<a href="/legal/privacy.html" className="underline">Privacy</a>.
+          </p>
+
           <div className="pt-2 mt-1 border-t border-stone-200">
             <button
               onClick={onOpenSettings}

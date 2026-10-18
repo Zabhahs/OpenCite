@@ -49,4 +49,8 @@ export const DEFAULT_SETTINGS = {
   // non-OpenAlex sources, OpenAlex is fetched 100-deep, and results are ordered by meaning
   // using an on-device embedding model (policy: src/lib/semanticSearch.js). Off: native order.
   semanticSearch: false,
+  // v0.50 — Search data capture. ON by default for everyone (decision of record, sprint
+  // v0.50 §8): each search's query, the ordered results and what you do with them are sent to
+  // /api/telemetry to improve ranking. Off → the browser sends nothing (lib/telemetry.js).
+  telemetry: true,
 };

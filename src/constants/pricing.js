@@ -10,7 +10,7 @@
 // are the volume/organization offer, shown under a disclosure. SUBSCRIPTIONS_ENABLED (plans.js)
 // remains the kill switch for the subscription cards.
 
-import { CREDIT_PACKS as PACKS, PLANS, SUBSCRIPTIONS_ENABLED, FREE_WEB_DAILY_SEARCHES, isPaidPlan } from "../../api/_shared/plans.js";
+import { CREDIT_PACKS as PACKS, PLANS, SUBSCRIPTIONS_ENABLED, FREE_WEB_DAILY_SEARCHES, isPaidPlan, API_UNIT_PRICE_USD, ENDPOINT_UNITS, TRIAL } from "../../api/_shared/plans.js";
 import { ADAPTERS } from "../adapters/index.js";
 
 export { SUBSCRIPTIONS_ENABLED, isPaidPlan };
@@ -56,10 +56,27 @@ export const SUBSCRIPTION_PLANS = [
     ],
     cta: "Subscribe — $10/mo",
   },
+  // v0.48: the machine product — Brave's model at half price. $0 base, card at checkout, usage
+  // billed monthly in arrears, 1,000 calls a month included. Does NOT lift the web cap (D-8).
+  {
+    id: "api",
+    label: "API — pay as you go",
+    price: `$${(API_UNIT_PRICE_USD * 1000).toFixed(2)}`,
+    cadence: "/ 1,000 calls",
+    tagline: "Developers, agents & labs",
+    features: [
+      `${PLANS.api.monthlyGrant.toLocaleString()} calls a month included`,
+      `Verify & ID lookups $${(API_UNIT_PRICE_USD * ENDPOINT_UNITS.verify * 1000).toFixed(2)} / 1,000`,
+      `All ${SOURCE_COUNT.all} API sources · MCP`,
+      "Billed monthly · card required · set your own cap",
+    ],
+    cta: "Start — no charge today",
+  },
 ];
 
+// v0.48 (D-14): no free API credits. The free plan is the web app plus the verify trial.
 export const FREE_TIER_NOTE =
-  `Free: ${FREE_WEB_DAILY_SEARCHES} web searches a day plus ${PLANS.free.monthlyGrant} API credits a month — no card needed.`;
+  `Free: ${FREE_WEB_DAILY_SEARCHES} web searches a day, and ${TRIAL.refsPerDay} reference checks a day through the API — no card, no account needed for the checks.`;
 
 // Machine / API credit packs (pay-as-you-go, one-time). For developers wiring the grounding API
 // and AI agents making per-query calls. Credits come from plans.js (SSOT); only the copy is here.

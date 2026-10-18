@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext.jsx";
 import { isAdmin } from "../lib/admin.js";
 import { GoldSetHarness } from "./admin/GoldSetHarness.jsx";
 import { SemanticCompare } from "./admin/SemanticCompare.jsx";
+import { SearchData } from "./admin/SearchData.jsx"; // v0.50
 
 // Admin console — F2 (Gold-Set Harness): recall grading is ranking-independent, so it
 // survives the v0.44 engine teardown. The Score Explainer (F1) tab was removed with the
@@ -36,6 +37,7 @@ export function AdminConsole({ settings, isEnabled }) {
         {[
           { id: "gold-set", label: "Gold-Set Harness (F2)" },
           { id: "semantic-ab", label: "Semantic A/B (v0.49)" },
+          { id: "search-data", label: "Search data (v0.50)" },
         ].map(tab => (
           <button
             key={tab.id}
@@ -55,6 +57,7 @@ export function AdminConsole({ settings, isEnabled }) {
       <div>
         {activeTab === "gold-set" && <GoldSetHarness />}
         {activeTab === "semantic-ab" && <SemanticCompare settings={settings} isEnabled={isEnabled} />}
+        {activeTab === "search-data" && <SearchData />}
       </div>
     </div>
   );

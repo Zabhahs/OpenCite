@@ -28,13 +28,17 @@
   <p class="meta">Effective 28 September 2026 · Controller: Shahbaz Yusuf · <a href="/legal/contact.html">contact</a></p>
 
   <h2>Searching without an account</h2>
-  <p>You can search without signing in. Your query is sent from your browser directly to the upstream databases you have enabled (and, for a few sources, through our proxy so the upstream sees our server, not you). We do not store anonymous queries. Settings, library and history for anonymous use stay in your browser's local storage.</p>
+  <p>You can search without signing in. Your query is sent from your browser directly to the upstream databases you have enabled (and, for a few sources, through our proxy so the upstream sees our server, not you). Settings, library and history for anonymous use stay in your browser's local storage.</p>
+
+  <h2>Search data we keep (everyone)</h2>
+  <p>We store your searches and which results you open, copy or save, together with the result metadata and how long you stayed on them, to improve ranking and build better research tools. For API and MCP callers the same applies to each call and to which results you fetch or verify afterwards. Anonymous web searches are not tied to an account; they are grouped by a one-day rotating hash of your connection, and your IP address is stored only as a salted hash. You can switch this off for web searches in Search settings → <em>Share searches to improve ranking</em>; API use is covered by the <a href="/legal/terms.html">terms</a>. Deleting your account de-identifies your search rows rather than deleting them.</p>
 
   <h2>What we store when you sign in</h2>
   <table>
     <tr><th>Data</th><th>Why</th><th>Where</th></tr>
     <tr><td>Google account id, email, name, avatar URL, and the OAuth tokens Google issues</td><td>Sign-in (Auth.js)</td><td>Supabase (Postgres, US East)</td></tr>
     <tr><td>Search history and saved library items</td><td>Sync across your devices</td><td>Supabase</td></tr>
+    <tr><td>Search log and result interactions (see above), linked to your account</td><td>Improving ranking; research datasets</td><td>Supabase</td></tr>
     <tr><td>Settings, including any third-party API keys you enter</td><td>Sync; keys are encrypted at rest (AES-256-GCM)</td><td>Supabase</td></tr>
     <tr><td>Credit balance, plan, API key hashes (never the key itself), key creation and last-used times</td><td>Metering the API</td><td>Supabase</td></tr>
     <tr><td>Stripe customer and subscription ids</td><td>Linking purchases to your account. Card details never reach us.</td><td>Supabase + Stripe</td></tr>

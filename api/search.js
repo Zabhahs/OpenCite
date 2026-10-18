@@ -58,16 +58,19 @@ import { exportAs } from "../src/lib/citations.js";
 import { DEFAULT_SETTINGS } from "../src/constants/defaults.js";
 import { renderCard, cardOptsFrom } from "./_shared/compact.js";
 import { enrichEvidence } from "./_shared/evidence.js";
+import { licensesFor } from "./_shared/licenses.js";
 import { computeCoverage } from "./_shared/coverage.js";
 import { buildUsage, DEFAULT_LIMIT, MAX_LIMIT, FORMATS, API_VERSION, MAX_TERMS, MAX_QUERY_CHARS } from "./_shared/apiContract.js";
 import { resolveApiKey, resolveSessionAdmin } from "./_shared/apiAuth.js";
 import { allowedSourceIds, unitCost } from "./_shared/plans.js";
 import { checkRateLimit, ANON_PLAN } from "./_shared/ratelimit.js";
-import { insufficientCredits, unauthorized, rateLimited, meterMeta } from "./_shared/meter.js";
+import { paymentRequired, unauthorized, rateLimited, meterMeta } from "./_shared/meter.js";
 import { cacheKey, readCache, writeCache } from "./_shared/cache.js";
 import { preAuthorize, settle, refund, getBalance } from "./_shared/billing.js";
 import { serverInjectedKeys } from "./_shared/serverKeys.js";
 import { recordSuccess, recordFailure, isCircuitOpen, circuitBreakerStats } from "./_shared/adapterHealth.js";
+// v0.50: search data capture (queries · ranked page · signals). Fail-open, bounded by withBudget.
+import { logSearch, requestContext, surfaceFor, withBudget } from "./_shared/searchLog.js";
 
 // DRY-2: the server-safe set is DERIVED from the registry — `capability.serverSafe`
 // lives next to each adapter's transport code, not hardcoded here.
@@ -156,12 +159,18 @@ const withTimeout = (promise, ms, label) =>
 // then settle down to the coverage-prorated net (refunding the diff). Used on the
 // cache-hit path, where there's no fan-out to gate between the two phases.
 // Admin/master (cost 0) → { ok:true, creditsCharged:0 }, ledger untouched.
-async function chargeForBand(identity, band) {
+// v0.48: the ledger context (plan, requestId, key) threads through so the three-bucket split
+// and the journal rows are identical to the fan-out path.
+async function chargeForBand(identity, band, ctx) {
   const cost = unitCost(identity.plan, "search");
-  const pre = await preAuthorize(identity.userId, cost);
-  if (!pre.ok) return { ok: false, creditsCharged: 0 };
+  const pre = await preAuthorize(identity.userId, cost, ctx);
+  if (!pre.ok) return { ok: false, creditsCharged: 0, pre };
   const creditsCharged = await settle(identity.userId, cost, band, {
     freeBelowBand: identity.plan.freeBelowBand,
+    split: pre.split,
+    requestId: ctx.requestId,
+    endpoint: ctx.endpoint,
+    keyId: ctx.keyId,
   });
   return { ok: true, creditsCharged };
 }
@@ -224,6 +233,8 @@ export default async function handler(req, res) {
   const requestId = randomUUID();
   res.setHeader("X-OpenCITE-Request-Id", requestId);
   const searchCost = unitCost(identity.plan, "search");
+  // Ledger context for every preAuthorize / settle / refund of this call (v0.48 journal).
+  const ledger = { plan: identity.plan, requestId, endpoint: "search", keyId: identity.keyId };
 
   // Limit
   let limit = parseInt(firstParam(req.query?.limit), 10);
@@ -317,6 +328,15 @@ export default async function handler(req, res) {
     return sendJson(res, 429, rateLimited(rl.retryAfter));
   }
 
+  // v0.50: capture context shared by the cache-hit and live log calls below. `logSettings` is the
+  // request shape (never the env keys spread into `settings`).
+  const logCtx = requestContext(req);
+  const logSurface = surfaceFor(identity, logCtx, { debug });
+  const logSettings = {
+    limit, authors: settings.authorSearch, format, detail: cardOpts.detail, style: cardOpts.style,
+    evidence: !!cardOpts.evidence, cite: citeFormats, sources: requested.length ? requested : null,
+  };
+
   // 4. Cache (json + non-debug only). Charge-on-hit using the band stored in the
   // payload, so a hit is billed the SAME coverage-prorated amount as the original.
   // Debug always runs fresh and is never cached (it must never poison the public
@@ -334,25 +354,34 @@ export default async function handler(req, res) {
   if (format === "json" && !debug) {
     const cached = await readCache(ck);
     if (cached) {
-      const charge = await chargeForBand(identity, cached.coverage);
+      const charge = await chargeForBand(identity, cached.coverage, ledger);
+      if (!charge.ok) return sendVersioned(res, 402, paymentRequired(charge.pre, identity));
       const balance = await getBalance(identity.userId);
-      if (!charge.ok) return sendVersioned(res, 402, insufficientCredits({ balance }));
       // The cached body carries the ORIGINAL assembly time; it is lifted into meta so a hit is
       // honest about when the answer was retrieved.
       const { retrieved_at, ...body } = cached;
       const meta = meterMeta({ creditsCharged: charge.creditsCharged, balance, requestId, retrievedAt: retrieved_at });
+      // v0.50: a cache hit is still a search the caller made — log it (cards carry the oc_ id +
+      // the works basis, so the page resolves to the same works rows as the original).
+      await withBudget(logSearch({
+        identity, ctx: logCtx, surface: logSurface, query: q, terms, settings: logSettings,
+        eligible: adapters.map((a) => a.id), failed: [], coverage: body.coverage,
+        records: body.results || [], nRaw: null, nDedup: body.totalCandidates ?? null,
+        tookMs: Date.now() - startMs, cacheHit: true,
+      }));
       return sendVersioned(res, 200, { ...body, tookMs: Date.now() - startMs, meta });
     }
   }
 
   // 5. Pre-authorize — gates the expensive fan-out (402 if short). Admin cost 0 → ok,
   // ledger untouched.
-  const pre = await preAuthorize(identity.userId, searchCost);
-  if (!pre.ok) return sendVersioned(res, 402, insufficientCredits({ balance: await getBalance(identity.userId) }));
+  const pre = await preAuthorize(identity.userId, searchCost, ledger);
+  if (!pre.ok) return sendVersioned(res, 402, paymentRequired(pre, identity));
 
   // 6. Fan-out + interleave + dedup + coverage — wrapped so ANY throw refunds the
   // pre-auth (R1: never bill a failed search).
-  let limited, coverageBand, deduped, debugMeta, sources;
+  let limited, coverageBand, deduped, debugMeta, sources, licenses;
+  let nRawPool = null; // v0.50: pre-dedup pool size for the search log (set inside the fan-out)
   try {
     // Track which eligible adapters errored/timed out, for the corpus-weighted coverage
     // signal (an empty result set is NOT a failure — it means "no match", full coverage).
@@ -398,6 +427,7 @@ export default async function handler(req, res) {
     // D-3 ordering: round-robin interleave across adapters, preserving each adapter's
     // native upstream order (relevance ranking is the sources' job now, not ours).
     const pool = interleave(perAdapter);
+    nRawPool = pool.length;
 
     // v0.43 T2.2 — env-gated, default-off DOI canonicalization (see helper above). No-op in
     // production until IDRESOLVE_CANONICALIZE is set; runs before dedup so a resolved
@@ -447,6 +477,8 @@ export default async function handler(req, res) {
       ...cbDropped.map((a) => ({ source: a.id, status: "circuit_open", returned: 0 })),
       ...evSources,
     ];
+    // v0.48 (G2, E4): the metadata licence of every source that was searched (licenses.js SSOT).
+    licenses = licensesFor(adapters.map((a) => a.id));
 
     if (debug) {
       debugMeta = {
@@ -461,7 +493,7 @@ export default async function handler(req, res) {
       };
     }
   } catch {
-    await refund(identity.userId, searchCost).catch(() => {});
+    await refund(identity.userId, searchCost, { ...ledger, split: pre.split }).catch(() => {});
     return sendVersioned(res, 500, { error: "Search failed." });
   }
 
@@ -472,12 +504,26 @@ export default async function handler(req, res) {
   try {
     creditsCharged = await settle(identity.userId, searchCost, coverageBand, {
       freeBelowBand: identity.plan.freeBelowBand,
+      split: pre.split,
+      requestId,
+      endpoint: "search",
+      keyId: identity.keyId,
     });
   } catch {
-    await refund(identity.userId, searchCost).catch(() => {});
+    await refund(identity.userId, searchCost, { ...ledger, split: pre.split }).catch(() => {});
     return sendVersioned(res, 500, { error: "Billing failed; no credits were charged." });
   }
   const balance = await getBalance(identity.userId);
+
+  // v0.50: log the live search — the returned page in its final order, with the fan-out outcome.
+  // Runs for every format (a bibliography download is still a search). Bounded, fail-open.
+  await withBudget(logSearch({
+    identity, ctx: logCtx, surface: logSurface, query: q, terms, settings: logSettings,
+    eligible: [...adapters, ...cbDropped].map((a) => a.id),
+    failed: sources.filter((s) => s.status === "failed" || s.status === "timeout" || s.status === "circuit_open").map((s) => s.source),
+    coverage: coverageBand, records: limited, nRaw: nRawPool, nDedup: deduped.length,
+    tookMs: Date.now() - startMs, cacheHit: false,
+  }));
 
   // Non-JSON formats — flat bibliography of the returned results. Still metered; billing
   // headers carry the charge. (Non-json is not cached — text body ≠ structured payload,
@@ -512,6 +558,7 @@ export default async function handler(req, res) {
     terms,
     coverage: coverageBand,
     sources,
+    licenses,
     count: results.length,
     totalCandidates: deduped.length,
     tookMs: Date.now() - startMs,

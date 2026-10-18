@@ -60,7 +60,7 @@ Balance, cost and remaining trial are in every response trailer. No separate bal
 - **VS Code:** `code --add-mcp '{"name":…,"type":"http","url":…}'`; config key `servers`. **Cursor:** `mcp.json` with `url` (+ `auth`); the deeplink docs page returned 404 → **"Add to Cursor" link format is unverified**, confirm at execution.
 - ChatGPT requires Streamable HTTP and prefers CIMD (secondary source).
 
-**Stripe (docs, 2026-10-16):** metered prices under Managed Payments = **undocumented** (probe P0-1); `billing_thresholds` can't be set at Checkout, only via `subscriptions.update`; invoices < $0.50 roll into the next invoice; meter `identifier` dedups for ≥24 h and `timestamp` may be ≤35 days old; a Managed Payments subscription authorizes **only** Managed Payments to charge the card.
+**Stripe (docs, 2026-10-16):** metered prices under Managed Payments = **SUPPORTED — probe P0-1 passed 2026-10-17** in sandbox `acct_1Tcsc2EQY0544LR0`: `POST /v1/checkout/sessions` (`mode=subscription`, metered price `price_1URhHREQY0544LR0mhxkT4Bh` on meter `mtr_test_…GxE`, no quantity, `managed_payments[enabled]=true`, `billing_mode=flexible`) → `cs_test_a1fVp7…` created with `automatic_tax.liability.type:"stripe"`, `tax_id_collection.enabled:true`, `customer_creation:"always"`. The Stripe MCP has no Billing Meters operations and basil+ requires a meter, so meters/metered prices are created in the Dashboard (live: on the existing `txcd_10701400` product); `billing_thresholds` can't be set at Checkout, only via `subscriptions.update`; invoices < $0.50 roll into the next invoice; meter `identifier` dedups for ≥24 h and `timestamp` may be ≤35 days old; a Managed Payments subscription authorizes **only** Managed Payments to charge the card.
 
 **Brave benchmark** (pricing docs + trade press, Feb 2026; re-check before any public comparison): $5/1k search, **$5 monthly credit included** (reportedly attribution-conditional), card at signup, postpaid, 50 req/s, light endpoints $5/10k, enterprise by contact.
 
@@ -82,7 +82,7 @@ Balance, cost and remaining trial are in every response trailer. No separate bal
 | D-12 | Packs | Reprice to the metered rate ($10→4,000 · $50→20,000 · $150→60,000); API-credits only, never unlimited web |
 | D-13 | Subscription allowance vs packs | Separate allowance bucket spent first; purchased credits never expire |
 | D-14 | Removing free *search* credits | `FREE_MONTHLY_GRANT=0`; zero existing `plan='free'` balances once (≤13 users). The **web** cap (10/day) is unchanged |
-| D-15 | Managed Payments on the metered plan | Use it **if P0-1 passes**; else Stripe Tax as merchant of record for that plan |
+| D-15 | Managed Payments on the metered plan | **CONFIRMED 2026-10-17 — P0-1 passed**: the `api` plan runs under Managed Payments (§2). |
 | D-16 | Function layout | **9 / 12:** `works/[op]` (citations \| ids \| verify \| get), `agent/[proto]` (mcp only in v0.48), `oauth/[step]` |
 | D-17 | Throughput | 300/min per key (5 req/s), published; "contact us" above |
 | D-18 | **Moved to v0.49** | A2A tasks + signed Agent Card (static card stays), snapshots, signed receipts (re-specified as **JWS over RFC 8785 canonical JSON**, not a custom scheme), x402 listing |
@@ -216,7 +216,7 @@ Balance, cost and remaining trial are in every response trailer. No separate bal
 | Trial abuse | Postgres counter (durable, not per-instance), per-IP window, verify-only, 25/day; Claude.ai users are keyed per account not per Anthropic IP |
 | Hot billing path (3 buckets) | one guarded statement, journaled, branch-first concurrency probes, refund-on-throw unchanged |
 | Postpaid non-payment | card at Checkout, $25 default cap, $50 early invoice, stop on `past_due` |
-| MP rejects metered (S1) | P0-1 decides before M4; fallback = no MP + Stripe Tax for `api` only |
+| MP rejects metered (S1) | **Retired 2026-10-17** — P0-1 passed; no fallback needed |
 | CIMD fetch SSRF / spoofing | https + path required, `client_id` equality, size/time caps on fetch, no private-range hosts, redirect-URI exact match, consent shows host |
 | Remote MCP exposure without KV | KV before Checkpoint 3; IP windows on agent/oauth; 401 on every method |
 | Spec churn | P0-4 records versions; SSOT lists; stateless JSON POST |
@@ -296,4 +296,25 @@ Expect `true`; expect 401 + `WWW-Authenticate`. Claude.ai custom connector at `h
 - `source_url` per card was dropped from Phase 1 (only OpenAlex ids reconstruct cleanly); `url` + `source` + `meta.retrieved_at` carry G2.
 - `get_paper` folds `ids` + `citations` as planned; the standalone REST endpoints remain for existing integrators.
 
-**Not yet done / needs Shahbaz:** Checkpoint 1 commit + push (auto-deploys prod) → live verification (§9) → `npm publish opencite-mcp@0.48.0`. Phase 2/3 untouched.
+**Checkpoint 1 — 2026-10-17:** committed `6270662` → pushed (reached origin under `48935a0`, a v0.49 frontend commit from another session) → prod deployed. `opencite-mcp@0.48.0` published 23:25 UTC (`latest`). Live, unauthenticated: 401 bodies carry `code:"unauthorized"` + `signup_url` on search/verify/works; `/api/citations` and `/api/ids` still route (401, not 404); `llms.txt` 200; `openapi.json` v3 with 6 paths; docs say "Contract v3". Key-gated §9 checks (verify verdicts, v3 cards, `sources[]`, MCP trailer) pending an admin-session run (the admin master key is write-only in Vercel; Shahbaz skipped the sign-in).
+
+### Phase 2 — executed 2026-10-17/18 (working tree; NOT committed, NOT deployed — awaiting Shahbaz)
+
+**P0-1 passed** (sandbox `acct_1Tcsc2EQY0544LR0`): Managed Payments Checkout accepts a meter-backed metered price → D-15 = (a). **P0-2 skipped** on Shahbaz's instruction; `billing_thresholds` is a best-effort `subscriptions.update` after checkout (`STRIPE_BILLING_THRESHOLD_CENTS`, logged if refused); our own `metered_cap_usd` is the real control. The Stripe MCP has no Billing Meters operations and basil+ requires a meter, so the meter + metered price are created in the Dashboard (sandbox done; live = Shahbaz).
+
+**Built (parse-checked; machine-twin check pending the concurrent v0.50 session's records):**
+- **Migration `20261018000000_v0_48_evidence_metering`** (idempotent, additive): users `allowance_credits`, `subscription_status`, `metered_period`, `metered_usage`, `metered_unreported`, `metered_cap_usd` (default 25), `pack_purchased_at`, `total_credits` default → 0; `api_keys.label`, `api_keys.oauth_client_id`; tables `credit_events` (v0.45 T1 + key_id/bucket deltas/endpoint) and `trial_usage`. Prisma models `CreditEvent`, `TrialUsage`.
+- **M3/M2 `billing.js` rewrite:** three-bucket `preAuthorize` as ONE guarded `UPDATE … FROM` CTE under `FOR UPDATE` (allowance → purchased → metered; metered only if postpaid + `active` + under `cap_usd / unitPrice`); returns `{ reason }` on refusal; `settle`/`refund` reverse bucket-by-bucket; `journal()` row in every transaction; `applyMonthlyGrant` RESETS the allowance (closes leak L3); `applyUpgradeGrant` GREATEST on the allowance; `clawbackCredits` purchased-only; `periodOf` moved here (apiAuth re-exports); `listUnreportedUsage`/`consumeReported` for the sweep.
+- **M1 `plans.js`:** `api` plan (`postpaid`, `monthlyGrant 1000`, `unitPriceUsd 0.0025`, `STRIPE_PRICE_API_METERED`), `FREE_MONTHLY_GRANT 0`, `TRIAL = { verify, 25/day }`, `API_UNIT_PRICE_USD`, packs → 4,000/20,000/60,000, `hasUnlimitedWebSearch` excludes packs and postpaid (closes L1), `isPostpaid`, `downgradePlanFor` (closes L2).
+- **M6 trial:** `trial.js` (Postgres upsert counter, identity `user:`/`ip:`); `verify.js` handler serves keyless callers and free-plan 402s from the trial with `meta.trial`; `meter.authAndLimitOptional`.
+- **M4 Stripe:** `checkout.js` — `{plan:"api"}` → subscription mode, metered item without quantity, `billing_mode: flexible`, postpaid consent `custom_text`, Managed Payments for packs + `api`, flat-sub kill switch no longer blocks `api`, pre-auth IP window; `webhook.js` — `grantCredits` journal + `pack_purchased_at` on packs, `subscription_status` persisted, postpaid serves only while `active`, `invoice.payment_failed` → `past_due` for postpaid, `invoice.paid` → `active` + allowance reset, cancellation → `downgradePlanFor`, threshold update, clawback journaled.
+- **M2 sweep:** `handlers/billingSweep.js` on the user dispatcher (`/api/billing-sweep`, cron `0 5 * * *`, `CRON_SECRET` or admin): v0.45 T2 reconcile → meter report (`billing.meterEvents.create`, identifier `userId:day`, backdated to the previous UTC day end) → prune.
+- **M5:** `handlers/credits.js` (three-bucket detail, metered block, key path, `PATCH` cap $5–$1,000), `handlers/usage.js` (`/api/usage`, JSON/CSV, per day/key/endpoint), IP window on the user dispatcher + checkout (v0.45 T7 done), Developers panel (allowance/purchased/metered, cap editor, usage CSV, verify-first + Claude Code snippets), Plans panel (API pay-as-you-go card, 3-col grid, pack blurb), `Layout.jsx` tooltip, `.env.example`, legal (`terms.html` §2/§3, `refunds.html` pay-as-you-go section), docs/llms.txt/README pricing + 402 codes.
+- **E4:** `licenses.js` (20 server-safe sources, facts from the dossiers/TOS-items only; `ONB` unknown), `licenses` in the search envelope + contract, `scripts/gen-licensing.mjs` → `public/docs/licensing.html`.
+- **Data (NOT run, Shahbaz approves):** `prisma/data/2026-10-18_v0_48_zero_free_balances.sql` (D-14 zeroing, journaled) and `…_backfill_pack_purchased_at.sql` (L2; part B needs a Stripe lookup).
+
+**Deltas vs §5:** `licenses` is a top-level envelope field next to `sources` (cached with the body). Licence facts live in one `licenses.js` map rather than on each adapter's `capability` block (one file to audit; the registry stays transport-only). The `api` plan is listed in `pricing.js SUBSCRIPTION_PLANS` (so the existing card loop, `subscribed` detection and the 409 one-subscription rule cover it).
+
+**Concurrent work:** another session is landing v0.50 (search capture: `searchLog.js`, `telemetry` handler, `works`/`search_events` models, migration `20261017000000_search_capture`) in the same tree and edits the works handlers to add signals; no conflicts in the shared files (`[resource].js`, `vercel.json`, `schema.prisma`) — both sets of changes are present.
+
+**Needs Shahbaz before Checkpoint 2:** live Stripe meter + metered Price on the `txcd_10701400` product → `STRIPE_PRICE_API_METERED`, `STRIPE_API_METER_EVENT`, `CRON_SECRET` (and optionally `STRIPE_BILLING_THRESHOLD_CENTS`) in Vercel; add the `api` price to the Customer Portal configuration; review legal copy; commit + push (auto-migrates on build); then run the two data SQL files after a JSON backup. Phase 3 untouched.

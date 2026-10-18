@@ -238,7 +238,7 @@ export function PricingPanel({ currentPlan = "free", isAuthenticated = false, on
       )}
 
       {/* Personal subscriptions — hidden while SUBSCRIPTIONS_ENABLED is false (plans.js) */}
-      {SUBSCRIPTIONS_ENABLED && <div className="grid gap-3 md:grid-cols-2">
+      {SUBSCRIPTIONS_ENABLED && <div className="grid gap-3 md:grid-cols-3">
         {SUBSCRIPTION_PLANS.map(plan => {
           const isCurrent = plan.id === currentPlan;
           return (
@@ -285,8 +285,8 @@ export function PricingPanel({ currentPlan = "free", isAuthenticated = false, on
           <span aria-hidden="true" className="transition group-open:rotate-180">▾</span>
         </summary>
         <p className="text-xs text-stone-600 mt-2 mb-4">
-          Prepaid, one-time, never expire. For teams, labs and high-volume API/MCP use — a pack unlocks the full
-          source library, unlimited web search and the machine rate limit for your keys.
+          Prepaid, one-time, never expire — the same per-call rate as pay as you go, for buyers who can't run a
+          card on file. A pack unlocks the full source library and the machine rate limit for your API/MCP keys.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {CREDIT_PACKS.map(pack => (

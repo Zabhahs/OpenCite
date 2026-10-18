@@ -159,6 +159,22 @@ Upstash/Vercel Redis REST client. Two consumers:
 
 Both are fail-open: KV unavailability never blocks a search.
 
+## v0.48 — three-bucket ledger, journal, metered plan, trial
+
+Sprint v0.48 Phase 2 (log: `10-Sprints/sprint_log_v0_48.md` §13) replaced the single `total_credits` number with three buckets on the user row and an append-only journal:
+
+| Bucket | Column | Filled by | Spent |
+|---|---|---|---|
+| allowance | `allowance_credits` | `applyMonthlyGrant` (RESET to the plan grant each period — Student 500, Pro 1,000, api 1,000; never rolls over) / `applyUpgradeGrant` (GREATEST) | first |
+| purchased | `total_credits` | `grantCredits` (packs); `clawbackCredits` on refund/dispute | second |
+| metered | `metered_usage` / `metered_unreported` (+ `metered_period`, `metered_cap_usd`, `subscription_status`) | the postpaid `api` plan only, while `subscription_status = active` and under `cap_usd / unitPrice` | last |
+
+`preAuthorize(userId, cost, { plan, requestId, endpoint, keyId })` is ONE guarded `UPDATE … FROM` CTE under `FOR UPDATE`; it returns `{ ok, charged, split }` or `{ ok:false, reason }` where reason ∈ `insufficient_credits | spend_cap_reached | payment_failed` (meter.js `paymentRequired` maps it to the 402 body; a free plan gets `subscription_required`). `settle`/`refund` reverse the split metered → purchased → allowance so a refunded call never reaches the Stripe meter. Every mutation writes a `credit_events` row (`kind`, signed `amount`, per-bucket deltas, `band`, `endpoint`, `request_id`, `source`) in the same transaction — evidence, not balance.
+
+**Metered plan (`api`, Brave's model at half price):** $0 base, a card at Checkout (Managed Payments — probe P0-1 passed), 1,000 units/month allowance, $0.0025/unit beyond, invoiced monthly in arrears. The daily `billing-sweep` cron reports `floor(metered_unreported)` to the Stripe Billing Meter (`opencite_api_units`, identifier `userId:day`, backdated to the previous UTC day), then consumes it; it also runs the sprint v0.45 T2 orphan reconcile and retention pruning. `invoice.payment_failed` → `past_due` pauses metered spend (purchased credits still work); `invoice.paid` → `active` + allowance reset; cancellation → `downgradePlanFor` (pack buyers keep `machine`, leak L2).
+
+**No free API credits (D-14):** `FREE_MONTHLY_GRANT = 0`; the only unmetered path is the verify trial — `trial.js`, 25 references per UTC day per identity (`user:<id>` for a credentialed-but-unentitled caller, else `ip:<addr>`), a Postgres upsert counter, verify-only. **Units:** `ENDPOINT_UNITS` search/citations/works 1 · ids/verify/works_meta 0.1. **Usage export:** `/api/usage` (JSON/CSV, per day/key/endpoint). **Spend cap:** `PATCH /api/credits { cap_usd }` ($5–$1,000, default $25).
+
 ## 🩺 Health audit
 
 - **Verdict:** healthy — two-phase billing, idempotent webhook, and atomic pre-auth/settle are correctly implemented.

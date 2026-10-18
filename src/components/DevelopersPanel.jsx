@@ -22,13 +22,17 @@ import { useBilling } from "../contexts/BillingContext.jsx";
 
 const API_BASE = "https://citation.today";
 
+// v0.48: the quickstart leads with verification — the anti-hallucination call.
 const curlSnippet = (key) =>
-  `curl -H "x-api-key: ${key}" \\\n  "${API_BASE}/api/search?q=ottoman+manuscripts&limit=25&cite=bibtex"`;
+  `curl -X POST ${API_BASE}/api/verify \\\n  -H "x-api-key: ${key}" -H "content-type: application/json" \\\n  -d '{"refs":["10.1016/S0140-6736(97)11096-0"],"style":"apa"}'`;
 
 const mcpSnippet = (key) => JSON.stringify(
   { mcpServers: { opencite: { command: "npx", args: ["-y", "opencite-mcp"], env: { OPENCITE_API_KEY: key } } } },
   null, 2
 );
+const claudeCodeSnippet = (key) => `claude mcp add opencite -e OPENCITE_API_KEY=${key} -- npx -y opencite-mcp`;
+
+const CAP_MIN = 5, CAP_MAX = 1000;
 
 function CopyButton({ text, label = "Copy" }) {
   const [done, setDone] = useState(false);
@@ -50,6 +54,33 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmRevoke, setConfirmRevoke] = useState(null);
+  // v0.48: the three-bucket balance detail + metered state (GET /api/credits) and the spend cap.
+  const [detail, setDetail] = useState(null);
+  const [capDraft, setCapDraft] = useState("");
+  const [capBusy, setCapBusy] = useState(false);
+
+  const loadDetail = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const r = await apiCall("/api/credits", "GET");
+      if (!r.ok) return;
+      const d = await r.json();
+      setDetail(d);
+      if (d?.metered?.cap_usd != null) setCapDraft(String(d.metered.cap_usd));
+    } catch { /* balance stays as BillingContext shows it */ }
+  }, [isAuthenticated]);
+  useEffect(() => { loadDetail(); }, [loadDetail, justPaid]);
+
+  const saveCap = async () => {
+    const v = Number(capDraft);
+    if (!Number.isFinite(v)) return;
+    setCapBusy(true);
+    try {
+      const r = await apiCall("/api/credits", "PATCH", { cap_usd: Math.min(CAP_MAX, Math.max(CAP_MIN, v)) });
+      if (r.ok) await loadDetail(); else setError("Couldn't update the cap.");
+    } catch { setError("Network error — please retry."); }
+    finally { setCapBusy(false); }
+  };
 
   const load = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -109,22 +140,54 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
         </div>
       )}
 
-      {/* Balance */}
-      <div className="flex items-baseline justify-between gap-3 bg-white border border-stone-300 px-4 py-3 mb-4">
-        <div>
-          <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Balance</p>
-          <p className="display-font font-bold text-lg text-stone-900">{isAuthenticated ? balanceLine : "Sign in to see your balance"}</p>
-          {isAuthenticated && !unlimited && tier === "free" && (
-            <p className="text-[11px] text-stone-600 mt-1">Free accounts receive 20 API credits each month. Buy a pack for more and for the full source library.</p>
-          )}
+      {/* Balance — v0.48: allowance + purchased, plus metered state on pay as you go */}
+      <div className="bg-white border border-stone-300 px-4 py-3 mb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <div>
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Balance</p>
+            <p className="display-font font-bold text-lg text-stone-900">{isAuthenticated ? balanceLine : "Sign in to see your balance"}</p>
+            {isAuthenticated && !unlimited && detail && (
+              <p className="text-[11px] text-stone-600 mt-1">
+                {detail.allowance.toLocaleString()} monthly allowance · {detail.purchased.toLocaleString()} purchased
+                {detail.metered ? ` · ${detail.metered.usage_units.toLocaleString()} metered this period (≈ $${detail.metered.est_usd.toFixed(2)})` : ""}
+              </p>
+            )}
+            {isAuthenticated && !unlimited && tier === "free" && (
+              <p className="text-[11px] text-stone-600 mt-1">
+                Free accounts have no API credits. Start pay as you go (1,000 calls a month included, then $2.50 per 1,000) or buy a pack.
+                Reference checks stay free up to {detail?.trial?.refs_per_day ?? 25} a day.
+              </p>
+            )}
+            {isAuthenticated && detail?.subscription_status === "past_due" && (
+              <p className="mono-font text-[10px] uppercase tracking-widest text-red-900 mt-1">Payment failed — metered calls are paused until the card is updated (Manage billing).</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => (isAuthenticated ? onBuyCredits?.() : onRequireAuth?.())}
+            className="mono-font text-[10px] uppercase tracking-widest bg-stone-900 text-amber-50 px-4 py-2 hover:bg-red-900 transition"
+          >
+            {tier === "free" ? "Plans & packs" : "Buy credits"}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => (isAuthenticated ? onBuyCredits?.() : onRequireAuth?.())}
-          className="mono-font text-[10px] uppercase tracking-widest bg-stone-900 text-amber-50 px-4 py-2 hover:bg-red-900 transition"
-        >
-          Buy credits
-        </button>
+        {isAuthenticated && detail?.metered && (
+          <div className="mt-3 pt-3 border-t border-stone-200 flex flex-wrap items-center gap-3">
+            <label className="mono-font text-[9px] uppercase tracking-widest text-stone-500" htmlFor="oc-cap">Monthly spend cap (USD)</label>
+            <input id="oc-cap" type="number" min={CAP_MIN} max={CAP_MAX} step="1" value={capDraft} onChange={(e) => setCapDraft(e.target.value)}
+              className="mono-font text-xs border border-stone-300 px-2 py-1 w-24 bg-amber-50" />
+            <button type="button" onClick={saveCap} disabled={capBusy}
+              className="mono-font text-[9px] uppercase tracking-widest border border-stone-700 text-stone-700 px-2 py-1 hover:bg-stone-900 hover:text-amber-50 transition disabled:opacity-50">
+              {capBusy ? "Saving…" : "Save cap"}
+            </button>
+            <span className="text-[10px] text-stone-500">${CAP_MIN}–${CAP_MAX}. Metered calls stop at the cap until the next period.</span>
+            <a href="/api/usage?format=csv" className="mono-font text-[9px] uppercase tracking-widest underline text-stone-600 hover:text-red-900 ml-auto">Download usage CSV</a>
+          </div>
+        )}
+        {isAuthenticated && !detail?.metered && !unlimited && (
+          <div className="mt-3 pt-3 border-t border-stone-200">
+            <a href="/api/usage?format=csv" className="mono-font text-[9px] uppercase tracking-widest underline text-stone-600 hover:text-red-900">Download usage CSV (last 30 days)</a>
+          </div>
+        )}
       </div>
 
       {/* Keys */}
@@ -181,18 +244,25 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
         {error && <p className="mono-font text-[10px] uppercase tracking-widest text-red-900 mt-2">{error}</p>}
       </div>
 
-      {/* Quickstart */}
-      <div className="grid gap-3 md:grid-cols-2">
+      {/* Quickstart — v0.48: verify first, then connect */}
+      <div className="grid gap-3 md:grid-cols-3">
         <div className="bg-white border border-stone-300 p-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">REST · curl</p>
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">REST · verify a reference</p>
             <CopyButton text={curlSnippet(minted?.key || "YOUR_KEY")} />
           </div>
           <pre className="mono-font text-[11px] whitespace-pre-wrap break-all text-stone-800">{curlSnippet(minted?.key || "YOUR_KEY")}</pre>
         </div>
         <div className="bg-white border border-stone-300 p-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">MCP · Claude Desktop / Cursor</p>
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Claude Code · one line</p>
+            <CopyButton text={claudeCodeSnippet(minted?.key || "YOUR_KEY")} />
+          </div>
+          <pre className="mono-font text-[11px] whitespace-pre-wrap break-all text-stone-800">{claudeCodeSnippet(minted?.key || "YOUR_KEY")}</pre>
+        </div>
+        <div className="bg-white border border-stone-300 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">MCP · Claude Desktop & others</p>
             <CopyButton text={mcpSnippet(minted?.key || "YOUR_KEY")} />
           </div>
           <pre className="mono-font text-[11px] whitespace-pre-wrap break-all text-stone-800">{mcpSnippet(minted?.key || "YOUR_KEY")}</pre>
@@ -200,7 +270,7 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
       </div>
 
       <p className="mono-font text-[10px] uppercase tracking-widest text-stone-600 pt-4 mt-4 border-t border-stone-300 leading-relaxed">
-        Endpoints: /api/search · /api/citations · /api/ids ·{" "}
+        Tools: verify_citations · search_papers · get_paper · Endpoints: /api/verify · /api/search · /api/works ·{" "}
         <a href="/docs/" className="underline hover:text-red-900">API reference</a> ·{" "}
         <a href="/openapi.json" className="underline hover:text-red-900">OpenAPI</a> ·{" "}
         <a href="/legal/terms.html" className="underline hover:text-red-900">Terms</a>

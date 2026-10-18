@@ -12,6 +12,7 @@
 
 import { resolveIds } from "../../../../src/lib/idResolve.js";
 import { authAndLimit, charge, sendJson, firstParam, meterMeta, legBand } from "../../meter.js";
+import { logMachineSignal, withBudget, SIGNAL } from "../../searchLog.js"; // v0.50: an agent's "click"
 import { API_VERSION } from "../../apiContract.js";
 
 const MAX_IDS = 200; // NCBI's per-request homogeneous-batch cap; also the sane request ceiling.
@@ -48,6 +49,12 @@ export default async function handler(req, res) {
 
   // Map → plain object keyed by input id for JSON serialization.
   const results = Object.fromEntries(outcome.result);
+  // v0.50: one signal per id that resolved to a DOI (the only identifier `works` can join on).
+  // Capped at 25 per call so a 200-id crosswalk cannot turn into 200 inserts. Bounded, fail-open.
+  await withBudget(Promise.all(ids.slice(0, 25).map((ref) => {
+    const doi = results[ref]?.doi || (/^10\.\d{4,9}\//.test(ref) ? ref : null);
+    return doi ? logMachineSignal({ identity, req, ref: doi, action: SIGNAL.resolve_ids, meta: { op: "ids", input: ref.slice(0, 120) } }) : null;
+  })));
   return sendJson(res, 200, {
     count: Object.keys(results).length,
     requested: ids.length,

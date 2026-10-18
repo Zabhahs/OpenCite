@@ -39,8 +39,8 @@
     <tr><td><strong>Not a judgement</strong></td><td>OpenCITE never says whether a paper's findings are true and never labels journals "predatory". Only sourced facts.</td></tr>
   </table>
 
-  <h2>1. Get a key</h2>
-  <p>Sign in at <a href="/#developers">citation.today → Developers</a> and click <em>Create key</em>. The key is shown once. Send it as <code>x-api-key</code> or <code>Authorization: Bearer</code>.</p>
+  <h2>1. Get a key (or just try verification)</h2>
+  <p>Sign in at <a href="/#developers">citation.today → Developers</a> and click <em>Create key</em>. The key is shown once. Send it as <code>x-api-key</code> or <code>Authorization: Bearer</code>. <strong>No key?</strong> <code>POST /api/verify</code> works without one, up to 25 references a day per caller — the only endpoint that does.</p>
 
   <h2>2. Verify citations</h2>
 <pre>curl -X POST https://citation.today/api/verify \
@@ -90,18 +90,20 @@
 
   <h2>Billing</h2>
   <ul>
-    <li><strong>1 credit</strong> per search or citation-graph call, prorated by coverage: <code>full</code> 1.0 · <code>near-full</code> 0.99 · <code>high</code> 0.95 · <code>partial</code> 0.5 · <code>limited</code> free.</li>
-    <li><strong>0.1 credit</strong> per reference verified, per identifier lookup, or per work fetched without a graph.</li>
-    <li>A call whose upstream sources all failed is never charged. Failed calls are never charged.</li>
-    <li><code>GET /api/credits</code> returns your balance (free).</li>
-    <li>Current plans and packs: <a href="/#developers">citation.today → Developers</a>. Credits never expire. See the <a href="/legal/refunds.html">refund policy</a>.</li>
+    <li><strong>Pay as you go:</strong> $2.50 per 1,000 calls, with 1,000 calls a month included. $0 base fee, card at sign-up, invoiced monthly in arrears, and a monthly spend cap you set (default $25). Start from <a href="/#developers">Developers</a>.</li>
+    <li><strong>Prepaid packs</strong> at the same rate ($10 → 4,000 · $50 → 20,000 · $150 → 60,000 credits), for buyers who can't keep a card on file. Credits never expire.</li>
+    <li><strong>1 credit</strong> per search or citation-graph call, prorated by coverage: <code>full</code> 1.0 · <code>near-full</code> 0.99 · <code>high</code> 0.95 · <code>partial</code> 0.5 · <code>limited</code> free. <strong>0.1 credit</strong> per reference verified, per identifier lookup, or per work fetched without a graph.</li>
+    <li>Spending order: your plan's monthly allowance → purchased credits → pay-as-you-go usage. A call whose upstream sources all failed is never charged; failed calls are never charged.</li>
+    <li><strong>Free:</strong> 25 reference verifications a day per caller, no key needed. There are no other free API credits.</li>
+    <li><code>GET /api/credits</code> returns your balance and metered usage (free); <code>GET /api/usage?format=csv</code> exports your per-key, per-endpoint usage.</li>
+    <li>See the <a href="/legal/refunds.html">refund policy</a> and <a href="/docs/licensing.html">source licensing</a>.</li>
   </ul>
 
   <h2>Errors</h2>
   <table>
     <tr><td><code>400</code></td><td><code>bad_request</code> — unknown parameter value, too many terms or refs, query too long.</td></tr>
     <tr><td><code>401</code></td><td><code>unauthorized</code> — missing or invalid key; body carries <code>signup_url</code>. Keys are never accepted in the query string.</td></tr>
-    <tr><td><code>402</code></td><td><code>insufficient_credits</code> — body carries <code>balance</code>, <code>upgrade_url</code> and <code>packs</code>.</td></tr>
+    <tr><td><code>402</code></td><td><code>subscription_required</code> (free account — body carries <code>subscribe_url</code> and <code>pricing</code>) · <code>insufficient_credits</code> (<code>balance</code>, <code>upgrade_url</code>, <code>packs</code>) · <code>spend_cap_reached</code> · <code>payment_failed</code> · <code>trial_exhausted</code> (<code>resets_at</code>).</td></tr>
     <tr><td><code>429</code></td><td><code>rate_limited</code> — <code>Retry-After</code> header and <code>retry_after</code> in the body (per key; and per IP before authentication).</td></tr>
     <tr><td><code>503</code></td><td><code>no_sources_available</code> — nothing was charged.</td></tr>
   </table>

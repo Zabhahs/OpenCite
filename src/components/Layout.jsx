@@ -134,7 +134,7 @@ function CreditsChip() {
   return (
     <span
       className="mono-font text-[10px] uppercase tracking-widest text-stone-600 select-none"
-      title={tier === "free" ? "Free API credits this month (web search is unlimited)" : "API credits"}
+      title={tier === "free" ? "API credits (free accounts have none — the web app and the verify trial are free)" : "API credits: monthly allowance + purchased"}
     >
       {Number(credits).toLocaleString()} api credits
     </span>

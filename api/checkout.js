@@ -32,6 +32,9 @@
 // The webhook is unchanged: checkout.session.completed still grants credits, and Stripe-issued
 // refunds / disputes still arrive as charge.refunded / charge.dispute.created → claw-back.
 // Server-only flag on purpose: plans.js is bundled into the browser (src/constants/pricing.js).
+// v0.48: the metered `api` plan (postpaid) ALSO runs under Managed Payments — probe P0-1
+// (2026-10-17, sandbox) confirmed MP Checkout accepts a meter-backed metered price in
+// subscription mode. Student/Pro stay standard Checkout.
 const MANAGED_PAYMENTS_ENABLED = process.env.STRIPE_MANAGED_PAYMENTS === "1";
 // The pinned SDK (stripe@17 → 2025-02-24.acacia) predates Managed Payments (needs ≥ 2025-03-31.basil),
 // so a Managed Payments session overrides the version for that one request only — the account
@@ -42,8 +45,9 @@ const MANAGED_PAYMENTS_API_VERSION = "2026-02-25.preview";
 import { prisma } from "./_shared/prisma.js";
 import { setCorsHeaders, getSession, TRUSTED_ORIGINS, isTrustedOrigin } from "./_shared/auth.js";
 import { parseBody } from "./_shared/parseBody.js";
-import { stripePriceId, PLANS, CREDIT_PACKS, SUBSCRIPTIONS_ENABLED } from "./_shared/plans.js";
+import { stripePriceId, PLANS, CREDIT_PACKS, SUBSCRIPTIONS_ENABLED, API_UNIT_PRICE_USD } from "./_shared/plans.js";
 import { log } from "./_shared/log.js";
+import { checkRateLimit, ANON_PLAN } from "./_shared/ratelimit.js";
 
 // Resolve a safe absolute base URL for success/cancel redirects.
 // F-415: only our own origins (prod domains + opencite*.vercel.app previews) — the old
@@ -96,6 +100,15 @@ export default async function handler(req, res) {
 
   if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: "Billing not configured" });
 
+  // v0.48 (sprint v0.45 T7 remainder): per-IP window before the session lookup + Stripe work.
+  const xff = req.headers?.["x-forwarded-for"];
+  const ip = ((Array.isArray(xff) ? xff[0] : xff) || "").split(",")[0].trim() || "anon";
+  const rl = await checkRateLimit(`ip:${ip}`, ANON_PLAN);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter));
+    return res.status(429).json({ error: "Rate limit exceeded. Please retry later.", code: "rate_limited", retry_after: rl.retryAfter });
+  }
+
   const user = await getSession(req);
   if (!user) return res.status(401).json({ error: "Please sign in to continue" });
 
@@ -107,14 +120,16 @@ export default async function handler(req, res) {
   if (!wantPlan && !wantPack) return res.status(400).json({ error: "Specify a plan or pack" });
 
   // Validate the requested item and resolve its Stripe Price id (server-authoritative).
-  let mode, priceId, metadata;
+  let mode, priceId, metadata, postpaid = false;
   if (wantPlan) {
-    // Kill switch for the subscription rail (plans.js SUBSCRIPTIONS_ENABLED).
-    if (!SUBSCRIPTIONS_ENABLED) {
-      return res.status(400).json({ error: "Subscriptions are not available; buy an API credit pack instead.", code: "subscriptions_disabled" });
-    }
     const plan = PLANS[wantPlan];
     if (!plan || !plan.subscription) return res.status(400).json({ error: "Unknown plan" });
+    postpaid = !!plan.postpaid;
+    // Kill switch for the FLAT subscription rail (plans.js SUBSCRIPTIONS_ENABLED). The metered
+    // `api` plan is the machine product and is not behind it (v0.48).
+    if (!SUBSCRIPTIONS_ENABLED && !postpaid) {
+      return res.status(400).json({ error: "Subscriptions are not available; buy an API credit pack instead.", code: "subscriptions_disabled" });
+    }
     // v0.47: Student is honor-system (see plans.js) — no is_student_verified gate.
     // One subscription per user: a second Checkout would bill both in parallel. Plan changes and
     // cancellation go through the Customer Portal ({ portal: true }).
@@ -156,16 +171,20 @@ export default async function handler(req, res) {
     }
 
     const base = baseUrl(req);
-    // Packs only; the subscription rail never uses Managed Payments (see header).
-    const managed = MANAGED_PAYMENTS_ENABLED && mode === "payment";
+    // Packs and the metered `api` plan use Managed Payments; flat subscriptions (Student/Pro)
+    // stay standard Checkout (see header).
+    const managed = MANAGED_PAYMENTS_ENABLED && (mode === "payment" || postpaid);
     const session = await stripe.checkout.sessions.create({
       mode,
       customer: customerId,
       client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
+      // v0.48: a metered (meter-backed) price must NOT carry a quantity — Stripe rejects it.
+      line_items: [postpaid ? { price: priceId } : { price: priceId, quantity: 1 }],
       metadata,
       // Mirror metadata onto the subscription so subscription.* events carry it too.
-      ...(mode === "subscription" ? { subscription_data: { metadata } } : {}),
+      // v0.48: postpaid subscriptions use flexible billing mode so Stripe's "minimum amount before
+      // collection" script can be enabled later without migrating subscriptions (log §2 S3).
+      ...(mode === "subscription" ? { subscription_data: { metadata, ...(postpaid ? { billing_mode: { type: "flexible" } } : {}) } } : {}),
       // v0.46: packs mirror metadata onto the PaymentIntent so charge.refunded / dispute events
       // (which reference the PI, not the session) can identify the pack to claw back.
       ...(mode === "payment" ? { payment_intent_data: { metadata: { ...metadata, userId: user.id } } } : {}),
@@ -175,6 +194,8 @@ export default async function handler(req, res) {
       billing_address_collection: "required",
       custom_text: {
         terms_of_service_acceptance: { message: "I agree to the [Terms of Service](https://citation.today/legal/terms.html) and [Refund Policy](https://citation.today/legal/refunds.html)." },
+        // v0.48: postpaid consent — Stripe requires the timing + amount basis of future charges to be stated.
+        ...(postpaid ? { submit: { message: `You'll be billed monthly for API calls at $${(API_UNIT_PRICE_USD * 1000).toFixed(2)} per 1,000 (ID lookups and verification $${(API_UNIT_PRICE_USD * 100).toFixed(2)} per 1,000), after ${PLANS.api.monthlyGrant.toLocaleString()} included calls a month, up to the monthly cap you set (default $25). No charge today.` } } : {}),
       },
       success_url: `${base}/?checkout=success`,
       cancel_url: `${base}/?checkout=cancel`,
@@ -184,7 +205,7 @@ export default async function handler(req, res) {
       ...(managed ? { managed_payments: { enabled: true } } : {}),
     }, managed ? { apiVersion: MANAGED_PAYMENTS_API_VERSION } : undefined);
 
-    log("stripe", "checkout-created", { userId: user.id, mode, managed, ...metadata });
+    log("stripe", "checkout-created", { userId: user.id, mode, managed, postpaid, ...metadata });
     return res.status(200).json({ url: session.url });
   } catch (err) {
     log.err("stripe", "checkout-error", { userId: user.id, msg: err.message });

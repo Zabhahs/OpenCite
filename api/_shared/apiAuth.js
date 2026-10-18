@@ -18,9 +18,11 @@
 import { timingSafeEqual, createHash } from "crypto";
 import { prisma } from "./prisma.js";
 import { hashApiKey } from "./crypto.js";
-import { getPlan, monthlyGrantFor } from "./plans.js";
-import { applyMonthlyGrant } from "./billing.js";
+import { getPlan } from "./plans.js";
 import { getSession } from "./auth.js";
+// v0.48: the calendar-period key lives with the ledger (billing.js); re-exported here for the
+// webhook / credits handler which historically imported it from this module.
+export { periodOf } from "./billing.js";
 
 const firstParam = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
@@ -100,14 +102,10 @@ export async function resolveApiKey(req) {
       .catch(() => {});
   }
 
-  // v0.46: lazy monthly allowance for FREE users. Before this, applyMonthlyGrant was called only
-  // from Stripe renewal webhooks, so a free user got the 10-credit schema seed once and never the
-  // advertised monthly allowance. Fire-and-forget: the current request sees the topped-up balance
-  // only on the next call, which is fine (the grant is idempotent per calendar month).
+  // v0.48 (D-14): no free API allowance any more — the v0.46 lazy monthly grant for free users is
+  // gone. A free key still resolves (it can use the verify trial, api/_shared/trial.js); every
+  // metered call answers 402 `subscription_required` instead.
   const planId = row.user?.plan || "free";
-  if (planId === "free" && row.user?.credits_period !== periodOf()) {
-    applyMonthlyGrant(row.user_id, monthlyGrantFor({ plan: planId }), periodOf()).catch(() => {});
-  }
 
   return {
     userId: row.user_id,
@@ -116,10 +114,6 @@ export async function resolveApiKey(req) {
     admin: planId === "admin",
   };
 }
-
-// Calendar-month key (UTC) — same shape the Stripe webhook stamps into credits_period.
-export const periodOf = (d = new Date()) =>
-  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
 // Session-based admin break-glass for the browser admin console (Score Explainer / Gold-Set
 // Harness). /api/search is API-key-only for normal, billed traffic — but those tools run from
