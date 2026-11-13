@@ -31,6 +31,9 @@ const mcpSnippet = (key) => JSON.stringify(
   null, 2
 );
 const claudeCodeSnippet = (key) => `claude mcp add opencite -e OPENCITE_API_KEY=${key} -- npx -y opencite-mcp`;
+// Hosted MCP (api/mcp.js): the address a Claude web / iOS custom connector takes. The key is in
+// the path because a connector has no field for a request header.
+const connectorSnippet = (key) => `${API_BASE}/api/mcp/${key}`;
 
 const CAP_MIN = 5, CAP_MAX = 1000;
 
@@ -245,7 +248,17 @@ export function DevelopersPanel({ isAuthenticated = false, onRequireAuth, onBuyC
       </div>
 
       {/* Quickstart — v0.48: verify first, then connect */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="bg-white border border-stone-300 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">Claude web & mobile · custom connector</p>
+            <CopyButton text={connectorSnippet(minted?.key || "YOUR_KEY")} />
+          </div>
+          <pre className="mono-font text-[11px] whitespace-pre-wrap break-all text-stone-800">{connectorSnippet(minted?.key || "YOUR_KEY")}</pre>
+          <p className="text-[11px] text-stone-600 mt-2 leading-snug">
+            Settings → Connectors → Add custom connector. The key is part of this address: use a separate key for it and revoke that key if the address is shared.
+          </p>
+        </div>
         <div className="bg-white border border-stone-300 p-3">
           <div className="flex items-center justify-between mb-1">
             <p className="mono-font text-[9px] uppercase tracking-widest text-stone-500">REST · verify a reference</p>

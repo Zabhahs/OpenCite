@@ -75,7 +75,11 @@
   "https://citation.today/api/works?id=10.1038/nature14539&amp;include=cited-by&amp;limit=50"</pre>
   <p><code>id</code> is a DOI, DOI URL, PMID, PMCID or OpenAlex <code>W…</code> id. Returns the canonical <code>work</code>, <code>ids</code> (<code>doi</code>, <code>pmid</code>, <code>pmcid</code>, <code>openalex</code>), its evidence and — with <code>include=cited-by</code> or <code>include=refs</code> — the citation <code>graph</code>. The standalone <code>/api/citations</code> and <code>/api/ids</code> calls still work.</p>
 
-  <h2>5. MCP (Claude Code, Claude Desktop, any MCP client)</h2>
+  <h2>5. MCP (Claude web &amp; mobile, Claude Code, Claude Desktop, any MCP client)</h2>
+  <p><strong>Hosted — nothing to install.</strong> In Claude on the web or the iOS/Android app: Settings → Connectors → Add custom connector, and paste</p>
+<pre>https://citation.today/api/mcp/oc_live_...</pre>
+  <p>The key is part of that address, so create a <em>separate key</em> for the connector (Developers → Create key) and revoke it there if the address is ever shared. Clients that can send a header should use <code>https://citation.today/api/mcp</code> with <code>x-api-key</code> or <code>Authorization: Bearer</code> instead.</p>
+  <p><strong>Local (stdio).</strong></p>
 <pre>claude mcp add opencite -e OPENCITE_API_KEY=oc_live_... -- npx -y opencite-mcp</pre>
 <pre>{
   "mcpServers": {

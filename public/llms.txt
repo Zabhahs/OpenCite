@@ -32,6 +32,7 @@ Cards are compact by default (title, ≤3 authors, year, venue, doi, url, type, 
 
 ## MCP
 
+- Hosted (Streamable HTTP, no install — Claude web / iOS / Android custom connectors and any remote-MCP client): `https://citation.today/api/mcp/oc_live_…`, or `https://citation.today/api/mcp` with the key as `x-api-key` / `Authorization: Bearer`. Use a dedicated key for a connector so it can be revoked on its own.
 - npm: `npx -y opencite-mcp` (stdio). Tools: `verify_citations`, `search_papers`, `get_paper`. Env: `OPENCITE_API_KEY`.
 - Claude Code: `claude mcp add opencite -e OPENCITE_API_KEY=oc_live_… -- npx -y opencite-mcp`
 - Claude Desktop / any stdio client: `{ "mcpServers": { "opencite": { "command": "npx", "args": ["-y", "opencite-mcp"], "env": { "OPENCITE_API_KEY": "oc_live_…" } } } }`

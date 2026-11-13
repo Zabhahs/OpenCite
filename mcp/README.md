@@ -16,7 +16,26 @@ answered (`sources[]`) and carries a `meta.requestId`. Cards are compact by defa
 
 ## Install
 
-### Claude Code (one line)
+### Hosted — Claude on the web, iOS and Android (nothing to install)
+
+Settings → Connectors → **Add custom connector**, and paste:
+
+```
+https://citation.today/api/mcp/oc_live_...
+```
+
+The same three tools, served over Streamable HTTP from `https://citation.today`. The key is part
+of the address (a connector has no field for a header), so mint a **separate key** for it and
+revoke that key if the address is ever shared. Clients that can send headers should use
+`https://citation.today/api/mcp` with `x-api-key` or `Authorization: Bearer` instead:
+
+```bash
+claude mcp add --transport http opencite https://citation.today/api/mcp --header "x-api-key: oc_live_..."
+```
+
+The hosted endpoint requires a key on every request.
+
+### Claude Code (one line, local)
 
 ```bash
 claude mcp add opencite -e OPENCITE_API_KEY=oc_live_... -- npx -y opencite-mcp
@@ -108,6 +127,10 @@ as `src/apiContract.js`; `npm run check-contract` fails if the copy is stale).
 This package calls the public REST API over HTTPS only — it does **not** import the search
 pipeline. It is an MCP-shaped client of the same contract any customer uses, so it inherits the
 response contract and credit billing automatically.
+
+Two transports, one implementation: `src/server.js` (stdio, this package) and the hosted endpoint
+(`api/mcp.js` in the OpenCITE repo) both answer through `src/dispatch.js`, which builds every
+result from `src/tools.js`.
 
 ## Changelog
 

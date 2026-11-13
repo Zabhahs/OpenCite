@@ -60,7 +60,8 @@ export function presentedKey(req) {
 
 // Customer keys are `oc_live_` + 32 url-safe chars (crypto.js generateApiKey). Anything else is
 // rejected before the hash + DB lookup so a key-spray never reaches Postgres.
-const CUSTOMER_KEY_RE = /^oc_live_[A-Za-z0-9_-]{32}$/;
+// Exported for api/mcp.js, which applies the same shape check before forwarding a key.
+export const CUSTOMER_KEY_RE =/^oc_live_[A-Za-z0-9_-]{32}$/;
 
 // Resolve a request to a billing identity, or null if unauthenticated.
 // Returns { userId, keyId, plan } — plan is a PLANS entry (see plans.js).

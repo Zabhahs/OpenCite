@@ -17,11 +17,15 @@
     { "source": "/api/ids", "destination": "/api/works/ids" },
     { "source": "/api/verify", "destination": "/api/works/verify" },
     { "source": "/api/works", "destination": "/api/works/get" },
+    { "source": "/api/mcp/:key", "destination": "/api/mcp?key=:key" },
     {
       "source": "/((?!api|legal/|docs/|openapi\\.json|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ],
+  "functions": {
+    "api/mcp.js": { "maxDuration": 60, "includeFiles": "mcp/package.json" }
+  },
   "crons": [
     { "path": "/api/health", "schedule": "0 6 * * *" },
     { "path": "/api/billing-sweep", "schedule": "0 5 * * *" }

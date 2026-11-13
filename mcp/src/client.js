@@ -18,8 +18,12 @@ import { createRequire } from "node:module";
 export const DEFAULT_BASE_URL = "https://citation.today";
 const REQUEST_TIMEOUT_MS = 30000;
 // v0.50: `opencite-mcp/<version>` — read from package.json so it can never go stale.
-const { name: PKG_NAME, version: PKG_VERSION } = createRequire(import.meta.url)("../package.json");
+export const { name: PKG_NAME, version: PKG_VERSION } = createRequire(import.meta.url)("../package.json");
 export const CLIENT_ID = `${PKG_NAME}/${PKG_VERSION}`;
+// The hosted endpoint (api/mcp.js) identifies itself separately so the search log can tell the
+// two transports apart. It still starts with "opencite-mcp", which is what searchLog.js
+// `surfaceFor` matches to file a call under the MCP surface.
+export const HOSTED_CLIENT_ID = `${PKG_NAME}-hosted/${PKG_VERSION}`;
 
 export function resolveBaseUrl(raw) {
   const base = (raw || DEFAULT_BASE_URL).replace(/\/+$/, "");
@@ -38,11 +42,13 @@ export function resolveBaseUrl(raw) {
 }
 
 /**
- * httpExecutor({ baseUrl, apiKey }) → execute({ method, path, query?, body?, signal? })
+ * httpExecutor({ baseUrl, apiKey, clientId }) → execute({ method, path, query?, body?, signal? })
  * Resolves to { status, headers: Headers, body } for JSON responses or { status, headers, text }
  * for text ones. Throws only when the request itself could not be made (network / timeout).
+ * `clientId` is the X-OpenCITE-Client value (default: this package; api/mcp.js passes
+ * HOSTED_CLIENT_ID).
  */
-export function httpExecutor({ baseUrl, apiKey } = {}) {
+export function httpExecutor({ baseUrl, apiKey, clientId = CLIENT_ID } = {}) {
   const base = resolveBaseUrl(baseUrl);
   return async function execute({ method = "GET", path, query, body, signal, tool } = {}) {
     const params = new URLSearchParams();
@@ -55,7 +61,7 @@ export function httpExecutor({ baseUrl, apiKey } = {}) {
     // v0.50: surface attribution for the server-side search log (api/_shared/searchLog.js) —
     // `client` says this call came through the MCP package (not raw curl on the same key);
     // `tool` names the MCP tool the model invoked. Neither carries user data.
-    headers["X-OpenCITE-Client"] = CLIENT_ID;
+    headers["X-OpenCITE-Client"] = clientId;
     if (tool) headers["X-OpenCITE-Tool"] = String(tool);
     const init = { method, headers };
     if (body !== undefined) {

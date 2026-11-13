@@ -1,7 +1,8 @@
 // OpenCITE MCP — tool registry SSOT (v0.48)
 //
-// The THREE tools every OpenCITE agent surface exposes (stdio MCP today; the remote MCP and any
-// A2A skill derive from the same table). Each entry owns:
+// The THREE tools every OpenCITE agent surface exposes (the stdio MCP in server.js and the hosted
+// MCP in api/mcp.js, both through dispatch.js; any A2A skill derives from the same table). Each
+// entry owns:
 //   name / title / description — the discovery mechanism: a model picks a tool by its description,
 //                                so each one says WHEN to call it, not just what it does
 //   inputSchema()              — generated from the contract (schema.js), never hand-typed
@@ -134,7 +135,9 @@ function errorText(status, body) {
     }
     case "unauthorized":
     case 401:
-      return `${base} Get a key at ${b.signup_url || "https://citation.today/#developers"} and set OPENCITE_API_KEY.`;
+      // Transport-neutral: the stdio package takes the key from the environment, the hosted
+      // endpoint (api/mcp.js) from the connector address.
+      return `${base} Get a key at ${b.signup_url || "https://citation.today/#developers"}, then set it as OPENCITE_API_KEY (local server) or put it in the connector address (hosted).`;
     case "rate_limited":
     case 429:
       return `${base} Retry after ${b.retry_after ?? "a few"} seconds.`;
